@@ -227,6 +227,146 @@ local function readCommands(from)
   return out, n + 1
 end
 
+-- BIKE_PLAN B0/B1: the bike commands (cells, counts, states and frame numbers only).
+--
+--   { id = 2, op = "scan", dir = "up", bike = "mach" }
+--     on the current map, the five longest straight runs a bike may ride in `dir` from a standing start, by the
+--     engine's own bike collision (bike/rse.lua Rse.collision, as kb_g3field.lua's bikeVerdict asks it), and the
+--     rails: KB_SCAN id= rank= x= y= cells=, KB_RAIL id= x= y= kind=
+--   { id = 3, op = "ride", segs = { { dir = "up", b = false, frames = 240 }, ... }, sight = false }
+--     the hidden game's own bike driven by held buttons (game.input sources, as mod.input's presses): each segment
+--     holds its direction (or none) and B for its frames; trainer sight is off while it runs unless sight = true.
+--     Every logic step whose bike facts changed prints KB_RT (f frame, mv moving, c cell, t target, sf step frames,
+--     j jump type, ac action kind, as acroState, fc frameCounter, an acroAnim kind, fl the flags the bridge's
+--     classifier reads: J jumping, S scripted step, F forced movement, T transitioning, L locked or a script);
+--     KB_RIDE id= seg= f= at each segment, KB_RIDE_END id= x= y= moved= frames=
+--   { id = 4, op = "watch", frames = 600 }
+--     prints KB_BTN f= b= dir= whenever B or the held direction changes (the latency of a client's hold)
+local RIDE_SOURCE = "kbdrv:ride"
+local DIRS4 = { "up", "down", "left", "right" }
+local DELTA4 = { up = { 0, -1 }, down = { 0, 1 }, left = { -1, 0 }, right = { 1, 0 } }
+
+local function rideRelease(game, held)
+  for btn in pairs(held) do pcall(game.input.sourceRelease, game.input, btn, RIDE_SOURCE) end
+  for k in pairs(held) do held[k] = nil end
+end
+
+local function ridePress(game, held, want)
+  for btn in pairs(held) do
+    if not want[btn] then
+      pcall(game.input.sourceRelease, game.input, btn, RIDE_SOURCE)
+      held[btn] = nil
+    end
+  end
+  for btn in pairs(want) do
+    if not held[btn] then
+      pcall(game.input.sourcePress, game.input, btn, RIDE_SOURCE)
+      held[btn] = true
+    end
+  end
+end
+
+local function bikeFacts(game)
+  local P = mod3("player")
+  local Rse = package.loaded["src.core.game3.bike.rse"]
+  local S = Rse and Rse.state or {}
+  local fl = ""
+  if P.jumping then fl = fl .. "J" end
+  if P._scriptedStep ~= nil then fl = fl .. "S" end
+  local FM = mod3("forced_movement")
+  if FM and type(FM.isForced) == "function" and FM.isForced() then fl = fl .. "F" end
+  local W = mod3("warp")
+  local Fade = package.loaded["src.ui.game3.fade"]
+  if (W and W.isBusy and W.isBusy()) or (Fade and Fade.lockInput) then fl = fl .. "T" end
+  local F = mod3("field")
+  local Space = mod3("scripting.space")
+  if (F and F.isLocked and F.isLocked()) or (Space and Space.vm and Space.vm:isRunning()) then fl = fl .. "L" end
+  local a = P.action
+  local ac = "-"
+  if type(a) == "table" then ac = a.jump and ("jump_" .. tostring(a.jump)) or (a.walk and ("walk_" .. tostring(a.walk))) or "pose" end
+  return ("mv=%d c=%s,%s t=%s,%s sf=%s j=%s ac=%s as=%s fc=%s an=%s bike=%s fl=%s"):format(
+    P.moving and 1 or 0, word(P.cellX), word(P.cellY), word(P.moving and P.targetX or "-"), word(P.moving and P.targetY or "-"),
+    word(P.stepFrames), word(P.jumping and P.jumpType or "-"), ac, word(S.acroState), word(S.frameCounter),
+    word(type(P.acroAnim) == "table" and P.acroAnim.kind or "-"), word(P.biking and (P.bikeType or "?") or "no"),
+    fl == "" and "-" or fl)
+end
+
+local function scanRuns(game, id, dir, bike)
+  local P, C, Map = mod3("player"), mod3("collision"), mod3("map")
+  local Rse = require("src.core.game3.bike.rse")
+  local def = Map and Map.currentDef and Map.currentDef() or nil
+  local lay = def and def.midLayout
+  if not (P and C and lay) then
+    print(("KB_SCAN_FAIL id=%s reason=no_map"):format(word(id)))
+    return
+  end
+  local tw = math.floor(tonumber(lay.trueWidth) or tonumber(lay.width) or 0)
+  local th = math.floor(tonumber(lay.trueHeight) or tonumber(lay.height) or 0)
+  local saved = { P.cellX, P.cellY, P.surfing, P.currentElevation, P.elevation, P.biking, P.bikeType }
+  P.surfing, P.biking, P.bikeType = false, true, bike or "mach"
+  local d = DELTA4[dir] or DELTA4.up
+  local function elevOf(x, y) return C.elevationOn and C.elevationOn(def, x, y) or 0 end
+  local function ok(x, y, e)
+    local tx, ty = x + d[1], y + d[2]
+    if not C.inBounds(tx, ty) then return false end
+    P.cellX, P.cellY, P.currentElevation, P.elevation = x, y, e, e
+    local good, col = pcall(Rse.collision, game, dir)
+    return good and tonumber(col) == 0
+  end
+  local runs, rails = {}, {}
+  local okScan, err = pcall(function()
+    for x = 0, tw - 1 do
+      for y = 0, th - 1 do
+        local beh = C.behaviorOn and C.behaviorOn(def, x, y) or nil
+        if beh and (C.isVerticalRail(beh) or C.isHorizontalRail(beh) or C.isIsolatedVerticalRail(beh)
+            or C.isIsolatedHorizontalRail(beh)) and #rails < 400 then
+          rails[#rails + 1] = { x = x, y = y, kind = C.isVerticalRail(beh) and "v" or C.isHorizontalRail(beh) and "h"
+            or C.isIsolatedVerticalRail(beh) and "iv" or "ih" }
+        end
+      end
+    end
+    -- a run from each start: count cells while the bike may go on (a 15 cell keeps the elevation it was entered with)
+    for x = 0, tw - 1 do
+      for y = 0, th - 1 do
+        local e0 = elevOf(x, y)
+        if e0 ~= 15 and C.isWalkable(x, y) then
+          local cx, cy, e, n = x, y, e0, 0
+          while n < 200 and ok(cx, cy, e) do
+            cx, cy = cx + d[1], cy + d[2]
+            local ne = elevOf(cx, cy)
+            if ne ~= 15 then e = ne end
+            n = n + 1
+          end
+          runs[#runs + 1] = { x = x, y = y, n = n }
+        end
+      end
+    end
+  end)
+  P.cellX, P.cellY, P.surfing, P.currentElevation, P.elevation, P.biking, P.bikeType =
+    saved[1], saved[2], saved[3], saved[4], saved[5], saved[6], saved[7]
+  if not okScan then
+    print(("KB_SCAN_FAIL id=%s reason=%s"):format(word(id), word(err):sub(1, 60)))
+    return
+  end
+  table.sort(runs, function(a, b) return a.n > b.n or (a.n == b.n and (a.x < b.x or (a.x == b.x and a.y < b.y))) end)
+  local seen, rank = {}, 0
+  for _, r in ipairs(runs) do
+    -- one per column (the longest), five in all
+    if rank >= 5 then break end
+    local key = (d[1] == 0) and r.x or r.y
+    if not seen[key] then
+      seen[key] = true
+      rank = rank + 1
+      print(("KB_SCAN id=%s rank=%d x=%d y=%d dir=%s cells=%d"):format(word(id), rank, r.x, r.y, word(dir), r.n))
+    end
+  end
+  for i, r in ipairs(rails) do
+    if i > 12 then break end
+    print(("KB_RAIL id=%s x=%d y=%d kind=%s"):format(word(id), r.x, r.y, r.kind))
+  end
+  print(("KB_SCAN_END id=%s runs=%d rails=%d"):format(word(id), #runs, #rails))
+end
+
 return function(game)
   local started = love.timer.getTime()
   local phase = "ready"
@@ -278,7 +418,21 @@ return function(game)
       if not cmd and #queue > 0 then
         cmd = table.remove(queue, 1)
         frames = 0
-        if cmd.op ~= "go" or type(cmd.map) ~= "string" then
+        if cmd.op == "scan" then
+          scanRuns(game, cmd.id, cmd.dir or "up", cmd.bike)
+          cmd = nil
+        elseif cmd.op == "ride" or cmd.op == "watch" then
+          cmd.state, cmd.seg, cmd.held, cmd.last = cmd.op, 0, {}, nil
+          local P = mod3("player")
+          cmd.from = { P.cellX or 0, P.cellY or 0 }
+          if cmd.op == "ride" and not cmd.sight then
+            local TS = package.loaded["src.core.game3.trainer_sight"]
+            if TS and TS.check then
+              patches.sight = patches.sight or TS.check
+              TS.check = function() return false end
+            end
+          end
+        elseif cmd.op ~= "go" or type(cmd.map) ~= "string" then
           print(("KB_SPOT_FAIL id=%s reason=bad_command"):format(word(cmd.id)))
           cmd = nil
         else
@@ -294,6 +448,55 @@ return function(game)
               cmd = nil
             end
           end
+        end
+      elseif cmd and cmd.state == "ride" then
+        frames = frames + 1
+        local segs = type(cmd.segs) == "table" and cmd.segs or {}
+        local at, seg = 0, nil
+        for i, s in ipairs(segs) do
+          at = at + (tonumber(s.frames) or 0)
+          if frames <= at then seg = i break end
+        end
+        if seg ~= nil and seg ~= cmd.seg then
+          cmd.seg = seg
+          local s = segs[seg]
+          local want = {}
+          if DELTA4[s.dir] then want[s.dir] = true end
+          if s.b then want.b = true end
+          ridePress(game, cmd.held, want)
+          print(("KB_RIDE id=%s seg=%d f=%d dir=%s b=%s"):format(word(cmd.id), seg, frames, word(s.dir or "-"),
+            word(s.b == true)))
+        end
+        local facts = bikeFacts(game)
+        if facts ~= cmd.last then
+          cmd.last = facts
+          print(("KB_RT f=%d %s"):format(frames, facts))
+        end
+        if seg == nil then
+          rideRelease(game, cmd.held)
+          local TS = package.loaded["src.core.game3.trainer_sight"]
+          if TS and patches.sight then TS.check = patches.sight end
+          patches.sight = nil
+          local P, Map = mod3("player"), mod3("map")
+          print(("KB_RIDE_END id=%s map=%s x=%s y=%s moved=%d frames=%d"):format(word(cmd.id), word(Map and Map.current),
+            word(P.cellX), word(P.cellY), math.abs((P.cellX or 0) - cmd.from[1]) + math.abs((P.cellY or 0) - cmd.from[2]),
+            frames))
+          cmd = nil
+        end
+      elseif cmd and cmd.state == "watch" then
+        frames = frames + 1
+        local dir = "-"
+        for _, d in ipairs(DIRS4) do
+          if game.input:isDown(d) then dir = d break end
+        end
+        local now = ("b=%d dir=%s"):format(game.input:isDown("b") and 1 or 0, dir)
+        if now ~= cmd.last then
+          cmd.last = now
+          print(("KB_BTN id=%s f=%d %s"):format(word(cmd.id), frames, now))
+        end
+        if frames >= (tonumber(cmd.frames) or 600) then
+          print(("KB_WATCH_END id=%s"):format(word(cmd.id)))
+          cmd = nil
         end
       elseif cmd and cmd.state == "hop" then
         frames = frames + 1

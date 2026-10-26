@@ -691,6 +691,14 @@ final class RemotePilot {
 			case "right" -> GLFW.GLFW_KEY_RIGHT;
 			// only for screens that aren't ours (Cobblemon's PC): on ours Esc opens the pause menu
 			case "esc" -> GLFW.GLFW_KEY_ESCAPE;
+			// BIKE_PLAN B0/B7: Minecraft's own movement keys (the ride reads them physically), sneak, sprint and jump
+			case "forward" -> bound(net.minecraft.client.Minecraft.getInstance().options.keyUp, GLFW.GLFW_KEY_W);
+			case "back" -> bound(net.minecraft.client.Minecraft.getInstance().options.keyDown, GLFW.GLFW_KEY_S);
+			case "strafe_left" -> bound(net.minecraft.client.Minecraft.getInstance().options.keyLeft, GLFW.GLFW_KEY_A);
+			case "strafe_right" -> bound(net.minecraft.client.Minecraft.getInstance().options.keyRight, GLFW.GLFW_KEY_D);
+			case "sneak" -> bound(net.minecraft.client.Minecraft.getInstance().options.keyShift, GLFW.GLFW_KEY_LEFT_SHIFT);
+			case "sprint" -> bound(net.minecraft.client.Minecraft.getInstance().options.keySprint, GLFW.GLFW_KEY_LEFT_CONTROL);
+			case "jump" -> bound(net.minecraft.client.Minecraft.getInstance().options.keyJump, GLFW.GLFW_KEY_SPACE);
 			default -> -1;
 		};
 	}
