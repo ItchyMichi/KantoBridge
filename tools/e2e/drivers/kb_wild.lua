@@ -25,6 +25,29 @@
 -- first export into a quarter of an hour; the driver lets a passed check
 -- stand that many seconds. The test install's cache never changes mid-run.
 --
+-- WORLD_SESSIONS_PLAN WS0 (the save/reload bug inside a wild route): KB_SCENE
+-- picks the launch (default: the C6 scene above, unchanged).
+--   save      before the new game a scratch slot of the driver's own is made
+--             the active one (SaveData.createSlot + setActiveSlot; KB_SLOT
+--             slot=<n> home=<n>), so no save the install already holds is
+--             touched; the rest as above, and once the hidden player has stood
+--             idle on KB_ROUTE_MAP for a second the driver saves the game the
+--             way the start menu's SAVE does (Game:writeSave,
+--             src/core/Game.lua:1362-1385): KB_SAVED map x y ok. At debug.quit
+--             the slot stays active for the next launch.
+--   continue  the same install after a relaunch: the game at its title until a
+--             session has bound (KB_CONTINUE_AT=bind, the default) or at once
+--             (KB_CONTINUE_AT=now); then CONTINUE as the title's menu runs it
+--             (SaveData.load + Game:restoreSave, src/core/Game.lua:224-242,
+--             :1537-1592; as kb_crash.lua does): KB_LOADED with the map the
+--             save file holds, then KB_CONTINUED with where the player stands
+--             and the load report's remapped fields (scrubMaps,
+--             src/core/SaveData.lua:3037-3060). With KB_HOME_SLOT and
+--             KB_SCRATCH_SLOT at debug.quit the home slot is made active again
+--             and the scratch slot deleted (KB_CLEANED); with KB_CONTINUE_AT=
+--             never the game stays at its title (a client's own CONTINUE).
+--   cleanup   only that clean-up, then quits (after a failed run).
+--
 -- Runs unsandboxed as a POKEPORT_DRIVER coroutine, resumed once per frame
 -- (refs/gen1recomp/main.lua:755-759, :1136-1157). Data safety: prints only
 -- markers, map symbols, cells and counts -- never a species, a name or any
@@ -42,6 +65,25 @@ local FACING = os.getenv("KB_SPOT_FACING") or ""
 local STARTER_DEX = 4
 local PACE = tonumber(os.getenv("KB_PACE") or "") or 0
 local DATASET_MEMO = tonumber(os.getenv("KB_DATASET_MEMO") or "") or 0
+local SCENE = os.getenv("KB_SCENE") or "c6"
+local ROUTE_MAP = os.getenv("KB_ROUTE_MAP") or "KB_ROUTE_VIRIDIAN_FOREST_ZONE"
+local CONTINUE_AT = os.getenv("KB_CONTINUE_AT") or "bind"
+local HOME_SLOT = os.getenv("KB_HOME_SLOT")
+local SCRATCH_SLOT = os.getenv("KB_SCRATCH_SLOT")
+
+local function slotNum(id)
+  return tonumber(tostring(id):match("^slot(%d+)$")) or 0
+end
+
+-- WS0: makes the home slot active again and deletes the scratch slot (never the home one).
+local function cleanSlots()
+  if not (HOME_SLOT and SCRATCH_SLOT) or HOME_SLOT == SCRATCH_SLOT then return 0 end
+  local SaveData = require("src.core.SaveData")
+  local version = require("src.core.GameVersion").get()
+  pcall(SaveData.setActiveSlot, version, HOME_SLOT)
+  local ok, done = pcall(SaveData.deleteSlot, version, SCRATCH_SLOT)
+  return (ok and done) and 1 or 0
+end
 
 local function memoDatasetChecks(seconds)
   local ok, DatasetViews = pcall(require, "src.mods.DatasetViews")
@@ -85,7 +127,9 @@ return function(game)
   local phase = "ready"
   local arrived = false
   local nextFrame
-  if not (SPOT_X and SPOT_Y and ({ up = true, down = true, left = true, right = true })[FACING]) then
+  local savedAt, idleFrames, continued = nil, 0, false
+  if SCENE ~= "continue" and SCENE ~= "cleanup"
+      and not (SPOT_X and SPOT_Y and ({ up = true, down = true, left = true, right = true })[FACING]) then
     fail("no_spot")
   end
   if DATASET_MEMO > 0 then
@@ -102,8 +146,27 @@ return function(game)
     if phase == "ready" then
       if status and status.ready then
         status.configure({ port = PORT })
-        game:startNewGame({ intro = false })
-        phase = "world"
+        if SCENE == "cleanup" then
+          print(("KB_CLEANED deleted=%d"):format(cleanSlots()))
+          print("KB_QUIT sessions=0 code=0")
+          return
+        elseif SCENE == "continue" then
+          local top = game.stack:top()
+          print(("KB_BOOTED scene=continue top=%s"):format(word(top and top.screenId)))
+          phase = "serve"
+        else
+          if SCENE == "save" then
+            local SaveData = require("src.core.SaveData")
+            local version = require("src.core.GameVersion").get()
+            local home = SaveData.activeSlot(version)
+            local ok, id = pcall(SaveData.createSlot, version)
+            if not (ok and id) then fail("create_slot") end
+            SaveData.setActiveSlot(version, id)
+            print(("KB_SLOT slot=%d home=%d"):format(slotNum(id), slotNum(home)))
+          end
+          game:startNewGame({ intro = false })
+          phase = "world"
+        end
       end
     elseif phase == "world" then
       local ow = overworld(game)
@@ -136,10 +199,44 @@ return function(game)
         nextFrame = math.max((nextFrame or now) + 1 / PACE, now - 0.1)
         if nextFrame > now then love.timer.sleep(nextFrame - now) end
       end
+      local ow = overworld(game)
+      if SCENE == "save" and not savedAt then
+        local p = ow and ow.player
+        local still = ow and game.stack:top() == ow and ow.map and ow.map.id == ROUTE_MAP and p and not p.moving
+          and not (ow.runner and ow.runner:isRunning())
+        idleFrames = still and idleFrames + 1 or 0
+        if idleFrames >= 60 then
+          local written = game:writeSave()
+          savedAt = love.timer.getTime()
+          print(("KB_SAVED map=%s x=%s y=%s facing=%s ok=%s slot=%d"):format(word(ow.map.id), word(p.cellX),
+            word(p.cellY), word(p.facing), word(written == true),
+            slotNum(require("src.core.SaveData").activeSlot(require("src.core.GameVersion").get()))))
+        end
+      elseif SCENE == "continue" and not continued and CONTINUE_AT ~= "never"
+          and (CONTINUE_AT == "now" or (status.sessionBinds or 0) >= 1) and not ow then
+        local SaveData = require("src.core.SaveData")
+        local loaded, recovered = SaveData.load()
+        if not loaded then fail("no_save") end
+        local pl = loaded.player or {}
+        local heal = loaded.lastHeal or {}
+        print(("KB_LOADED map=%s x=%s y=%s heal=%s slot=%d recovered=%s"):format(word(pl.map), word(pl.x), word(pl.y),
+          word(heal.map), slotNum(SaveData.activeSlot(require("src.core.GameVersion").get())), word(recovered)))
+        game:restoreSave(loaded, recovered, { freshBoot = true, continued = true })
+        continued = true
+        local now = overworld(game)
+        local fields = {}
+        for _, r in ipairs((game.saveReport and game.saveReport.remappedMaps) or {}) do
+          fields[#fields + 1] = word(r.field) .. ":" .. word(r.id) .. ">" .. word(r.to)
+        end
+        print(("KB_CONTINUED map=%s x=%s y=%s remapped=%d %s"):format(word(now and now.map and now.map.id),
+          word(now and now.player and now.player.cellX), word(now and now.player and now.player.cellY), #fields,
+          table.concat(fields, ",")))
+      end
       if status.quitRequested then
-        local ow = overworld(game)
-        print(("KB_END map=%s party=%d potions=%d"):format(word(ow and ow.map and ow.map.id), #game.save.party,
-          game.save.inventory.POTION or 0))
+        local sv = game.save or {}
+        print(("KB_END map=%s party=%d potions=%d"):format(word(ow and ow.map and ow.map.id), #(sv.party or {}),
+          (sv.inventory or {}).POTION or 0))
+        if SCENE == "continue" then print(("KB_CLEANED deleted=%d"):format(cleanSlots())) end
         print(("KB_QUIT sessions=%s code=%s"):format(word(status.sessions), word(status.quitCode)))
         return
       end

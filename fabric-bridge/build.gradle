@@ -101,6 +101,11 @@ if (kbAutopilot != null && !kbAutopilot.isBlank()) {
 					vmArg "-Dkantobridge.autopilot.pilotDir=${file(kbAutopilotPilotDir.trim()).absolutePath}"
 				}
 				// and the shots it films (H7's video): stairs:<map> or ladder:<map>, comma-separated
+				// WORLD_SESSIONS_PLAN WS0: the wild_zone scene's "save in the zone, leave the world, rejoin" (reconnect|relaunch)
+				def kbAutopilotRejoin = providers.gradleProperty("kb.autopilotRejoin").getOrNull()
+				if (kbAutopilotRejoin != null && !kbAutopilotRejoin.isBlank()) {
+					vmArg "-Dkantobridge.autopilot.rejoin=${kbAutopilotRejoin.trim()}"
+				}
 				def kbAutopilotShots = providers.gradleProperty("kb.autopilotShots").getOrNull()
 				if (kbAutopilotShots != null && !kbAutopilotShots.isBlank()) {
 					vmArg "-Dkantobridge.autopilot.shots=${kbAutopilotShots.trim()}"

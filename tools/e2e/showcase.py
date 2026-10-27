@@ -25,6 +25,12 @@ its window never covers Minecraft's in the recording.
    records the scene and quits; local/reports/autopilot.log lists its steps.
 4. Kills Gen1Recomp, which never saves.
 
+WORLD_SESSIONS_PLAN WS0 (the user's save/reload bug in a wild route): --rejoin reconnect|relaunch runs the wild_zone
+scene with the driver's save scene (a scratch slot; the hidden game saved once the hidden player stands on the route
+map) and the autopilot's "save in the zone, leave the world, rejoin" (-Pkb.autopilotRejoin). With relaunch, once the
+autopilot has left the world, Gen1Recomp is killed and launched again on the same data home with the driver's continue
+scene (CONTINUE once the client binds), as a player restarting the game would. A last launch deletes the scratch slot.
+
 Data safety (docs/PLAN.md section 0.3): Gen1Recomp's output passes run_gen1recomp's filter; of the client's output only
 the autopilot's lines are printed, and of its errors only the exception classes; everything else is counted. The video
 shows the user's own game: it is for the user, stays on the pod's volume, and the agent never opens it.
@@ -57,6 +63,46 @@ EXCEPTION = re.compile(r"\b([\w$.]+(?:Exception|Error))\b")
 def spot() -> dict:
     entry = json.loads((REPO / "gen1-bridge" / "data" / "routes.json").read_text(encoding="utf-8"))["routes"][0]
     return entry["from"]
+
+
+def entry_id() -> str:
+    return json.loads((REPO / "gen1-bridge" / "data" / "routes.json").read_text(encoding="utf-8"))["routes"][0]["id"]
+
+
+def slots_of(game) -> dict:
+    line = game.result.marker("KB_SLOT")
+    return dict(p.split("=", 1) for p in line.split()[1:]) if line else {}
+
+
+def relauncher(game, args, slots, out):
+    """WS0 relaunch: once the autopilot has left the world, kill Gen1Recomp and launch it again with the continue
+    scene; the new launch is kept in out["game"] (the caller ends it)."""
+    import threading
+
+    def run():
+        deadline = time.monotonic() + args.timeout
+        while time.monotonic() < deadline:
+            lines = AUTOPILOT_LOG.read_text(encoding="utf-8").splitlines() if AUTOPILOT_LOG.is_file() else []
+            if any("autopilot: left_world" in line for line in lines):
+                break
+            time.sleep(1)
+        else:
+            return
+        time.sleep(3)
+        game.kill()
+        print("relaunch: killed", json.dumps({k: v for k, v in game.wait(timeout=30).summary().items() if k != "markers"}),
+              flush=True)
+        env = {"KB_TEST_PORT": str(args.port), "KB_SCENE": "continue", "KB_ROUTE_MAP": "KB_ROUTE_" + entry_id().upper(),
+               "KB_HOME_SLOT": f"slot{slots.get('home')}", "KB_SCRATCH_SLOT": f"slot{slots.get('slot')}",
+               "KB_PACE": "60", "KB_DATASET_MEMO": "30", "KB_DRIVER_SECONDS": str(args.timeout)}
+        ctx = launch("kb_wild.lua", game=args.game, extra_env=env, echo=False)
+        second = ctx.__enter__()
+        out["ctx"], out["game"] = ctx, second
+        print("relaunch:", second.wait_marker("KB_BOOTED", timeout=240), flush=True)
+
+    thread = threading.Thread(target=run, daemon=True)
+    thread.start()
+    return thread
 
 
 def gradle(args: list[str], timeout: float, show) -> int:
@@ -134,6 +180,7 @@ def main(argv=None) -> int:
     parser.add_argument("--game-display", help="Gen1Recomp's X display (default: DISPLAY)")
     parser.add_argument("--export-timeout", type=int, default=3600)
     parser.add_argument("--timeout", type=int, default=5400, help="the client run's limit, seconds")
+    parser.add_argument("--rejoin", choices=("reconnect", "relaunch"), help="WS0: save in the zone, leave, rejoin")
     args = parser.parse_args(argv)
 
     pf = preflight()
@@ -159,6 +206,8 @@ def main(argv=None) -> int:
         env = {"KB_TEST_PORT": str(args.port), "KB_SPOT_MAP": f["map"], "KB_SPOT_X": str(f["x"]), "KB_SPOT_Y": str(f["y"]),
                "KB_SPOT_FACING": f["facing"], "KB_PACE": "60", "KB_DATASET_MEMO": "30",
                "KB_DRIVER_SECONDS": str(args.timeout + args.export_timeout)}
+        if args.rejoin:
+            env.update({"KB_SCENE": "save", "KB_ROUTE_MAP": "KB_ROUTE_" + entry_id().upper()})
     if args.game_display:
         env["DISPLAY"] = args.game_display
     AUTOPILOT_LOG.unlink(missing_ok=True)
@@ -193,9 +242,29 @@ def main(argv=None) -> int:
             client.append(f"-Pkb.autopilotRecord={args.record}")
         if world_exists:
             client.append(f"-Pkb.autopilotWorld={args.world}")
+        slots, second = slots_of(game), {}
+        if args.rejoin:
+            client.append(f"-Pkb.autopilotRejoin={args.rejoin}")
+            print("slots:", slots, flush=True)
+            if args.rejoin == "relaunch":
+                relauncher(game, args, slots, second)
         code = gradle(client, args.timeout, show_client)
         game.kill()
         result = game.wait(timeout=30)
+        if second.get("game") is not None:
+            g2 = second["game"]
+            print("relaunch markers:", [line for line in g2.result.lines if line.startswith(
+                ("KB_LOADED", "KB_CONTINUED", "KB_MAP_ENTERED"))], flush=True)
+            g2.kill()
+            g2.wait(timeout=30)
+            second["ctx"].__exit__(None, None, None)
+        if args.rejoin:
+            print("save:", result.marker("KB_SAVED"), flush=True)
+            if slots.get("slot") and slots.get("slot") != slots.get("home"):
+                with launch("kb_wild.lua", game=args.game, echo=False, extra_env={
+                        "KB_TEST_PORT": str(args.port), "KB_SCENE": "cleanup", "KB_HOME_SLOT": f"slot{slots['home']}",
+                        "KB_SCRATCH_SLOT": f"slot{slots['slot']}"}) as clean:
+                    print("cleanup:", clean.wait(timeout=180).marker("KB_CLEANED"), flush=True)
     print("Gen1Recomp:", json.dumps({k: v for k, v in result.summary().items() if k != "markers"}), flush=True)
     steps = AUTOPILOT_LOG.read_text(encoding="utf-8").splitlines() if AUTOPILOT_LOG.is_file() else []
     done = any(line.endswith("autopilot: done") for line in steps)

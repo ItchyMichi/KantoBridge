@@ -45,7 +45,8 @@
 			"dev.kantobridge.gametest.MultiplayerGameTests",
 			"dev.kantobridge.gametest.PlayerTradeGameTests",
 			"dev.kantobridge.gametest.SavePairGameTests",
-			"dev.kantobridge.gametest.RelayHelloGameTests"
+			"dev.kantobridge.gametest.RelayHelloGameTests",
+			"dev.kantobridge.gametest.BeforeSaveGameTests"
 		]
 	},
 	"depends": {

@@ -226,3 +226,154 @@ def test_the_clearing_the_route_map_and_its_acts():
     assert result.facts("KB_END").get("potions") == "3" and result.facts("KB_END").get("map") == f["map"]
     assert not result.crash_log_touched
     assert not result.error_spots
+
+
+# ---- WORLD_SESSIONS_PLAN WS0: a save on the route map, then a reload (the user's bug) ----
+
+WS0_PORT = 27207
+WS0_WORLD = "kb-e2e-ws0-world"
+
+
+class Recorder(Visitor):
+    """Visitor plus the sequence the plan's WS0 records: every snapshot, player.pos, warp, player.state and save
+    message with its map, cell and in-game flag, in arrival order (symbols, cells and booleans only)."""
+
+    def __init__(self, mc, seq):
+        super().__init__(mc)
+        self.seq = seq
+        self.saves = []
+        self.bound = []
+
+    def handle(self, m):
+        super().handle(m)
+        t, d = m["type"], m["data"]
+        if t == "snapshot":
+            p = d.get("player") or {}
+            self.seq.append(("snapshot", d.get("ingame"), p.get("map"), p.get("x"), p.get("y"), d.get("route")))
+        elif t == "player.pos":
+            self.seq.append(("pos", d.get("kind"), d["map"], d["x"], d["y"]))
+        elif t == "warp":
+            self.seq.append(("warp", d.get("phase"), d.get("kind"), d.get("map"), d.get("x"), d.get("y")))
+        elif t == "player.state" and (not self.seq or self.seq[-1][:2] != ("state", d.get("mode"))):
+            self.seq.append(("state", d.get("mode"), d.get("route")))
+        elif t in ("save.begin", "save.loaded"):
+            self.seq.append((t, d.get("reason"), d.get("fresh")))
+            if t == "save.begin":
+                self.saves.append(d)
+        elif t == "session.bound":
+            self.bound.append(d)
+            self.seq.append(("bound", d.get("slot"), d.get("switched")))
+
+    async def bind(self):
+        n = len(self.bound)
+        await self.mc.send("session.bind", {"world": WS0_WORLD, "multiplayer": False})
+        await self.until(lambda: len(self.bound) > n, 30, "session.bound")
+
+
+async def _ws0_first(port, f, seq):
+    """Launch 1: into the zone, the driver's save on the route map, then scene A (drop and reconnect)."""
+    mc = FakeMinecraft(port=port, role="test", ping_ms=300)
+    await mc.connect(attempts=20)
+    await mc.hello()
+    w = Recorder(mc, seq)
+    await w.until(lambda: w.pos is not None, 10, "the snapshot")
+    await w.bind()
+    await w.settle()
+    for _ in range(2 * f["depth"]):
+        await w.answer(await w.step(f["facing"]))
+    await w.until(lambda: any(d["phase"] == "arrive" for d in w.warps), 30, "the warp into the route map")
+    await w.settle()
+    await w.until(lambda: w.saves, 60, "save.begin of the driver's save on the route map")
+    for s in w.saves:
+        await w.mc.send("save.done", {"save": s["save"], "ok": True})
+    await w.settle()
+    facts = {"saved_at": w.pos}
+    # scene A: the client drops and comes back with the engine running
+    seq.append(("--", "scene A: reconnect"))
+    w.problems_before = await w.reconnect()
+    await w.until(lambda: w.seq and w.seq[-1][0] == "snapshot", 15, "the snapshot after the reconnect")
+    await w.bind()
+    await w.settle()
+    facts["a_after"] = w.pos
+    status = await w.status()
+    facts["a_status"] = {k: v for k, v in sorted(status.items()) if k.startswith(("route", "playthrough", "ingame"))}
+    await w.mc.send("debug.quit", {"code": 0})
+    await w.mc.close()
+    return w, facts
+
+
+async def _ws0_second(port, f, seq):
+    """Launch 2 (scene B): the engine relaunched on the same data home at its title; the bind; the driver's CONTINUE;
+    then a step west onto A, which must take the hidden player home if it stands free on the route map."""
+    mc = FakeMinecraft(port=port, role="test", ping_ms=300)
+    await mc.connect(attempts=20)
+    await mc.hello()
+    w = Recorder(mc, seq)
+    await w.until(lambda: w.seq and w.seq[0][0] == "snapshot", 10, "the snapshot at the title")
+    await w.bind()
+    await w.until(lambda: any(e[0] == "save.loaded" for e in w.seq), 120, "save.loaded after the CONTINUE")
+    await w.settle()
+    facts = {"b_after": w.pos}
+    warps = len(w.warps)
+    if w.pos and w.pos[0] == ROUTE_MAP:
+        await w.step("left")
+        try:
+            await w.until(lambda: any(d["phase"] == "arrive" for d in w.warps[warps:]), 30, "the warp home")
+            await w.settle()
+        except AssertionError as e:
+            facts["b_home_error"] = str(e)
+    facts["b_home"] = w.pos
+    status = await w.status()
+    facts["b_status"] = {k: v for k, v in sorted(status.items()) if k.startswith(("route", "playthrough", "ingame"))}
+    await w.mc.send("debug.quit", {"code": 0})
+    await w.mc.close()
+    return w, facts
+
+
+@pytest.mark.e2e
+@pytest.mark.timeout(1500)
+def test_ws0_a_save_on_the_route_map_then_a_reconnect_and_a_relaunch():
+    """WORLD_SESSIONS_PLAN WS0 (1), the engine's half: what the bridge says after a save on the route map, (A) across a
+    reconnect with the engine running, (B) across a relaunch and CONTINUE. Prints the sequence; asserts only that the
+    scenes ran (WS1 turns them into check C1)."""
+    pf = preflight()
+    if not pf.ok:
+        pytest.skip("pre-flight not done: " + "; ".join(pf.reasons))
+    f = spot()
+    env = {"KB_TEST_PORT": str(WS0_PORT), "KB_SPOT_MAP": f["map"], "KB_SPOT_X": str(f["x"]),
+           "KB_SPOT_Y": str(f["y"]), "KB_SPOT_FACING": f["facing"], "KB_SCENE": "save", "KB_ROUTE_MAP": ROUTE_MAP}
+    seq = []
+    slots = {}
+    try:
+        with launch("kb_wild.lua", extra_env=env) as running:
+            assert running.wait_marker("KB_WILD_READY", timeout=180) is not None, running.result.summary()
+            line = running.result.marker("KB_SLOT")
+            slots = dict(p.split("=", 1) for p in line.split()[1:]) if line else {}
+            w1, facts1 = asyncio.run(asyncio.wait_for(_ws0_first(WS0_PORT, f, seq), 600))
+            r1 = running.wait(timeout=60)
+        saved = r1.marker("KB_SAVED")
+        print("launch 1:", saved, r1.marker("KB_END"))
+        print("facts 1:", facts1)
+        assert saved is not None and "ok=true" in saved, r1.summary()
+        env2 = {"KB_TEST_PORT": str(WS0_PORT), "KB_SCENE": "continue", "KB_ROUTE_MAP": ROUTE_MAP,
+                "KB_HOME_SLOT": f"slot{slots.get('home')}", "KB_SCRATCH_SLOT": f"slot{slots.get('slot')}"}
+        seq.append(("--", "scene B: relaunch"))
+        with launch("kb_wild.lua", extra_env=env2) as running:
+            assert running.wait_marker("KB_BOOTED", timeout=180) is not None, running.result.summary()
+            w2, facts2 = asyncio.run(asyncio.wait_for(_ws0_second(WS0_PORT, f, seq), 600))
+            r2 = running.wait(timeout=60)
+        entered = [line.split(" ", 1)[1] for line in r2.lines if line.startswith("KB_MAP_ENTERED")]
+        print("launch 2:", r2.marker("KB_LOADED"), "|", r2.marker("KB_CONTINUED"), "|", r2.marker("KB_CLEANED"))
+        print("map.entered 2:", entered)
+        print("facts 2:", facts2)
+        slots = {}  # cleaned by the second launch
+    finally:
+        for e in seq:
+            print("seq:", e)
+        if slots.get("slot") and slots.get("slot") != slots.get("home"):
+            with launch("kb_wild.lua", extra_env={"KB_TEST_PORT": str(WS0_PORT), "KB_SCENE": "cleanup",
+                                                  "KB_HOME_SLOT": f"slot{slots['home']}",
+                                                  "KB_SCRATCH_SLOT": f"slot{slots['slot']}"}) as running:
+                print("cleanup:", running.wait(timeout=120).marker("KB_CLEANED"))
+    assert facts1["saved_at"][0] == ROUTE_MAP, facts1
+    assert r2.marker("KB_CONTINUED") is not None, r2.summary()

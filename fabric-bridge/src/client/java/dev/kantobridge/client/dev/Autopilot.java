@@ -75,6 +75,14 @@ import org.jetbrains.annotations.Nullable;
  * first person, tilted up at the roof or the canopy, recording each look round into its own file (the record file
  * with {@code -stop<n>}; {@code kantobridge.autopilot.stops}, default 2).
  *
+ * <p>WORLD_SESSIONS_PLAN WS0 (the user's save/reload bug in a wild route): with {@code kantobridge.autopilot.rejoin}
+ * ({@code reconnect} or {@code relaunch}) the wild_zone scene, once in the zone, walks a few lanes, stands while the test
+ * driver saves the hidden game on the route map, leaves the world as the pause menu's "Save and Quit to Title" does, and
+ * opens it again: with {@code relaunch} only after the link dropped and came back (tools/e2e/showcase.py relaunches
+ * Gen1Recomp, which CONTINUEs the save). Then it watches for {@value #REJOIN_WATCH_SECONDS} seconds and walks
+ * forward, logging the body's block, whether it is in the zone, {@code away}, the lock's reason, the hidden player's map
+ * and cell, the movement counters (syncs are the join's teleports) and every jump of the body.
+ *
  * <p>Scene {@code remote} (MG8's story video): {@link RemotePilot}, the client steered by a script outside it.
  *
  * <p>Scene {@code pilot} (the caves in 3D plan's H6 video, docs/specs/CAVES_3D_PLAN.md): it plans two shots from the
@@ -109,6 +117,10 @@ public final class Autopilot {
 	static final float INTRO_SWING = 60f;
 	static final int TICKS = 20;
 	static final int MAX_REPLANS = 3;
+	/** WS0: seconds watched after the rejoin, the walk's ticks before and after it, and a body jump worth logging. */
+	static final int REJOIN_WATCH_SECONDS = 20;
+	static final int REJOIN_WALK_TICKS = 4 * 20;
+	static final double REJOIN_JUMP = 3.0;
 
 	private enum Phase {
 		TITLE,
@@ -132,7 +144,13 @@ public final class Autopilot {
 		PILOT_SETTLE,
 		PILOT_STAIRS,
 		PILOT_EDGE,
-		PILOT_LADDER
+		PILOT_LADDER,
+		REJOIN_SAVE,
+		REJOIN_LEAVE,
+		REJOIN_TITLE,
+		REJOIN_WORLD,
+		REJOIN_WATCH,
+		REJOIN_WALK
 	}
 
 	private final Minecraft minecraft;
@@ -146,6 +164,13 @@ public final class Autopilot {
 	private final boolean pilot;
 	private final @Nullable Path pilotDir;
 	private final @Nullable String shotList;
+	/** WS0: null, "reconnect" or "relaunch". */
+	private final @Nullable String rejoin;
+	private @Nullable String levelId;
+	private boolean linkDropped;
+	private double rejoinX;
+	private double rejoinZ;
+	private long syncsBefore;
 	private final List<PilotPlan.Shot> shots = new ArrayList<>();
 	private int shot;
 	private int requestSeq;
@@ -177,7 +202,7 @@ public final class Autopilot {
 	private int fpsMin = Integer.MAX_VALUE;
 
 	private Autopilot(Minecraft minecraft, @Nullable String world, @Nullable Path record, @Nullable Path log, boolean quit, boolean tour,
-			int stops, boolean pilot, @Nullable Path pilotDir, @Nullable String shotList) {
+			int stops, boolean pilot, @Nullable Path pilotDir, @Nullable String shotList, @Nullable String rejoin) {
 		this.minecraft = minecraft;
 		this.world = world;
 		this.record = record;
@@ -188,6 +213,7 @@ public final class Autopilot {
 		this.pilot = pilot;
 		this.pilotDir = pilotDir;
 		this.shotList = shotList;
+		this.rejoin = rejoin;
 	}
 
 	/** Call once from client init; does nothing without {@value #PROPERTY}. */
@@ -213,11 +239,12 @@ public final class Autopilot {
 		String log = System.getProperty(PROPERTY + ".log");
 		String pilotDir = System.getProperty(PROPERTY + ".pilotDir");
 		String shots = System.getProperty(PROPERTY + ".shots");
+		String rejoin = System.getProperty(PROPERTY + ".rejoin");
 		Autopilot pilot = new Autopilot(Minecraft.getInstance(), world == null || world.isBlank() ? null : world,
 				record == null || record.isBlank() ? null : Path.of(record), log == null || log.isBlank() ? null : Path.of(log),
 				Boolean.getBoolean(PROPERTY + ".quit"), SCENE_TOUR.equals(scene), Math.max(1, Integer.getInteger(PROPERTY + ".stops", 2)),
 				SCENE_PILOT.equals(scene), pilotDir == null || pilotDir.isBlank() ? null : Path.of(pilotDir),
-				shots == null || shots.isBlank() ? null : shots.trim());
+				shots == null || shots.isBlank() ? null : shots.trim(), rejoin == null || rejoin.isBlank() ? null : rejoin.trim());
 		ClientTickEvents.END_CLIENT_TICK.register(minecraft -> pilot.tick());
 		pilot.mark("armed scene=" + scene + " record=" + (pilot.record != null));
 	}
@@ -252,6 +279,12 @@ public final class Autopilot {
 				case PILOT_STAIRS -> this.pilotStairs();
 				case PILOT_EDGE -> this.pilotEdge();
 				case PILOT_LADDER -> this.pilotLadder();
+				case REJOIN_SAVE -> this.rejoinSave();
+				case REJOIN_LEAVE -> this.rejoinLeave();
+				case REJOIN_TITLE -> this.rejoinTitle();
+				case REJOIN_WORLD -> this.rejoinWorld();
+				case REJOIN_WATCH -> this.rejoinWatch();
+				case REJOIN_WALK -> this.rejoinWalk();
 				case DONE, FAILED -> {
 				}
 			}
@@ -288,6 +321,9 @@ public final class Autopilot {
 	}
 
 	private void world() {
+		if (this.rejoin != null && this.minecraft.level != null && this.dismissNotice()) {
+			return;
+		}
 		CreateKantoWorldFlow flow = CreateKantoWorldFlow.active();
 		if (flow != null && flow.step() == CreateKantoWorldFlow.Step.FAILED) {
 			this.fail("create_failed");
@@ -405,11 +441,12 @@ public final class Autopilot {
 			this.fail("no_player");
 			return;
 		}
-		if (this.waypoint >= this.waypoints.size() || this.phaseTicks > 75 * TICKS) {
+		if (this.waypoint >= this.waypoints.size() || this.phaseTicks > 75 * TICKS
+				|| (this.rejoin != null && this.phaseTicks > 12 * TICKS)) {
 			this.forward(false);
 			this.mark("walked waypoints=" + this.waypoint + "/" + this.waypoints.size() + " ticks=" + this.phaseTicks);
 			this.panFrom = player.getYRot();
-			this.next(Phase.PAN);
+			this.next(this.rejoin != null ? Phase.REJOIN_SAVE : Phase.PAN);
 			return;
 		}
 		double[] target = this.waypoints.get(this.waypoint);
@@ -571,6 +608,172 @@ public final class Autopilot {
 		this.next(Phase.DONE);
 		if (this.quit) {
 			this.minecraft.stop();
+		}
+	}
+
+
+	// ---- WS0: save in the zone, leave, rejoin ----
+
+	/** A warning notice (an AlertScreen: a save mismatch, another game) is acknowledged as a player would; true when one was. */
+	private boolean dismissNotice() {
+		if (this.minecraft.screen instanceof net.minecraft.client.gui.screens.AlertScreen) {
+			this.mark("notice_dismissed");
+			this.minecraft.setScreen(null);
+			return true;
+		}
+		return false;
+	}
+
+	/** The body, the zone, away, the lock, the hidden player and the counters, as one line (ids, cells and counts). */
+	private String where() {
+		LocalPlayer player = this.minecraft.player;
+		WorldIndex index = ClientWorldIndex.current();
+		MovementSync sync = MoveRuntime.sync();
+		var controller = MoveRuntime.controller();
+		ClientBridgeState state = this.state();
+		StringBuilder line = new StringBuilder();
+		if (player != null) {
+			line.append(String.format(Locale.ROOT, "body=%d,%d,%d", player.getBlockX(), player.getBlockY(), player.getBlockZ()));
+			WorldIndex.Zone zone = index == null ? null : ZoneView.zoneAt(index, player.getX(), player.getZ());
+			line.append(" zone=").append(zone == null ? "-" : zone.id());
+			if (index != null && zone != null) {
+				int[] cell = ZoneView.cellAt(index, zone, player.getX(), player.getZ());
+				if (cell != null) {
+					line.append(" zcell=").append(cell[0]).append(',').append(cell[1]);
+				}
+			}
+		} else {
+			line.append("body=-");
+		}
+		line.append(" away=").append(sync != null && sync.away());
+		line.append(" lock=").append(controller == null ? "-" : controller.reason().name());
+		line.append(" unbuilt=").append(sync != null && sync.hiddenUnbuilt());
+		var hidden = sync == null ? null : sync.hidden();
+		line.append(" hidden=").append(hidden == null ? "-" : hidden.map() + "," + hidden.x() + "," + hidden.y() + "," + hidden.facing());
+		line.append(" state=").append(state == null ? "-" : state.map() + "," + state.x() + "," + state.y() + " ingame=" + state.ingame());
+		MovementSync.Stats stats = MoveRuntime.stats();
+		if (stats != null) {
+			line.append(" syncs=").append(stats.syncs).append(" teleports=").append(stats.teleports).append(" steps=").append(stats.steps)
+					.append(" faces=").append(stats.faces).append(" blocked=").append(stats.blocked).append(" zoneTicks=").append(stats.zoneTicks);
+		}
+		return line.toString();
+	}
+
+	/** Standing in the zone for eight seconds: the test driver saves the hidden game on the route map meanwhile. */
+	private void rejoinSave() {
+		if (this.phaseTicks == 1) {
+			this.mark("rejoin_save " + this.where());
+			var server = this.minecraft.getSingleplayerServer();
+			if (server != null) {
+				this.levelId = server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT).toAbsolutePath().normalize()
+						.getFileName().toString();
+			}
+		}
+		if (this.phaseTicks >= 8 * TICKS) {
+			this.mark("rejoin_saved level=" + this.levelId + " " + this.where());
+			this.next(Phase.REJOIN_LEAVE);
+		}
+	}
+
+	/** "Save and Quit to Title", as the pause menu runs it (PauseScreen.onDisconnect). */
+	private void rejoinLeave() {
+		this.stopRecording();
+		this.mark("left_world " + this.where());
+		boolean local = this.minecraft.isLocalServer();
+		if (this.minecraft.level != null) {
+			this.minecraft.level.disconnect();
+		}
+		if (local) {
+			this.minecraft.disconnect(new net.minecraft.client.gui.screens.GenericMessageScreen(
+					net.minecraft.network.chat.Component.translatable("menu.savingLevel")));
+		} else {
+			this.minecraft.disconnect();
+		}
+		this.minecraft.setScreen(new TitleScreen());
+		this.linkDropped = false;
+		this.next(Phase.REJOIN_TITLE);
+	}
+
+	/** At the title: with relaunch, the link must drop and come back first; then the world opens again. */
+	private void rejoinTitle() {
+		BridgeRuntime bridge = BridgeRuntime.get();
+		boolean connected = bridge != null && bridge.client().state() == ConnectionState.CONNECTED;
+		if (!connected && !this.linkDropped) {
+			this.linkDropped = true;
+			this.mark("link_dropped ticks=" + this.phaseTicks);
+		}
+		boolean waitDrop = "relaunch".equals(this.rejoin) && !this.linkDropped;
+		this.stableTicks = connected && !waitDrop && this.minecraft.screen instanceof TitleScreen ? this.stableTicks + 1 : 0;
+		if (this.stableTicks < 3 * TICKS) {
+			this.limit(10 * 60, "rejoin_title");
+			return;
+		}
+		if (this.levelId == null || !this.minecraft.getLevelSource().levelExists(this.levelId)) {
+			this.fail("no_level");
+			return;
+		}
+		this.mark("reopen level=" + this.levelId + " ticks=" + this.phaseTicks);
+		this.minecraft.createWorldOpenFlows().openWorld(this.levelId, () -> this.minecraft.setScreen(new TitleScreen()));
+		this.next(Phase.REJOIN_WORLD);
+	}
+
+	private void rejoinWorld() {
+		boolean in = this.minecraft.level != null && this.minecraft.player != null && ClientWorldIndex.current() != null;
+		if (in) {
+			LocalPlayer player = this.minecraft.player;
+			this.rejoinX = player.getX();
+			this.rejoinZ = player.getZ();
+			MovementSync.Stats stats = MoveRuntime.stats();
+			this.syncsBefore = stats == null ? 0 : stats.syncs;
+			this.mark("rejoined ticks=" + this.phaseTicks + " " + this.where());
+			this.next(Phase.REJOIN_WATCH);
+		} else {
+			this.limit(5 * 60, "rejoin_world");
+		}
+	}
+
+	/** Watching: a line a second, and every jump of the body (a teleport). */
+	private void rejoinWatch() {
+		LocalPlayer player = this.minecraft.player;
+		if (player == null) {
+			this.fail("no_player");
+			return;
+		}
+		this.dismissNotice();
+		double jump = Math.hypot(player.getX() - this.rejoinX, player.getZ() - this.rejoinZ);
+		if (jump > REJOIN_JUMP) {
+			this.mark(String.format(Locale.ROOT, "body_jump blocks=%.1f tick=%d ", jump, this.phaseTicks) + this.where());
+		}
+		this.rejoinX = player.getX();
+		this.rejoinZ = player.getZ();
+		if (this.phaseTicks % TICKS == 0) {
+			this.mark("watch t=" + this.phaseTicks / TICKS + " " + this.where());
+		}
+		if (this.phaseTicks >= REJOIN_WATCH_SECONDS * TICKS) {
+			this.next(Phase.REJOIN_WALK);
+		}
+	}
+
+	/** Forward for a few seconds (the camera's way): does the body walk, does the hidden player move? */
+	private void rejoinWalk() {
+		LocalPlayer player = this.minecraft.player;
+		if (player == null) {
+			this.fail("no_player");
+			return;
+		}
+		if (this.phaseTicks == 1) {
+			this.rejoinX = player.getX();
+			this.rejoinZ = player.getZ();
+			this.mark("walk_start " + this.where());
+		}
+		this.forward(this.phaseTicks < REJOIN_WALK_TICKS);
+		if (this.phaseTicks >= REJOIN_WALK_TICKS + 2 * TICKS) {
+			this.forward(false);
+			double moved = Math.hypot(player.getX() - this.rejoinX, player.getZ() - this.rejoinZ);
+			MovementSync.Stats stats = MoveRuntime.stats();
+			this.mark(String.format(Locale.ROOT, "walk_end moved=%.1f rejoin_syncs=%d ", moved,
+					(stats == null ? 0 : stats.syncs) - this.syncsBefore) + this.where());
+			this.next(Phase.OUTRO);
 		}
 	}
 
