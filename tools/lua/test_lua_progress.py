@@ -97,3 +97,22 @@ def test_the_status_never_goes_to_a_builder():
     g = CenterGame(connect=False)
     g.connect(role="builder")
     assert statuses(g) == []
+
+
+def test_at_the_title_the_status_carries_the_active_slots_save_summary():
+    # WORLD_SESSIONS_PLAN WS2: game.status.save (the first-join screen; B1's stash only before a truly new game)
+    g = CenterGame()
+    g.E.SaveData.setActiveSlot(b"blue", b"slot1")
+    g.E.game.returnToTitle(g.E.game)
+    g.run(12)
+    s = statuses(g)[-1]
+    assert s["playthrough"] == "title" and "save" not in s, "an empty slot: no save"
+    g.E.slotFiles[b"slot1"] = True
+    g.E.slotSummaries = g.b.to_lua({"slot1": {"name": "SAVER", "badges": 3}})
+    seq = g.send("resync")
+    g.until(lambda m: m["type"] == "snapshot" and m.get("re") == seq)
+    g.run(2)
+    assert statuses(g)[-1]["save"] == {"slot": 1, "name": "SAVER", "badges": 3}
+    g.E.continueGame()
+    g.run(2)
+    assert "save" not in statuses(g)[-1], "started: the save says itself through name and badges"

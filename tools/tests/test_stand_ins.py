@@ -791,3 +791,29 @@ def test_route_state_and_route_leave():
             await mc.close()
             await gen1.stop()
     run(scenario())
+
+
+def test_ws2_binds_with_a_recorded_slot_or_a_choice_and_the_titles_save_summary():
+    """WORLD_SESSIONS_PLAN WS2: session.bind's slot (a missing one refused session.no_slot) and save (copy/new: a slot of
+    the world's own, the choice in session.bound); game.status at the title carries the slot's save summary."""
+    async def scenario():
+        gen1 = await FakeGen1(port=0, state="title").start()
+        mc = await FakeMinecraft(port=gen1.port, role="test", ping_ms=0).connect()
+        try:
+            await mc.hello()
+            await mc.expect("snapshot")
+            status = (await mc.expect("game.status"))["data"]
+            assert status["save"] == {"slot": 1, "name": "TESTER", "badges": 0}
+            missing = await mc.send("session.bind", {"world": "w-1", "multiplayer": True, "slot": 7})
+            err = await mc.expect("error", re=missing["seq"])
+            assert err["data"]["code"] == "session.no_slot"
+            sent = await mc.send("session.bind", {"world": "w-1", "multiplayer": True, "save": "copy", "continue": "park"})
+            bound = await mc.expect("session.bound", re=sent["seq"])
+            assert bound["data"]["save"] == "copy" and bound["data"]["slot"] == 2
+            again = await mc.send("session.bind", {"world": "w-1", "multiplayer": True, "slot": 2})
+            assert (await mc.expect("session.bound", re=again["seq"]))["data"]["slot"] == 2
+            assert not mc.conn.problems
+        finally:
+            await mc.close()
+            await gen1.stop()
+    run(scenario())

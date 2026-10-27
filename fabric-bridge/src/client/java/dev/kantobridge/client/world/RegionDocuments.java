@@ -122,6 +122,8 @@ public final class RegionDocuments {
 	/** True once a {@code world.regions} document named the regions (a region world); false for a legacy world. */
 	private boolean fromTable;
 	private @Nullable String worldId;
+	/** WS2: the world record the document carried (or its table's). */
+	private dev.kantobridge.world.@Nullable WorldRecord record;
 	private long epoch;
 	private @Nullable String followedId;
 
@@ -157,6 +159,7 @@ public final class RegionDocuments {
 		}
 		Regions parsed = parseDocument(json);
 		this.worldId = worldOf(json);
+		this.record = recordOf(json, parsed);
 		this.adopt(parsed, true);
 		return hash;
 	}
@@ -380,7 +383,25 @@ public final class RegionDocuments {
 		this.fromTable = false;
 		this.worldId = null;
 		this.followedId = null;
+		this.record = null;
 		this.publish();
+	}
+
+	/**
+	 * WORLD_SESSIONS_PLAN WS2: the world record ({@code start} and {@code games}) the {@code world.regions} document carried,
+	 * else the one derived from its table (a server before WS2); null in a legacy world (no document) and outside any.
+	 */
+	public dev.kantobridge.world.@Nullable WorldRecord record() {
+		return this.record;
+	}
+
+	/** WS2: the document's {@code start} and {@code games}, else its table's record; a malformed pair is refused. */
+	static dev.kantobridge.world.@Nullable WorldRecord recordOf(String json, Regions parsed) throws DataException {
+		JsonObject root = root(json);
+		if (root.has("start") || root.has("games")) {
+			return dev.kantobridge.world.WorldRecord.read(dev.kantobridge.world.DataReader.of(root, ""));
+		}
+		return dev.kantobridge.world.WorldRecord.legacy(parsed.table());
 	}
 
 	// ---- views ----
@@ -569,7 +590,10 @@ public final class RegionDocuments {
 		}
 	}
 
-	/** The {@code world.regions} document: {@code {"version":1,"world":"<id>","table":{...},"regions":[...]}}. */
+	/**
+	 * The {@code world.regions} document: {@code {"version":1,"world":"<id>","table":{...},"regions":[...]}}, and since WS2
+	 * {@code start} and {@code games} (the world record; read by {@link #recordOf}).
+	 */
 	static Regions parseDocument(String json) throws DataException {
 		JsonObject root = root(json);
 		JsonElement version = root.get("version");

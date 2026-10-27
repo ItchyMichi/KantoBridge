@@ -155,7 +155,7 @@
       "legs": ["g2m", "c2s"],
       "re": "never",
       "rom": true,
-      "redact": ["/name"],
+      "redact": ["/name", "/save/name"],
       "schema": "messages/game.status.schema.json"
     },
     "hello": {

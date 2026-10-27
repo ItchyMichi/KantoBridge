@@ -225,6 +225,25 @@ class SessionBinderTest {
 	}
 
 	@Test
+	void theChoiceAppliedAndWhatTheContinueDidAreKeptAndTheChoiceGoesUp() throws Exception {
+		// WORLD_SESSIONS_PLAN WS2/WS3: session.bound's save, started and parked
+		SessionBinder binder = new SessionBinder(this.links, true);
+		binder.linkUp();
+		binder.world(WORLD, true);
+		binder.tick();
+		assertTrue(binder.onBound(ProtoJson.parseObject("{\"slot\":4,\"switched\":\"title\",\"save\":\"copy\",\"started\":\"continue\",\"parked\":true}"),
+				binder.sentSeq()));
+		assertEquals("copy", binder.save());
+		assertEquals("continue", binder.started());
+		assertTrue(binder.parked());
+		assertEquals("{\"save\":\"copy\",\"slot\":4}", ProtoJson.write(this.links.server.get(0).data()), "the server records the choice");
+		assertFalse(binder.onBound(ProtoJson.parseObject("{\"slot\":4,\"save\":\"keep\"}"), binder.sentSeq()));
+		assertFalse(binder.onBound(ProtoJson.parseObject("{\"slot\":4,\"started\":\"maybe\"}"), binder.sentSeq()));
+		assertFalse(binder.onBound(ProtoJson.parseObject("{\"slot\":4,\"parked\":1}"), binder.sentSeq()));
+		assertFalse(binder.onBound(ProtoJson.parseObject("{\"slot\":4,\"other\":1}"), binder.sentSeq()));
+	}
+
+	@Test
 	void anInvalidWorldIdIsNeverBound() {
 		SessionBinder binder = new SessionBinder(this.links, false);
 		binder.linkUp();

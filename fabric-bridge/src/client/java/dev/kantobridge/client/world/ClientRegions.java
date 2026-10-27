@@ -83,6 +83,14 @@ public final class ClientRegions {
 		return DOCS.regions();
 	}
 
+	/**
+	 * WORLD_SESSIONS_PLAN WS2: the world's record of its games (start region and games), or null in a legacy world (no
+	 * region table: its one region's game is the followed link's) and outside any world.
+	 */
+	public static dev.kantobridge.world.@Nullable WorldRecord record() {
+		return DOCS.record();
+	}
+
 	/** True once the server sent a region table (a region world); false in a legacy world and outside any world. */
 	public static boolean regionWorld() {
 		return DOCS.regionWorld();

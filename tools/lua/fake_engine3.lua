@@ -178,6 +178,16 @@ function FakeEngine3.new(opts)
     for i, v in ipairs(known(version) and E.slotReg.list or {}) do out[i] = v end
     return out
   end
+  -- WORLD_SESSIONS_PLAN WS2: duplicateSlot (:1937-2000): a new slot holding the source's save, labelled
+  function SaveData.duplicateSlot(version, src, label)
+    call("duplicateSlot", version)
+    if not known(version) or not registered(src) then return nil, "slot not registered" end
+    if not E.slotFiles[src] then return nil, "that save could not be read" end
+    local id = SaveData.createSlot(version)
+    E.slotFiles[id], E.slotSaves[id] = E.slotFiles[src], E.slotSaves[src]
+    if label then E.slotReg.names[id] = label end
+    return id
+  end
   -- loadOptions (:1025): the options file, the slot registry under saveSlots
   function SaveData.loadOptions()
     local list, names = {}, {}

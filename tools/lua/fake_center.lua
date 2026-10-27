@@ -289,6 +289,34 @@ function FakeCenter.attach(E)
     if E.activeSlot == id then E.activeSlot = E.slotReg.active end
     return true
   end
+  -- WORLD_SESSIONS_PLAN WS2: duplicateSlot (:1937-2000): a new slot (createSlot's numbering) holding a copy of the
+  -- source's save, labelled; nil plus a reason when the source has none or E.copyFails
+  function SaveData.duplicateSlot(_, src, label)
+    call("duplicateSlot")
+    if E.copyFails then return nil, "the copy did not read back" end
+    if not registered(src) then return nil, "slot not registered" end
+    if not E.slotFiles[src] then return nil, "that save could not be read" end
+    local id = SaveData.createSlot()
+    E.slotFiles[id] = true
+    if E.slotSaves and E.slotSaves[src] then E.slotSaves[id] = E.slotSaves[src] end
+    if label then E.slotReg.names[id] = label end
+    E.copies = (E.copies or 0) + 1
+    return id
+  end
+  -- WS2: listSlots (:1642-1646): every registered slot, whether it holds a save and slotSummary's name and meta
+  -- (E.slotSummaries[id] = { name, badges }, made up)
+  function SaveData.listSlots()
+    call("listSlots")
+    local out = {}
+    for _, id in ipairs(E.slotReg.list) do
+      local sum = E.slotSummaries and E.slotSummaries[id] or nil
+      local exists = E.slotFiles[id] == true
+      out[#out + 1] = { id = id, exists = exists, name = exists and (sum and sum.name or "TESTER") or nil,
+                        meta = exists and { badges = sum and sum.badges or 0, dexCount = 0, timeText = "0:00" } or nil,
+                        label = E.slotReg.names[id] }
+    end
+    return out
+  end
   function SaveData.getCart() return E.cart end -- :2095
   -- loadOptions (:1025): the whole options.lua table -- the slot registry
   -- plus whatever a saveOptions wrote (E.optionsFile, the made-up file)

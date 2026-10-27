@@ -710,8 +710,8 @@ compat profile (`hello.ok.compat`: Gen 1 151 and 165, Emerald 386 and 354), appl
 |---|---|---|---|
 | `save.begin` | G→M, C→S | `save` (id), `reason:"menu"\|"center"`, `pair` (the hidden save's lasting id), `at?` (its time, Unix s) | |
 | `save.done` | S→C, M→G | `save, ok`; `re` optional | |
-| `session.bind` | S→C, M→G | `world, multiplayer, incompatible?:"visitor"\|"leave_out"` (save pairing: the server tells its client the world id; the client passes it on after joining and after every reconnect; `incompatible`, M→G: the link's region record's `rules.compat.onIncompatible`, absent = `visitor`) | |
-| `session.bound` | G→M, C→S | `slot, switched?:"none"\|"title"\|"saved"\|"moved"`; `re` optional (the client records the pairing on the server) | |
+| `session.bind` | S→C, M→G | `world, multiplayer, incompatible?:"visitor"\|"leave_out"` (save pairing: the server tells its client the world id; the client passes it on after joining and after every reconnect; `incompatible`, M→G: the link's region record's `rules.compat.onIncompatible`, absent = `visitor`); WORLD_SESSIONS_PLAN: M→G `slot?` (the slot recorded for this player and world), `save?:"current"\|"copy"\|"new"` (the first join's choice), `continue?:"play"\|"park"\|"title"` (WS3); S→C `regions?{<region>:{slot?, save?}}` (the player's recorded choices) | |
+| `session.bound` | G→M, C→S | `slot, switched?:"none"\|"title"\|"saved"\|"moved"`; WORLD_SESSIONS_PLAN `save?` (the choice applied), `started?:"continue"\|"new"\|"none"`, `parked?` (WS3); `re` optional (the client records the pairing on the server, with `save`) | |
 | `session.waiting` | G→M | `slot, reason:"busy"\|"new_game"\|"save_failed"`; `re` optional (the bind) | |
 | `save.loaded` | G→M, C→S | `fresh, ops, pair?, at?, daycare?, boarded?` (which save the hidden game runs from; M10 crash recovery; `boarded`: every uid the daycare holds when it holds more than one) | |
 | `save.mismatch` | S→C | `kind:"hidden_behind"\|"world_behind"\|"hidden_older"\|"hidden_newer"\|"new_game"\|"other", ops?, hiddenAt?, worldAt?` | |
@@ -907,7 +907,7 @@ compat profile (`hello.ok.compat`: Gen 1 151 and 165, Emerald 386 and 354), appl
 
 | Type | Dir | Data | ROM |
 |---|---|---|---|
-| `game.status` | G→M, C→S | `game, region?, playthrough:"title"\|"fresh"\|"saved", ingame, started, badges, markers{<name>:bool}, name?, slot?, visitors?` (one hidden game's story progress; `name` is the save's player name, the player's own text; `visitors`: how many party members it shows as visitors) | yes |
+| `game.status` | G→M, C→S | `game, region?, playthrough:"title"\|"fresh"\|"saved", ingame, started, badges, markers{<name>:bool}, name?, slot?, visitors?, save?{slot, name?, badges}` (one hidden game's story progress; `name` is the save's player name, the player's own text; `visitors`: how many party members it shows as visitors; WORLD_SESSIONS_PLAN WS2 `save`: at the title, the active slot's save summary, absent when the slot holds none) | yes |
 | `region.park` | M→G | `region` (hold this game where it stands) → `act.result{kind:"park"}` | |
 | `region.resume` | M→G | `region, to{map,x,y,facing}` (release the hold; warp onto `to` when not there) → `act.result{kind:"resume"}` | |
 | `region.start` | M→G | `region` (start the game from its title: CONTINUE or NEW GAME) → `act.result{kind:"start", detail:"new"\|"continue"}` | |
@@ -1163,7 +1163,7 @@ bytes. A downloaded export is stored as an **export bundle**, which stays under 
 | `world.shapes` | S→C | `doc, index, count, hash, part, enc?` (the shape index, `doc:"index"`, deflated with `enc:"deflate"`, and the shape map, `doc:"map"`, in parts, when a client asks for them; the voxel plan's V2) | yes |
 | `world.shapes.offer` | S→C | `index{hash, chars}, map{hash, chars}` (a region's shape documents by the SHA-256 of what they hold and their wire size, after `world.slots` on join and whenever a build publishes) | |
 | `world.shapes.get` | C→S | `index?, map?` (the content hashes of the offered documents this client lacks) | |
-| `world.regions` | S→C | `index, count, hash, part` (MG3: the region table and records, in parts on join before the regions' `world.index` parts; ids, numbers and hashes only) | |
+| `world.regions` | S→C | `index, count, hash, part` (MG3: the region table and records, in parts on join before the regions' `world.index` parts; ids, numbers and hashes only; WORLD_SESSIONS_PLAN WS2: the document also carries the world record's `start` and `games[{game, region}]`) | |
 
 **The WorldIndex** ([`protocol/world/world_index.schema.json`](../protocol/world/world_index.schema.json))
 is what the builder writes to `<world>/kantobridge/world_index.json`:
@@ -1372,6 +1372,20 @@ before V1) counts as no pack.
   is a multiplayer world's, in which case the remembered offline slot returns. Errors: `session.no_game`,
   `session.no_slots`, `session.no_slot`, `session.store_failed`, `session.failed`. After a switch the
   snapshot shows the title (`ingame:false`).
+- **Recorded slots and first-join choices (WORLD_SESSIONS_PLAN §2.1, §2.3; WS2).** The world record
+  `kantobridge/world.json` (`protocol/world/world.schema.json`: `version`, `start`, `games[{game, region}]`; one game per
+  world space) names a world's games and its start region; the server sends `start` and `games` in the `world.regions`
+  document (a world without the file: derived from the table, the start slot 0's region). The player's choice is per
+  player and region, recorded with the slot in the world's `session.json` (`players{uuid:{slot, save?, regions:{<id>:
+  {slot, save?}}}}`, format 2 once a choice is recorded) from the client's relayed `session.bound{slot, save?}`, and sent
+  back in the S→C `session.bind.regions` on every join. A bind with `slot` pairs that slot as it is (singleplayer or
+  multiplayer); a slot the engine no longer has is refused `session.no_slot` (the client forgets the choice and asks
+  again). A bind with `save`: `current` the engine's current (offline) slot; `copy` a slot of the world's own written
+  from a copy of the offline slot with the engine's own `SaveData.duplicateSlot` (online and offline stay separate,
+  DESIGN §8; an offline slot without a save gives an empty slot, applied `new`; a copy the engine refuses pairs the
+  offline slot itself, applied `current`: D14's fallback); `new` an empty slot of the world's own. The world → slot
+  pairing then reuses it; `session.bound.save` says what was applied. `game.status.save{slot, name?, badges}` at the
+  title tells a saved game waiting there from a new one.
 - **The client's side of pairing:** it sends `session.bind` on entering a Kanto world and after every
   reconnect, and accepts only a `session.bound` whose `re` matches its latest bind. Until then it relays
   nothing between gen1-bridge and the server (story messages wait in order, keeping only the newest

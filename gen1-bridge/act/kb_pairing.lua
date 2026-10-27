@@ -76,6 +76,27 @@
 --     game still had for Minecraft (gifts, operations, a save to announce:
 --     engine.dropPlaythrough); a New Game moved as it is keeps its own and
 --     sends them again (onSwitch "fresh").
+-- WORLD_SESSIONS_PLAN WS2 (§2.3; D3, D13, D14): a bind may name the slot the
+-- server recorded for this player and world (`slot`) and the player's
+-- first-join choice (`save`):
+--   * slot      that slot, singleplayer or multiplayer (a multiplayer world's
+--               pairing is pointed at it); one the engine no longer has is
+--               refused session.no_slot (the client clears the choice and asks
+--               again);
+--   * current   the engine's current (offline) slot, as a singleplayer bind
+--               always did;
+--   * copy      the world's own slot written from a copy of the offline slot
+--               (the home slot, else the current one) with the engine's own
+--               duplicateSlot (DESIGN §8: online and offline stay separate);
+--               an offline slot without a save gives an empty slot ("new"); a
+--               copy the engine refuses falls back to pairing the offline slot
+--               itself (D14; applied "current", counted copyFallbacks);
+--   * new       an empty slot of the world's own (multiplayer: as before WS2).
+-- The world's pairing records what was chosen, so later binds without a
+-- choice reuse it; session.bound says the choice applied (`save`). The switch
+-- seams below are unchanged. `continue` (WS3) is checked and kept for the
+-- continue step (act/kb_continue.lua).
+--
 -- Refusals (error, re set): bad_message, session.no_game (no game version),
 -- session.no_slots (no slot API, or a cart), session.no_slot (a slot can't
 -- be created or made active), session.store_failed (the pairing can't be
@@ -94,6 +115,8 @@ Pairing.MAX_BYTES = 1024 * 1024
 
 local ID = "^[A-Za-z0-9_.:-]+$"
 local INCOMPATIBLE = { visitor = true, leave_out = true } -- FP1: session.bind.incompatible
+local SAVES = { current = true, copy = true, new = true }  -- WS2: session.bind.save
+local CONTINUES = { play = true, park = true, title = true } -- WS3: session.bind.continue
 
 local function validWorld(v)
   return type(v) == "string" and #v >= 1 and #v <= 64 and v:find(ID) ~= nil
@@ -185,6 +208,7 @@ function Pairing.new(opts)
     storeWrites = 0, storeFailed = 0, storeRecovered = 0, storeUnreadable = 0,
     waitingSent = 0, -- M10: session.waiting messages
     storeLegacy = 0, -- MG1: the legacy install-wide file gave this game's entry
+    recorded = 0, recordedMissing = 0, copies = 0, copyFallbacks = 0, copyEmpty = 0, newSlots = 0, -- WS2
   }
   local WAIT_FIELD = { busy = "waitBusy", new_game = "waitNewGame", save_failed = "waitSaveFailed" }
   -- M10: a switch's kind as session.bound.switched (no switch: "none")
@@ -309,6 +333,76 @@ function Pairing.new(opts)
     local s = engine.slotState()
     if not s.version then return nil, "session.no_game" end
     local usable = s.api and not s.cart
+    -- WS2: a recorded slot, or a first-join choice
+    if r.slot ~= nil or r.save ~= nil then
+      if not usable then return nil, "session.no_slots" end
+      local g = gameRec(s.version)
+      local active = s.active or engine.resolveActiveSlot()
+      local offline = (g.home and not worldSlot(g, g.home)) and g.home
+        or (active and not worldSlot(g, active) and active) or nil
+      if r.slot ~= nil then
+        local id = "slot" .. r.slot
+        if not engine.slotRegistered(id) then
+          counts.recordedMissing = counts.recordedMissing + 1
+          return nil, "session.no_slot"
+        end
+        r.target, r.applied = id, r.save
+        counts.recorded = counts.recorded + 1
+      elseif r.save == "current" then
+        r.target, r.current, r.applied = offline or active, true, "current"
+      else
+        local w = g.worlds[r.world]
+        if w and engine.slotRegistered(w.slot) then
+          -- the world was paired before on this install: its slot again
+          r.target, r.applied = w.slot, r.save
+          counts.reused = counts.reused + 1
+        else
+          local label = Pairing.LABEL .. (hash and hash(r.world) or "")
+          local id
+          if r.save == "copy" and offline and engine.slotHasSave(offline) then
+            local copied = engine.copySlot(offline, label)
+            if copied and (slotNumber(copied) or 0) <= Pairing.MAX_SLOT then
+              id, r.applied = copied, "copy"
+              counts.copies = counts.copies + 1
+            else
+              if copied then engine.deleteSlot(copied) end
+              -- D14's fallback: the offline slot itself
+              r.target, r.current, r.applied = offline, true, "current"
+              counts.copyFallbacks = counts.copyFallbacks + 1
+              if log then log.warn("session.copy_fallback", { count = counts.copyFallbacks }) end
+            end
+          end
+          if not r.target then
+            if not id then
+              local code
+              id, code = newSlot(label)
+              if not id then return nil, code end
+              r.applied = "new"
+              if r.save == "copy" then counts.copyEmpty = counts.copyEmpty + 1 end
+              counts.newSlots = counts.newSlots + 1
+            end
+            for world, other in pairs(g.worlds) do
+              if other.slot == id then g.worlds[world] = nil end
+            end
+            g.worlds[r.world] = { slot = id }
+            r.target, r.created = id, true
+          end
+        end
+      end
+      -- the offline slot is home while worlds are paired; a chosen world slot is this world's pairing
+      local dirty = false
+      if offline and g.home ~= offline then g.home, dirty = offline, true end
+      if not r.current and not (g.worlds[r.world] and g.worlds[r.world].slot == r.target) then
+        g.worlds[r.world], dirty = { slot = r.target }, true
+      end
+      if (dirty or r.created) and not persist() then
+        if r.created then engine.deleteSlot(r.target) end
+        return nil, "session.store_failed"
+      end
+      if r.created then counts.created = counts.created + 1 end
+      r.switch = r.target ~= active
+      return true
+    end
     if not r.multiplayer then
       local g = usable and gameRec(s.version) or nil
       if g and s.active and worldSlot(g, s.active) then
@@ -429,10 +523,12 @@ function Pairing.new(opts)
       local slot = protocolSlot(r.target)
       -- M10: how the hidden game reached the slot (session.bound.switched)
       local switched = SWITCHED[r.how] or "none"
-      out[#out + 1] = { "session.bound", { slot = slot, switched = switched }, re = r.seq, gen = r.gen }
+      local bound = { slot = slot, switched = switched }
+      if r.applied then bound.save = r.applied end -- WS2: the choice applied
+      out[#out + 1] = { "session.bound", bound, re = r.seq, gen = r.gen }
       counts.answered = counts.answered + 1
       req = nil
-      onBound(r.world, r.multiplayer, slot, switched)
+      onBound(r.world, r.multiplayer, slot, switched, r)
       if log then
         log.info("session.bound", { slot = slot, multiplayer = r.multiplayer, worldLen = #r.world,
                                     switched = r.how or "no", created = r.created == true, count = counts.answered })
@@ -465,13 +561,17 @@ function Pairing.new(opts)
   -- and the answer come in step(). Returns true, or nil plus an error code.
   function pairing.bind(d, seq, generation)
     if type(d) ~= "table" or not validWorld(d.world) or type(d.multiplayer) ~= "boolean"
-        or d.incompatible ~= nil and not INCOMPATIBLE[d.incompatible] then
+        or d.incompatible ~= nil and not INCOMPATIBLE[d.incompatible]
+        or d.save ~= nil and not SAVES[d.save] or d.continue ~= nil and not CONTINUES[d.continue]
+        or d.slot ~= nil and (type(d.slot) ~= "number" or d.slot ~= math.floor(d.slot) or d.slot < 1
+                              or d.slot > Pairing.MAX_SLOT) then
       return nil, "bad_message"
     end
     incompatible = d.incompatible or "visitor"
     counts.binds = counts.binds + 1
     if req then counts.superseded = counts.superseded + 1 end
-    local r = { world = d.world, multiplayer = d.multiplayer, seq = seq, gen = generation }
+    local r = { world = d.world, multiplayer = d.multiplayer, seq = seq, gen = generation,
+                slot = d.slot, save = d.save, continue = d.continue }
     req = nil
     local ok, done, code = pcall(decide, r)
     if not ok then

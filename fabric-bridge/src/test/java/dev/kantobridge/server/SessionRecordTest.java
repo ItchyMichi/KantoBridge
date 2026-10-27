@@ -152,4 +152,29 @@ class SessionRecordTest {
 		}
 		throw new AssertionError("accepted a bad record");
 	}
+
+	@Test
+	void saveChoicesAreKeptWithTheirSlotsAndRoundTrip() throws Exception {
+		// WORLD_SESSIONS_PLAN WS2: {slot, save} per region; a record holding a choice is format 2
+		SessionRecord record = SessionRecord.create();
+		assertTrue(record.put(ALICE, null, 3, "copy"));
+		assertTrue(record.put(ALICE, "johto", 4, "new"));
+		assertFalse(record.put(ALICE, "johto", 4, null), "a null choice keeps the recorded one");
+		assertTrue(record.put(BOB, null, 1, null));
+		assertEquals(2, record.format());
+		SessionRecord again = SessionRecord.parse(dev.kantobridge.proto.ProtoJson.write(record.toJson()));
+		assertEquals("copy", again.save(ALICE, null));
+		assertEquals("new", again.save(ALICE, "johto"));
+		assertEquals(4, again.slot(ALICE, "johto"));
+		assertNull(again.save(BOB, null));
+		assertThrows(IllegalArgumentException.class, () -> record.put(ALICE, null, 3, "keep"));
+		assertThrows(DataException.class, () -> SessionRecord.parse("{\"format\":2,\"world\":\"" + record.world()
+				+ "\",\"players\":{\"" + ALICE + "\":{\"slot\":1,\"save\":\"keep\"}}}"));
+		assertThrows(DataException.class, () -> SessionRecord.parse("{\"format\":1,\"world\":\"" + record.world()
+				+ "\",\"players\":{\"" + ALICE + "\":{\"slot\":1,\"save\":\"copy\"}}}"), "format 1 has no choices");
+		// a lost slot is forgotten
+		assertTrue(again.forget(ALICE, "johto"));
+		assertNull(again.slot(ALICE, "johto"));
+		assertNull(again.save(ALICE, "johto"));
+	}
 }

@@ -48,5 +48,23 @@
       "slot": 1,
       "visitors": 2
     }
+  },
+  {
+    "type": "game.status",
+    "seq": 40,
+    "data": {
+      "game": "crystal",
+      "playthrough": "title",
+      "ingame": false,
+      "started": false,
+      "badges": 0,
+      "markers": {},
+      "slot": 3,
+      "save": {
+        "slot": 3,
+        "name": "TESTER",
+        "badges": 4
+      }
+    }
   }
 ]

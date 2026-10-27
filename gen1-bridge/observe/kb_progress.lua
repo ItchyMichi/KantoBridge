@@ -1,7 +1,14 @@
 -- kb_progress: one hidden game's story progress, game.status (docs/PROTOCOL.md
 -- "Regions (MG2)", docs/specs/MULTI_GAME_PLAN.md §4.7).
 --
---   game.status{game, playthrough, ingame, started, badges, markers, name?, slot?}
+--   game.status{game, playthrough, ingame, started, badges, markers, name?, slot?, save?}
+--
+-- WORLD_SESSIONS_PLAN WS2 (§2.8): at the title, `save{slot, name?, badges}` is
+-- the active slot's save summary as the launcher and the title menu show it
+-- (kb_engine.saveSummary; absent: the slot holds no save), so the client can
+-- tell a saved game waiting at its title from a new one (the first-join
+-- screen; B1: the pass stashes only before a truly new game). Read again on
+-- changed()/rebase() and every SAVE_EVERY steps (it reads the slot's file).
 --
 -- Built from the adapter: the running game's id, the playthrough as the
 -- pairing judges it ("title": no live game; "fresh": a New Game never
@@ -26,6 +33,7 @@ local Progress = {}
 Progress.REFUSED = { battle_tower = true, battle_frontier = true, battle_tent = true }
 
 Progress.EVERY = 10
+Progress.SAVE_EVERY = 600
 Progress.MAX_NAME = 16
 Progress.MAX_BADGES = 16
 
@@ -49,6 +57,17 @@ function Progress.new(opts)
   local dirty = true
   local lastKey
   local counts = { sent = 0, changes = 0 }
+  local summary, summaryAt -- WS2: the title's save summary, and the step it was read at
+
+  local function saveSummary()
+    if summaryAt == nil or steps - summaryAt >= Progress.SAVE_EVERY then
+      local fn = rawget(engine, "saveSummary") or engine.saveSummary
+      local ok, got = false, nil
+      if type(fn) == "function" then ok, got = pcall(fn) end
+      summary, summaryAt = ok and type(got) == "table" and got or nil, steps
+    end
+    return summary
+  end
 
   -- The status now, or nil when the game names no catalogue id.
   function obs.status()
@@ -98,14 +117,28 @@ function Progress.new(opts)
     end
     local slot = engine.saveSlot()
     if type(slot) == "number" and slot >= 0 and slot <= 255 and slot == math.floor(slot) then data.slot = slot end
+    if not started then
+      -- WS2: the save a CONTINUE would load (the active slot's), as the title shows it
+      local sum = saveSummary()
+      local n = sum and sum.slot
+      if type(n) == "number" and n >= 0 and n <= 255 and n == math.floor(n) then
+        local out = { slot = n, badges = math.max(0, math.min(Progress.MAX_BADGES, tonumber(sum.badges) or 0)) }
+        if type(sum.name) == "string" and #sum.name >= 1 and #sum.name <= Progress.MAX_NAME then out.name = sum.name end
+        data.save = out
+      end
+    end
     return data
   end
 
   -- A snapshot went out: the status follows it.
-  function obs.rebase() dirty = true end
+  function obs.rebase()
+    dirty, summaryAt = true, nil
+  end
 
   -- The save changed hands (New Game, CONTINUE, a bind answered): say so.
-  function obs.changed() dirty = true end
+  function obs.changed()
+    dirty, summaryAt = true, nil
+  end
 
   -- out:  this step's messages
   -- link: { live }

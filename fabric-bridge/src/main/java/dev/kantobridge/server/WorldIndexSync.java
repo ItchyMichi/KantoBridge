@@ -96,6 +96,8 @@ public final class WorldIndexSync {
 		/** The {@code world.regions} document's parts, built for the world id they name (lazily: the id comes later). */
 		@Nullable String regionsWorldId;
 		List<WorldIndexParts.Part> regionParts = List.of();
+		/** WORLD_SESSIONS_PLAN WS2: the world record (world.json, else the table's), read with the document; null: not yet. */
+		dev.kantobridge.world.@Nullable WorldRecord record;
 
 		boolean legacy() {
 			return this.table == null;
@@ -365,6 +367,7 @@ public final class WorldIndexSync {
 				shapeMapParts);
 		world.regions.put(key, published);
 		world.regionsWorldId = null;
+		world.record = null;
 		world.view = view(world);
 		KantoBridge.LOGGER.info("world.index{}: {} parts on request, hash {}; world.slots: {} parts on request, hash {}; world.shapes: {}+{} parts on request, index {}",
 				world.legacy() ? "" : " (" + key + ")", parts.size(), Hashes.shortHash(published.hash()), world.slotParts.size(),
@@ -584,6 +587,41 @@ public final class WorldIndexSync {
 		return out;
 	}
 
+	/**
+	 * WORLD_SESSIONS_PLAN WS2: the world's record of its games: {@code kantobridge/world.json}, else derived from the region
+	 * table (a legacy world: its regions' games, the start slot 0's region; a world with no table: its one region). Null
+	 * without a published world.
+	 */
+	public static dev.kantobridge.world.@Nullable WorldRecord worldRecord(MinecraftServer server) {
+		World world = CURRENT.get(server);
+		return world == null ? null : record(server, world);
+	}
+
+	private static dev.kantobridge.world.@Nullable WorldRecord record(MinecraftServer server, World world) {
+		if (world.record != null) {
+			return world.record;
+		}
+		dev.kantobridge.world.WorldRecord record = null;
+		try {
+			record = dev.kantobridge.world.WorldRecord.read(server.getWorldPath(LevelResource.ROOT).resolve(BuildTask.DATA_FOLDER));
+		} catch (IOException | DataException | RuntimeException e) {
+			KantoBridge.LOGGER.warn("world.json: the world record is unreadable ({}); the table's is used", e.getClass().getSimpleName());
+		}
+		if (record == null && world.table != null) {
+			record = dev.kantobridge.world.WorldRecord.legacy(world.table);
+		}
+		if (record == null && world.view != null && world.view.legacy() != null) {
+			RegionRecord legacy = world.view.legacy();
+			try {
+				record = new dev.kantobridge.world.WorldRecord(legacy.id(), List.of(new dev.kantobridge.world.WorldRecord.Game(legacy.game(), legacy.id())));
+			} catch (IllegalArgumentException e) {
+				record = null;
+			}
+		}
+		world.record = record;
+		return record;
+	}
+
 	/** The {@code world.regions} parts a region world would send (empty for a legacy world or none). */
 	public static List<WorldIndexParts.Part> currentRegionParts(MinecraftServer server) {
 		World world = CURRENT.get(server);
@@ -703,6 +741,13 @@ public final class WorldIndexSync {
 			throw new IllegalStateException("region documents don't parse", e);
 		}
 		document.add("regions", records);
+		// WORLD_SESSIONS_PLAN WS2: the world record's start and games (world.json, else derived from the table)
+		dev.kantobridge.world.WorldRecord record = record(server, world);
+		if (record != null) {
+			JsonObject rec = record.toJsonObject();
+			document.add("start", rec.get("start"));
+			document.add("games", rec.get("games"));
+		}
 		world.regionParts = WorldIndexParts.split(ProtoJson.write(document), WorldIndexParts.PART_CHARS);
 		world.regionsWorldId = worldId;
 		return world.regionParts;

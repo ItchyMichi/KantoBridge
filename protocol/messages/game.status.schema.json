@@ -100,6 +100,34 @@
         }
       },
       "description": "FOREIGN_POKEMON_PLAN §4.12, Q1 (FP5): the last facility desk the adapter refused while a client follows (its rules and rentals are FP9's), for the HUD's note."
+    },
+    "save": {
+      "type": "object",
+      "required": [
+        "slot",
+        "badges"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "slot": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16,
+          "x-rom-derived": true,
+          "description": "The save's player name (the player's own text)."
+        },
+        "badges": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 16
+        }
+      },
+      "description": "WORLD_SESSIONS_PLAN §2.8 (WS2): at the title, the active slot's save summary as the launcher and the title menu show it (what a CONTINUE would load); absent: the slot holds no save, or the game is started (then name, badges and the rest say it)."
     }
   }
 }

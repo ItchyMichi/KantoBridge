@@ -75,12 +75,20 @@ public final class SessionBinder {
 	private @Nullable Integer slot;
 	/** The last accepted answer's {@code switched}, or null when it didn't say. */
 	private @Nullable String switched;
+	/** WS2/WS3: the last accepted answer's {@code save}, {@code started} and {@code parked}. */
+	private @Nullable String save;
+	private @Nullable String started;
+	private boolean parked;
 
 	/**
 	 * @param boundUp relay {@code session.bound} to the server (the protocol's catalog decides)
 	 */
 	/** {@code session.bound.switched}'s values. */
 	static final Set<String> SWITCHES = Set.of("none", "title", "saved", "moved");
+	/** WS2/WS3: {@code session.bound}'s fields, {@code save}'s and {@code started}'s values. */
+	static final Set<String> BOUND_FIELDS = Set.of("slot", "switched", "save", "started", "parked");
+	static final Set<String> SAVES = Set.of("current", "copy", "new");
+	static final Set<String> STARTED = Set.of("continue", "new", "none");
 
 	public SessionBinder(Port port, boolean boundUp) {
 		this.port = port;
@@ -182,7 +190,13 @@ public final class SessionBinder {
 		long value = JsonFields.integer(data, "slot", -1);
 		String how = JsonFields.str(data, "switched");
 		boolean switchedOk = data.has("switched") ? how != null && SWITCHES.contains(how) : how == null;
-		if (value < 0 || value > 255 || !switchedOk || data.size() != (data.has("switched") ? 2 : 1)) {
+		// WORLD_SESSIONS_PLAN WS2/WS3: the choice applied, what the continue did, whether the game is parked
+		String save = JsonFields.str(data, "save");
+		String started = JsonFields.str(data, "started");
+		boolean extrasOk = (!data.has("save") || save != null && SAVES.contains(save))
+				&& (!data.has("started") || started != null && STARTED.contains(started))
+				&& (!data.has("parked") || data.get("parked").isJsonPrimitive() && data.get("parked").getAsJsonPrimitive().isBoolean());
+		if (value < 0 || value > 255 || !switchedOk || !extrasOk || !BOUND_FIELDS.containsAll(data.keySet())) {
 			this.warn("session.bad_bound");
 			return false;
 		}
@@ -198,10 +212,17 @@ public final class SessionBinder {
 		}
 		this.slot = (int) value;
 		this.switched = how;
+		this.save = save;
+		this.started = started;
+		this.parked = data.has("parked") && data.get("parked").getAsBoolean();
 		this.stats.bounds++;
 		if (this.boundUp) {
 			JsonObject up = new JsonObject();
 			up.addProperty("slot", this.slot);
+			if (save != null) {
+				// WS2: the server records the choice with the slot
+				up.addProperty("save", save);
+			}
 			if (this.port.toServer(MsgTypes.SESSION_BOUND, up)) {
 				this.stats.boundsRelayed++;
 			}
@@ -231,6 +252,21 @@ public final class SessionBinder {
 	 */
 	public @Nullable String switched() {
 		return this.switched;
+	}
+
+	/** WS2: the choice gen1-bridge applied in the last accepted answer ({@code current}, {@code copy}, {@code new}), or null. */
+	public @Nullable String save() {
+		return this.save;
+	}
+
+	/** WS3: what the last accepted answer's continue did ({@code continue}, {@code new}, {@code none}), or null. */
+	public @Nullable String started() {
+		return this.started;
+	}
+
+	/** WS3: the last accepted answer said the game is parked. */
+	public boolean parked() {
+		return this.parked;
 	}
 
 	/** The {@code seq} of this link's latest bind, or -1. */

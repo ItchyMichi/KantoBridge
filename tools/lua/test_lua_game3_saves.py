@@ -28,6 +28,17 @@ def recording_save(a):
 # ------------------------------------------------------------ slots (the engine's shared registry)
 
 
+def test_copy_slot_copies_a_save_into_a_new_labelled_slot():
+    # WORLD_SESSIONS_PLAN WS2 (D14): the shared slots part's copySlot, through the engine's duplicateSlot
+    a = Adapter3()
+    E, eng = a.E, a.eng
+    E.slotSave(b"slot1", save_table(a))
+    new = eng.copySlot(b"slot1", b"MULTIPLAYER 0123abcd")
+    assert new == b"slot2" and eng.slotHasSave(b"slot2") is True and E.slotReg.names.slot2 == b"MULTIPLAYER 0123abcd"
+    none, why = eng.copySlot(b"slot9", None)
+    assert none is None and why == b"refused"
+
+
 def test_slot_functions_against_the_registry():
     a = Adapter3()
     E, eng = a.E, a.eng

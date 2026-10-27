@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kantobridge.invalid/protocol/messages/session.bind.schema.json",
   "title": "session.bind",
-  "description": "Pair the hidden game's save slot with this Minecraft world. The server tells its client the world id (S→C); the client passes it to gen1-bridge (M→G).",
+  "description": "Pair the hidden game's save slot with this Minecraft world. The server tells its client the world id (S→C); the client passes it to gen1-bridge (M→G). WORLD_SESSIONS_PLAN (WS2, WS3): M→G slot, save and continue carry the player's recorded or first-join choice; S→C regions carries the recorded choices.",
   "x-type": "session.bind",
   "x-legs": [
     "m2g",
@@ -32,6 +32,53 @@
     "region": {
       "$ref": "../defs.schema.json#/$defs/regionId",
       "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."
+    },
+    "slot": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 255,
+      "description": "WORLD_SESSIONS_PLAN §2.3 (WS2): M→G the slot recorded for this player and world (bound as it is, singleplayer or multiplayer; a slot the engine no longer has is refused session.no_slot); absent: none recorded yet."
+    },
+    "save": {
+      "enum": [
+        "current",
+        "copy",
+        "new"
+      ],
+      "description": "WS2 (D3, D13, D14): M→G the player's first-join choice for this game: current (singleplayer: the engine's current slot), copy (multiplayer: the world's own slot written from a copy of the offline save), new (an empty slot of the world's own). Absent: today's rule (singleplayer the current slot, multiplayer the world's own slot)."
+    },
+    "continue": {
+      "enum": [
+        "play",
+        "park",
+        "title"
+      ],
+      "description": "WS3 (D4): what gen1-bridge does once the slot is settled: play (CONTINUE, else NEW GAME, and the game is followed), park (CONTINUE and held where it loaded; a slot without a save stays at its title), title (nothing: the game stays at its title). Absent: title (today's behaviour)."
+    },
+    "regions": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "../defs.schema.json#/$defs/regionId"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "slot": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "save": {
+            "enum": [
+              "current",
+              "copy",
+              "new"
+            ]
+          }
+        }
+      },
+      "description": "WS2 (§2.1): S→C the player's recorded choices for this world, per region (the legacy region by its id), so a server's client knows them as one opening its own world does."
     }
   }
 }

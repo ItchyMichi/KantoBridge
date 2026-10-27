@@ -32,6 +32,26 @@
     "region": {
       "$ref": "../defs.schema.json#/$defs/regionId",
       "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."
+    },
+    "save": {
+      "enum": [
+        "current",
+        "copy",
+        "new"
+      ],
+      "description": "WS2: the choice gen1-bridge applied (copy falls back to current when the engine can't copy the save, D14); C→S: recorded with the slot."
+    },
+    "started": {
+      "enum": [
+        "continue",
+        "new",
+        "none"
+      ],
+      "description": "WS3: what the bind's continue did: continue (a saved game loaded), new (NEW GAME), none (the game stays at its title, or was already in game)."
+    },
+    "parked": {
+      "type": "boolean",
+      "description": "WS3: the game is held where it loaded (continue park)."
     }
   }
 }

@@ -32,6 +32,10 @@ import org.jetbrains.annotations.Nullable;
  * and {@code regions} holds the others. Format 1 is read as before, and written as long as no player has paired a
  * non-legacy region, so a legacy world's file stays byte for byte what it was.
  *
+ * <p><b>WORLD_SESSIONS_PLAN WS2:</b> each pairing may also keep the player's save choice ({@code save}: {@code current},
+ * {@code copy}, {@code new}; D3), at the player's level for the legacy region and in {@code regions} for the others.
+ * A record holding one is written in format 2.
+ *
  * <p>The id is created once and never changes, so it survives restarts, renames and copies of the world folder. The
  * file is replaced atomically on every write; an unreadable one is moved aside (never silently overwritten) and a new
  * id takes its place. Plain Java; the service keeps one per server and touches it on the server thread only.
@@ -45,8 +49,10 @@ public final class SessionRecord {
 	public static final int MAX_SLOT = 255;
 	private static final Set<String> FIELDS = Set.of("format", "world", "players");
 	private static final Set<String> PLAYER_FIELDS_1 = Set.of("slot");
-	private static final Set<String> PLAYER_FIELDS_2 = Set.of("slot", "regions");
-	private static final Set<String> REGION_FIELDS = Set.of("slot");
+	private static final Set<String> PLAYER_FIELDS_2 = Set.of("slot", "regions", "save");
+	private static final Set<String> REGION_FIELDS = Set.of("slot", "save");
+	/** WS2: {@code session.bind.save}'s values. */
+	public static final Set<String> SAVES = Set.of("current", "copy", "new");
 
 	/** What {@link #loadOrCreate} found. */
 	public enum Origin {
@@ -65,6 +71,9 @@ public final class SessionRecord {
 	private static final class Entry {
 		@Nullable Integer slot;
 		final Map<String, Integer> regions = new TreeMap<>();
+		/** WS2: the legacy region's save choice, and the other regions'. */
+		@Nullable String save;
+		final Map<String, String> saves = new TreeMap<>();
 	}
 
 	private final String world;
@@ -115,6 +124,9 @@ public final class SessionRecord {
 			if (format == FORMAT || player.has("slot")) {
 				pairing.slot = player.integer("slot", 0, MAX_SLOT);
 			}
+			if (format == FORMAT_2 && player.has("save")) {
+				pairing.save = save(player, "save");
+			}
 			if (format == FORMAT_2 && player.has("regions")) {
 				DataReader regions = player.object("regions");
 				for (Map.Entry<String, JsonElement> region : regions.json().entrySet()) {
@@ -123,6 +135,9 @@ public final class SessionRecord {
 					}
 					DataReader slot = regions.object(region.getKey()).allowOnly(REGION_FIELDS);
 					pairing.regions.put(region.getKey(), slot.integer("slot", 0, MAX_SLOT));
+					if (slot.has("save")) {
+						pairing.saves.put(region.getKey(), save(slot, "save"));
+					}
 				}
 			}
 			if (pairing.slot == null && pairing.regions.isEmpty()) {
@@ -133,8 +148,67 @@ public final class SessionRecord {
 		return record;
 	}
 
+	private static String save(DataReader reader, String name) throws DataException {
+		String value = reader.string(name);
+		if (!SAVES.contains(value)) {
+			throw new DataException(reader.path(name), "unknown save choice");
+		}
+		return value;
+	}
+
 	public String world() {
 		return this.world;
+	}
+
+	/** WS2: the save choice recorded with the player's pairing of a region ({@code null}: the legacy region), or null. */
+	public @Nullable String save(UUID player, @Nullable String region) {
+		Entry entry = this.players.get(player);
+		if (entry == null) {
+			return null;
+		}
+		return region == null ? entry.save : entry.saves.get(region);
+	}
+
+	/**
+	 * WS2: records a slot with its save choice ({@code save} null keeps the one recorded); false when nothing changed.
+	 */
+	public boolean put(UUID player, @Nullable String region, int slot, @Nullable String save) {
+		if (save != null && !SAVES.contains(save)) {
+			throw new IllegalArgumentException("unknown save choice");
+		}
+		boolean changed = this.put(player, region, slot);
+		if (save == null) {
+			return changed;
+		}
+		Entry entry = this.players.get(player);
+		String before = region == null ? entry.save : entry.saves.get(region);
+		if (region == null) {
+			entry.save = save;
+		} else {
+			entry.saves.put(region, save);
+		}
+		return changed || !save.equals(before);
+	}
+
+	/** WS2: forgets a region's pairing ({@code session.no_slot}: the engine lost the slot); false when there was none. */
+	public boolean forget(UUID player, @Nullable String region) {
+		Entry entry = this.players.get(player);
+		if (entry == null) {
+			return false;
+		}
+		boolean had;
+		if (region == null) {
+			had = entry.slot != null;
+			entry.slot = null;
+			entry.save = null;
+		} else {
+			had = entry.regions.remove(region) != null;
+			entry.saves.remove(region);
+		}
+		if (entry.slot == null && entry.regions.isEmpty()) {
+			this.players.remove(player);
+		}
+		return had;
 	}
 
 	/** The hidden-game save slot this player's gen1-bridge reported for this world's legacy region, or null. */
@@ -189,7 +263,7 @@ public final class SessionRecord {
 	/** The format the record is written in: 2 once any player paired a non-legacy region, else 1. */
 	public int format() {
 		for (Entry entry : this.players.values()) {
-			if (!entry.regions.isEmpty()) {
+			if (!entry.regions.isEmpty() || entry.save != null) {
 				return FORMAT_2;
 			}
 		}
@@ -204,11 +278,18 @@ public final class SessionRecord {
 			if (pairing.slot != null) {
 				entry.addProperty("slot", pairing.slot);
 			}
+			if (format == FORMAT_2 && pairing.save != null && pairing.slot != null) {
+				entry.addProperty("save", pairing.save);
+			}
 			if (format == FORMAT_2 && !pairing.regions.isEmpty()) {
 				JsonObject regions = new JsonObject();
 				pairing.regions.forEach((region, slot) -> {
 					JsonObject one = new JsonObject();
 					one.addProperty("slot", slot);
+					String choice = pairing.saves.get(region);
+					if (choice != null) {
+						one.addProperty("save", choice);
+					}
 					regions.add(region, one);
 				});
 				entry.add("regions", regions);

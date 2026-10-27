@@ -119,6 +119,12 @@ public final class SessionService {
 		return record == null ? null : record.slot(player);
 	}
 
+	/** WS2: the save choice recorded with the player's pairing of a region ({@code null} or the legacy id: the legacy one), or null. */
+	public static @Nullable String saveOf(MinecraftServer server, UUID player, @Nullable String region) {
+		SessionRecord record = RECORDS.get(server);
+		return record == null ? null : record.save(player, Regions.isLegacy(server, region) ? null : region);
+	}
+
 	/** The slot the player paired with a region (MG3; {@code null} or the legacy id: the legacy slot), or null. */
 	public static @Nullable Integer slotOf(MinecraftServer server, UUID player, @Nullable String region) {
 		SessionRecord record = RECORDS.get(server);
@@ -133,7 +139,10 @@ public final class SessionService {
 		return !player.server.isSingleplayerOwner(player.getGameProfile());
 	}
 
-	/** The {@code session.bind} body for a player of this world, or null without a world id. */
+	/**
+	 * The {@code session.bind} body for a player of this world, or null without a world id. WORLD_SESSIONS_PLAN WS2: with
+	 * {@code regions}, the player's recorded slot and save choice per region (the legacy region by its id), when any.
+	 */
 	public static @Nullable JsonObject bindData(ServerPlayer player) {
 		String world = worldId(player.server);
 		if (world == null) {
@@ -142,7 +151,36 @@ public final class SessionService {
 		JsonObject data = new JsonObject();
 		data.addProperty("world", world);
 		data.addProperty("multiplayer", multiplayer(player));
+		JsonObject regions = recorded(player);
+		if (regions.size() > 0) {
+			data.add("regions", regions);
+		}
 		return data;
+	}
+
+	/** WS2: the player's recorded choices, region id → {@code {slot, save?}}. */
+	public static JsonObject recorded(ServerPlayer player) {
+		JsonObject out = new JsonObject();
+		SessionRecord record = RECORDS.get(player.server);
+		if (record == null) {
+			return out;
+		}
+		UUID id = player.getUUID();
+		Integer legacy = record.slot(id);
+		if (legacy != null) {
+			out.add(Regions.legacyId(player.server), choice(legacy, record.save(id, null)));
+		}
+		record.regions(id).forEach((region, slot) -> out.add(region, choice(slot, record.save(id, region))));
+		return out;
+	}
+
+	private static JsonObject choice(int slot, @Nullable String save) {
+		JsonObject one = new JsonObject();
+		one.addProperty("slot", slot);
+		if (save != null) {
+			one.addProperty("save", save);
+		}
+		return one;
 	}
 
 	/** Tells a joining client the world id (needs the protocol's {@code s2c} leg for {@code session.bind}). */
@@ -163,9 +201,15 @@ public final class SessionService {
 	static void onBound(ServerPlayer player, Envelope message) {
 		int slot;
 		String region;
+		String save;
 		try {
-			DataReader reader = DataReader.of(message.data(), "").allowOnly(Set.of("slot", "switched", "region"));
+			DataReader reader = DataReader.of(message.data(), "").allowOnly(Set.of("slot", "switched", "region", "save", "started", "parked"));
 			slot = reader.integer("slot", 0, SessionRecord.MAX_SLOT);
+			// WS2: the choice gen1-bridge applied, recorded with the slot
+			save = reader.has("save") ? reader.string("save") : null;
+			if (save != null && !SessionRecord.SAVES.contains(save)) {
+				throw new DataException(reader.path("save"), "unknown value");
+			}
 			String switched = reader.has("switched") ? reader.string("switched") : null;
 			if (switched != null && !SWITCHES.contains(switched)) {
 				throw new DataException(reader.path("switched"), "unknown value");
@@ -180,7 +224,7 @@ public final class SessionService {
 			RelayService.get().sendError(player, "bad_message", message.seq());
 			return;
 		}
-		record(player, region, slot);
+		record(player, region, slot, save);
 	}
 
 	/**
@@ -196,13 +240,18 @@ public final class SessionService {
 	 * slot; another region's slot goes under {@code regions} (format 2).
 	 */
 	public static boolean record(ServerPlayer player, @Nullable String region, int slot) {
+		return record(player, region, slot, null);
+	}
+
+	/** WS2: {@link #record(ServerPlayer, String, int)} with the save choice applied ({@code null}: the recorded one stays). */
+	public static boolean record(ServerPlayer player, @Nullable String region, int slot, @Nullable String save) {
 		SessionRecord record = RECORDS.get(player.server);
 		if (record == null) {
 			warn("no_record");
 			return false;
 		}
 		String key = Regions.isLegacy(player.server, region) ? null : region;
-		if (!record.put(player.getUUID(), key, slot)) {
+		if (!record.put(player.getUUID(), key, slot, save)) {
 			return true;
 		}
 		try {

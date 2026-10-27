@@ -3492,7 +3492,40 @@ the volume), stopped after each job. Choices where the plan was silent keep toda
 | # | Phase | Status | Date | Commits |
 |---|---|---|---|---|
 | WS0 | Facts on a pod | **done**: the bug reproduced (scene A), the cause is none of H1–H3 (below) | 2026-10-27 | `a91f735`, `f5b2ba2` |
-| WS1 | The wild route rule (and the bind fix) | **done**; C1 passed on the pod (engine and client) | 2026-10-27 | WS1 commit |
+| WS2 | The protocol and the world record | **done** (server-side tests; no pod step in the plan) | 2026-10-27 | WS2 commit |
+| WS1 | The wild route rule (and the bind fix) | **done**; C1 passed on the pod (engine and client) | 2026-10-27 | `a95d2ec` |
+
+### Worlds and sessions: WS2 notes
+
+1. **The world record** `kantobridge/world.json` (`WorldRecord`, shared by server and client; schema
+   `protocol/world/world.schema.json`): `version`, `start`, `games[{game, region}]`, one game per world space. The server
+   reads it with the region table (`WorldIndexSync.worldRecord`) and puts `start` and `games` into the `world.regions`
+   document; without the file it derives them from the table (its regions' games, the start slot 0's region; a world
+   with no table: its one region). The client keeps it (`ClientRegions.record()`). **Choice:** the same game in two
+   regions is allowed (the GameTests' synthetic worlds have it; the plan only demands one game per world space).
+2. **`game.status.save{slot, name?, badges}`** at the title: the active slot's save summary from the engine's own
+   `listSlots` → `slotSummary` (`kb_engine.saveSummary`, Gen 1 in `gen1.lua`, Gen 2/3 in `common/slots.lua`), read again
+   on a snapshot or a save change and every 600 steps (it reads the slot's file).
+3. **`session.bind` M→G `slot` / `save` / `continue`** in `kb_pairing.decide`'s new first branch (the M9 switch seams
+   untouched): a recorded slot is bound as it is (a missing one `session.no_slot`), `current` the offline slot, `copy` a
+   world slot from `kb_engine.copySlot` (the engine's `duplicateSlot`; an empty offline slot gives `new`; a refused copy
+   pairs the offline slot, D14's fallback, `session.copy_fallback`), `new` an empty world slot; the pairing file records
+   the world's slot; `session.bound.save` says what was applied. **Choices:** `copy` works in singleplayer too, and
+   `current` in multiplayer pairs the offline slot (both only on an explicit choice; without one, today's rule).
+4. **The server's record:** `session.json` keeps `{slot, save}` per player and region (format 2 once a choice is
+   recorded; `SessionRecord.forget` for a lost slot) from the relayed `session.bound{slot, save}`; the S→C `session.bind`
+   carries `regions{<id>:{slot, save?}}` (the legacy region by its id). **Deviation:** the plan also named the player's
+   `kantobridge:save_pairs` attachment; the world's `session.json` is the one record (it is per world, as the choice is).
+   The client keeps the choices (`RecordedChoices`, `SessionRuntime.recorded()`); `SessionBinder` accepts and keeps
+   `session.bound`'s `save`, `started`, `parked` (it refused any extra field before: the new bridge's answers would have
+   been dropped) and relays `save` up.
+5. **Tests:** Lua `test_lua_pairing.py` +5 (copy, an empty offline slot, a refused copy's fallback, new, current, a
+   recorded slot singleplayer and missing, bad choices), `test_lua_progress.py` +1, `test_lua_game3_saves.py` +1
+   (`copySlot`); stand-ins +1, `test_world_record.py`; JUnit `WorldRecordTest` (5), `SessionRecordTest` +1,
+   `SessionBinderTest` +1, `RecordedChoicesTest`; pytest 2,502 passed; GameTests 145 passed. `fake_gen1` answers
+   `slot`/`save` (`slots`, a missing slot refused) and reports `game.status.save`. Fixed on the way: `route.leave` was
+   missing from the client's `RegionTags` (WS1). **Known, not ours:** `KbPackReloadTest.modelsReadFitAndStayWithinTheBudget`
+   fails on this server's 2-CPU container on the committed code too (a time budget); checked again on the pod at WS4.
 
 ### Worlds and sessions: WS1 notes
 

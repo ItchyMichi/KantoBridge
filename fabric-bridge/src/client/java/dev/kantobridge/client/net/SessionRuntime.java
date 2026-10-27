@@ -64,6 +64,8 @@ public final class SessionRuntime {
 	private final Map<BridgeLink, LinkSession> sessions = new LinkedHashMap<>();
 	/** The world id the server sent ({@code session.bind} S→C), or null. */
 	private @Nullable String serverWorld;
+	/** WS2: the recorded choices the server's session.bind named. */
+	private RecordedChoices recorded = RecordedChoices.NONE;
 
 	/** One link's save pairing (MG4): its gate, its save and PC relays and its binder. */
 	public final class LinkSession {
@@ -327,9 +329,16 @@ public final class SessionRuntime {
 			}
 		});
 		if (hasLeg(MsgTypes.SESSION_BIND, Catalog.Leg.S2C)) {
-			runtime.links.onServer(MsgTypes.SESSION_BIND, false, (link, message) -> runtime.serverWorld = JsonFields.str(message.data(), "world"));
+			runtime.links.onServer(MsgTypes.SESSION_BIND, false, (link, message) -> {
+				runtime.serverWorld = JsonFields.str(message.data(), "world");
+				// WORLD_SESSIONS_PLAN WS2: the player's recorded choices for this world
+				runtime.recorded = RecordedChoices.of(message.data());
+			});
 		}
-		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> runtime.serverWorld = null);
+		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+			runtime.serverWorld = null;
+			runtime.recorded = RecordedChoices.NONE;
+		});
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
 			long now = runtime.now();
 			for (LinkSession session : runtime.sessions.values()) {
@@ -339,6 +348,7 @@ public final class SessionRuntime {
 				session.binder.leftWorld();
 			}
 			runtime.serverWorld = null;
+			runtime.recorded = RecordedChoices.NONE;
 		});
 		// After BridgeRuntime's tick, which drains the bridge's messages.
 		ClientTickEvents.END_CLIENT_TICK.register(runtime::tick);
@@ -354,6 +364,11 @@ public final class SessionRuntime {
 
 	public static @Nullable SessionRuntime get() {
 		return instance;
+	}
+
+	/** WS2: the player's recorded save choices for the world they are in (the server's {@code session.bind.regions}). */
+	public RecordedChoices recorded() {
+		return this.recorded;
 	}
 
 	/** {@code link}'s pairing. */

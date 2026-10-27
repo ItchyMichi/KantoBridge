@@ -83,6 +83,8 @@ class FakeGen1:
         self.playthrough = state
         self.slot_has_save = slot_has_save
         self.slot = 1
+        self.slots = {1}  # WS2: the slots the fake engine has (a recorded slot outside them is refused)
+        self.last_bind = {}
         self.away = None
         self.markers = dict(self.catalogue.markers) if self.catalogue is not None else {}
         self._status_sent = None
@@ -232,6 +234,8 @@ class FakeGen1:
         elif msg_type == "session.bind":
             # FP1: the region's choice for members the game lacks (absent: visitor)
             self.incompatible = data.get("incompatible", "visitor")
+            # WORLD_SESSIONS_PLAN WS2/WS3: the recorded slot, the first-join choice and what to do after
+            self.last_bind = dict(data)
             # A waiting bind answers later without blocking pings.
             self._bind_task = asyncio.create_task(self._bind(conn, seq))
         elif msg_type == "party.sync":
@@ -269,13 +273,29 @@ class FakeGen1:
         """session.bind: fake_gen1 has one slot. With bind_wait set it first says why it waits, like
         gen1-bridge switching saves (session.waiting), then answers. save.loaded follows the answer."""
         switched = "none"
+        bind = getattr(self, "last_bind", {}) or {}
+        slot = bind.get("slot")
+        if slot is not None and slot not in self.slots:
+            # WS2: a recorded slot the engine no longer has
+            await conn.send("error", {"code": "session.no_slot", "msg": "session.no_slot"}, re=seq)
+            return
+        save = bind.get("save")
+        if slot is not None:
+            self.slot = slot
+        elif save in ("copy", "new"):
+            self.slot = max(self.slots) + 1
+            self.slots.add(self.slot)
+            self.slot_has_save = save == "copy" and self.slot_has_save
         if self.bind_wait is not None:
             reason, seconds = self.bind_wait
             self.bind_wait = None
             await conn.send("session.waiting", {"slot": 1, "reason": reason}, re=seq)
             await asyncio.sleep(seconds)
             switched = "title"
-        await conn.send("session.bound", {"slot": self.slot, "switched": switched}, re=seq)
+        bound = {"slot": self.slot, "switched": switched}
+        if save is not None:
+            bound["save"] = save  # WS2: the choice applied
+        await conn.send("session.bound", bound, re=seq)
         await conn.send("game.status", self.game_status())  # MG2: after session.bound
         await conn.send("save.loaded", self.loaded())
 
@@ -304,6 +324,9 @@ class FakeGen1:
         if self.ingame:
             data["name"] = "TESTER"
             data["visitors"] = self.visitors()  # FP1
+        elif self.slot_has_save:
+            # WS2: at the title, the slot's save summary (what a CONTINUE would load)
+            data["save"] = {"slot": self.slot, "name": "TESTER", "badges": len(self.story.badges)}
         return data
 
     # --- foreign Pokémon (FP1) ---------------------------------------------------------------------

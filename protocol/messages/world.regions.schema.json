@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kantobridge.invalid/protocol/messages/world.regions.schema.json",
   "title": "world.regions",
-  "description": "Several games (MULTI_GAME_PLAN §4.6, MG3): the world's region table and records, in parts on join before the regions' world.index parts: the text of {\"version\":1,\"world\":\"<id>\",\"table\":{...regions.json...},\"regions\":[<region record>...]}. A legacy world sends one implicit record for kanto. Ids, numbers and hashes only.",
+  "description": "Several games (MULTI_GAME_PLAN §4.6, MG3): the world's region table and records, in parts on join before the regions' world.index parts: the text of {\"version\":1,\"world\":\"<id>\",\"table\":{...regions.json...},\"regions\":[<region record>...],\"start\"?:\"<region>\",\"games\"?:[{\"game\",\"region\"}...]}. A legacy world sends one implicit record for kanto. Ids, numbers and hashes only. WORLD_SESSIONS_PLAN WS2: start and games are the world record (kantobridge/world.json, protocol/world/world.schema.json); without one, the server derives them from the table (start: slot 0's region).",
   "x-type": "world.regions",
   "x-legs": [
     "s2c"

@@ -689,3 +689,82 @@ def test_a_bind_carries_the_regions_choice_for_foreign_members():
     bad = g.send("session.bind", {"world": A, "multiplayer": True, "incompatible": "drop"})
     g.run(2)
     assert ("bad_message", bad) in errors(g)
+
+
+# ------------------------------------------------------------ WORLD_SESSIONS_PLAN WS2: recorded slots and choices
+
+
+def bind_with(g, world, multiplayer=True, steps=2, **extra):
+    seq = g.send("session.bind", dict({"world": world, "multiplayer": multiplayer}, **extra))
+    g.run(steps)
+    return seq
+
+
+def last_bound(g):
+    m = g.received("session.bound")[-1]
+    return m["data"], m.get("re")
+
+
+def test_copy_gives_the_world_a_slot_holding_the_offline_save():
+    g = game()
+    seq = bind_with(g, A, save="copy")
+    data, re = last_bound(g)
+    assert (data["slot"], data["save"], re) == (2, "copy", seq)
+    assert active(g) == "slot2" and g.E.slotFiles[b"slot2"] is True, "the copy holds the offline save"
+    assert g.E.slotFiles[b"slot1"] is True, "the offline save is untouched"
+    assert label(g, "slot2").startswith("MULTIPLAYER ")
+    assert store(g)["games"]["blue"] == {"home": "slot1", "worlds": {A: {"slot": "slot2"}}}
+    st = g.status()
+    assert (st["pairingCopies"], st["pairingCopyFallbacks"]) == (1, 0)
+    # later binds without a choice reuse the world's slot; a recorded slot binds it as it is
+    bind(g, A)
+    assert last_bound(g)[0]["slot"] == 2 and "save" not in last_bound(g)[0]
+    bind_with(g, A, slot=2)
+    assert last_bound(g)[0]["slot"] == 2 and calls(g, "duplicateSlot") == 1
+
+
+def test_copy_of_an_empty_offline_slot_is_a_new_slot_and_a_refused_copy_pairs_the_offline_slot():
+    g = game(saved=False)
+    bind_with(g, A, save="copy")
+    data, _ = last_bound(g)
+    assert (data["slot"], data["save"]) == (2, "new") and not g.E.slotFiles[b"slot2"]
+    assert g.status()["pairingCopyEmpty"] == 1
+    f = game()
+    f.E.copyFails = True
+    bind_with(f, B, save="copy")
+    data, _ = last_bound(f)
+    assert (data["slot"], data["save"]) == (1, "current"), "D14's fallback: the offline slot itself"
+    assert f.status()["pairingCopyFallbacks"] == 1 and registry(f) == ["slot1"]
+    assert warnings(f, "session.copy_fallback")
+
+
+def test_new_gives_an_empty_slot_and_current_keeps_the_offline_one():
+    g = game()
+    bind_with(g, SOLO, multiplayer=False, save="new")
+    data, _ = last_bound(g)
+    assert (data["slot"], data["save"]) == (2, "new") and active(g) == "slot2"
+    assert store(g)["games"]["blue"]["worlds"][SOLO] == {"slot": "slot2"}
+    c = game()
+    bind_with(c, SOLO, multiplayer=False, save="current")
+    data, _ = last_bound(c)
+    assert (data["slot"], data["save"], data["switched"]) == (1, "current", "none")
+    assert SOLO not in store(c)["games"]["blue"]["worlds"] if store(c) else True
+
+
+def test_a_recorded_slot_is_bound_singleplayer_too_and_a_missing_one_is_refused():
+    g = game()
+    g.E.SaveData.createSlot()  # slot2, a second playthrough
+    g.E.slotFiles[b"slot2"] = True
+    seq = bind_with(g, SOLO, multiplayer=False, slot=2)
+    data, re = last_bound(g)
+    assert (data["slot"], re) == (2, seq) and active(g) == "slot2", "two singleplayer worlds, two playthroughs"
+    missing = bind_with(g, SOLO, multiplayer=False, slot=9)
+    assert ("session.no_slot", missing) in errors(g)
+    assert g.status()["pairingRecordedMissing"] == 1
+
+
+def test_bad_choices_are_refused():
+    g = game()
+    for extra in ({"save": "keep"}, {"continue": "go"}, {"slot": 0}, {"slot": 300}, {"slot": "2"}):
+        seq = bind_with(g, A, **extra)
+        assert ("bad_message", seq) in errors(g), extra

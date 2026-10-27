@@ -5313,6 +5313,48 @@ function Gen1.new(opts)
     return false
   end
 
+  -- WORLD_SESSIONS_PLAN WS2: a slot's save summary as the launcher and the
+  -- title show it (SaveData.listSlots -> slotSummary, src/core/SaveData.lua:
+  -- 1642-1646, :1505-1560): { slot = n, name = <the player's name>?, badges }
+  -- when the slot (default: the active one) holds a save, else nil.
+  function engine.saveSummary(id)
+    local SaveData, v = try("src.core.SaveData"), engine.gameVersion()
+    if not (SaveData and v and type(SaveData.listSlots) == "function") then return nil end
+    if id == nil and type(SaveData.activeSlot) == "function" then
+      local okA, a = pcall(SaveData.activeSlot, v)
+      id = okA and a or nil
+    end
+    if not slotId(id) then return nil end
+    local ok, list = pcall(SaveData.listSlots, v)
+    for _, row in ipairs(ok and type(list) == "table" and list or {}) do
+      if type(row) == "table" and row.id == id then
+        if not row.exists then return nil end
+        local n = tonumber(id:match("^slot(%d+)$"))
+        local meta = type(row.meta) == "table" and row.meta or {}
+        local badges = tonumber(meta.badges) or 0
+        local out = { slot = n, badges = math.max(0, math.min(16, math.floor(badges))) }
+        if type(row.name) == "string" and #row.name >= 1 and #row.name <= 16 then out.name = row.name end
+        return out
+      end
+    end
+    return nil
+  end
+  -- WS2 (D14): a copy of a slot's save in a new slot, labelled, through the
+  -- engine's own SaveData.duplicateSlot (src/core/SaveData.lua:1937-2000: a
+  -- new playthrough id, read back before it counts): the new id, or nil plus
+  -- a reason.
+  function engine.copySlot(src, label)
+    local SaveData, v = try("src.core.SaveData"), engine.gameVersion()
+    if not (slotId(src) and SaveData and v and type(SaveData.duplicateSlot) == "function") then return nil, "no_copy" end
+    local ok, id, err = pcall(SaveData.duplicateSlot, v, src, label)
+    if not ok then
+      warnAt("engine.copy_slot_failed", id)
+      return nil, "failed"
+    end
+    if not slotId(id) then return nil, type(err) == "string" and "refused" or "failed" end
+    return id
+  end
+
   -- Labels a slot in Gen1Recomp's launcher. True when it took.
   function engine.labelSlot(id, label)
     local SaveData, version = try("src.core.SaveData"), engine.gameVersion()

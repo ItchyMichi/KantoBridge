@@ -241,6 +241,20 @@
       }
     },
     {
+      "type": "game.status",
+      "seq": 40,
+      "redacted": {
+        "game": "crystal",
+        "playthrough": "title",
+        "ingame": false,
+        "started": false,
+        "badges": 0,
+        "markers": {},
+        "slot": 3,
+        "save": {"slot": 3, "name": "<rom:str:6:92397ad4>", "badges": 4}
+      }
+    },
+    {
       "type": "hello",
       "seq": 11,
       "redacted": {
@@ -838,7 +852,44 @@
         "region": "johto"
       }
     },
+    {
+      "type": "session.bind",
+      "seq": 13,
+      "redacted": {"world": "kanto-test", "multiplayer": true, "save": "copy", "continue": "play"}
+    },
+    {
+      "type": "session.bind",
+      "seq": 14,
+      "redacted": {
+        "world": "kanto-test",
+        "multiplayer": false,
+        "slot": 4,
+        "continue": "park",
+        "region": "johto"
+      }
+    },
+    {
+      "type": "session.bind",
+      "seq": 15,
+      "redacted": {
+        "world": "kanto-test",
+        "multiplayer": true,
+        "regions": {"kanto": {"slot": 3, "save": "copy"}, "johto": {"save": "new"}}
+      }
+    },
     {"type": "session.bound", "seq": 11, "redacted": {"slot": 2, "switched": "title"}},
+    {
+      "type": "session.bound",
+      "seq": 12,
+      "redacted": {
+        "slot": 3,
+        "switched": "title",
+        "save": "copy",
+        "started": "continue",
+        "parked": false
+      }
+    },
+    {"type": "session.bound", "seq": 13, "redacted": {"slot": 3, "save": "copy", "region": "johto"}},
     {"type": "session.waiting", "seq": 12, "redacted": {"slot": 2, "reason": "busy"}},
     {
       "type": "snapshot",

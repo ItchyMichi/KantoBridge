@@ -1,1 +1,1 @@
-[{"type": "session.bound", "seq": 11, "re": 2, "data": {"slot": 2, "switched": "title"}}]
+[{"type": "session.bound", "seq": 11, "re": 2, "data": {"slot": 2, "switched": "title"}}, {"type": "session.bound", "seq": 12, "re": 13, "data": {"slot": 3, "switched": "title", "save": "copy", "started": "continue", "parked": false}}, {"type": "session.bound", "seq": 13, "data": {"slot": 3, "save": "copy", "region": "johto"}}]

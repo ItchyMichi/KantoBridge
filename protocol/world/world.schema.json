@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/world/world.schema.json",
+  "title": "world record",
+  "description": "WORLD_SESSIONS_PLAN §2.1 (WS2): <world>/kantobridge/world.json, the games a world plays (one per world space) and its start region. Written by the creation flow and \"Add a region\"; read by the server (and sent in the world.regions document) and the client. A world without it is a legacy world: its games are its regions' games, start is slot 0's region.",
+  "type": "object",
+  "required": [
+    "version",
+    "start",
+    "games"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "start": {
+      "$ref": "../defs.schema.json#/$defs/regionId",
+      "description": "The region whose town is the world spawn and whose game a fresh player follows first; one of games' regions."
+    },
+    "games": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "required": [
+          "game",
+          "region"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "game": {
+            "$ref": "../defs.schema.json#/$defs/gameId"
+          },
+          "region": {
+            "$ref": "../defs.schema.json#/$defs/regionId"
+          }
+        }
+      }
+    }
+  }
+}
