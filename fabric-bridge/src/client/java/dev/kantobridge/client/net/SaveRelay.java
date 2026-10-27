@@ -27,9 +27,33 @@ import org.jetbrains.annotations.Nullable;
  * <li>M10: {@code save.loaded} (which save the hidden game runs from) goes to the server unchanged, which compares it with
  * the world's save pair. It isn't kept: gen1-bridge sends it after every pairing and whenever its game loads a save.</li>
  * </ul>
+ * <p>WORLD_SESSIONS_PLAN WS4 (§2.4, D5): the server's {@code save.request{reason:"world"}} (Minecraft saves the world) and
+ * the quit choreography's {@code save.request{reason:"quit"}} (WS5) go to gen1-bridge through {@link #request}, at most
+ * once per link per {@value #SAVE_MIN_MS} ms for {@code world} ({@code quit} always). gen1-bridge answers
+ * {@code act.result{kind:"save"}} ({@link #requestResult}); a written save then arrives as an ordinary {@code save.begin}
+ * and is relayed and answered as above. {@link #request()} says where the latest request stands (for the HUD line and the
+ * quit's wait).
+ *
  * Plain Java, client thread only; {@link SessionRuntime} is the glue.
  */
 public final class SaveRelay {
+	/** WS4: one world save request per link at most this often. */
+	public static final long SAVE_MIN_MS = 60_000;
+
+	/** WS4: where the latest {@code save.request} stands. */
+	public enum RequestState {
+		/** None sent (or it was dropped with its link). */
+		NONE,
+		/** Sent, not answered yet. */
+		SENT,
+		/** gen1-bridge wrote the save; its {@code save.begin} is on the way (or waits for its {@code save.done}). */
+		WRITTEN,
+		/** The save's {@code save.done} came (ok or not). */
+		DONE,
+		/** gen1-bridge refused ({@link #refusal}: not_ingame, not_idle, vetoed, failed, busy). */
+		REFUSED
+	}
+
 	/** Where messages go. */
 	public interface Port {
 		/** To gen1-bridge, with {@code re} or null; false when not connected (then the message is dropped). */
@@ -54,6 +78,11 @@ public final class SaveRelay {
 		public long repeats;
 		public long loaded;
 		public long loadedDropped;
+		/** WS4: save.request sent, skipped by the rate limit, written, refused. */
+		public long requests;
+		public long requestsLimited;
+		public long requestsWritten;
+		public long requestsRefused;
 	}
 
 	private static final class Record {
@@ -86,6 +115,85 @@ public final class SaveRelay {
 	/** The link to gen1-bridge went up or down: seqs from before don't answer anything any more. */
 	public void linkChanged() {
 		this.link++;
+		if (this.requestState == RequestState.SENT || this.requestState == RequestState.WRITTEN) {
+			this.requestState = RequestState.NONE;
+		}
+	}
+
+	// ---- WS4: save.request ----
+
+	private RequestState requestState = RequestState.NONE;
+	private @Nullable String refusal;
+	private @Nullable String requestReason;
+	private long requestSeq = -1;
+	private long requestedAt = Long.MIN_VALUE;
+	private long worldAskedAt = Long.MIN_VALUE;
+	/** The save id the written request's save.begin carried (its save.done ends the request), or null. */
+	private @Nullable String requestSave;
+
+	/**
+	 * Asks gen1-bridge for a save of its own ({@code world} or {@code quit}); {@code seq} is what {@code sendTracked} gave
+	 * (-1: not sent). Returns false when a {@code world} request was skipped by the rate limit.
+	 */
+	public boolean request(String reason, long now, java.util.function.ToLongFunction<JsonObject> send) {
+		if ("world".equals(reason) && this.worldAskedAt != Long.MIN_VALUE && now - this.worldAskedAt < SAVE_MIN_MS) {
+			this.stats.requestsLimited++;
+			return false;
+		}
+		JsonObject data = new JsonObject();
+		data.addProperty("reason", reason);
+		long seq = send.applyAsLong(data);
+		if (seq < 0) {
+			this.warn("save.request_unsent");
+			return false;
+		}
+		if ("world".equals(reason)) {
+			this.worldAskedAt = now;
+		}
+		this.requestSeq = seq;
+		this.requestReason = reason;
+		this.requestedAt = now;
+		this.requestState = RequestState.SENT;
+		this.refusal = null;
+		this.requestSave = null;
+		this.stats.requests++;
+		return true;
+	}
+
+	/** {@code act.result{kind:"save"}} from gen1-bridge (its {@code re}); true when it answered the latest request. */
+	public boolean requestResult(@Nullable Long re, boolean ok, @Nullable String reason) {
+		if (re == null || re != this.requestSeq || this.requestState != RequestState.SENT) {
+			return false;
+		}
+		if (ok) {
+			this.requestState = RequestState.WRITTEN;
+			this.stats.requestsWritten++;
+		} else {
+			this.requestState = RequestState.REFUSED;
+			this.refusal = reason == null ? "failed" : reason;
+			this.stats.requestsRefused++;
+		}
+		return true;
+	}
+
+	/** WS4: where the latest request stands. */
+	public RequestState request() {
+		return this.requestState;
+	}
+
+	/** WS4: why gen1-bridge refused the latest request, or null. */
+	public @Nullable String refusal() {
+		return this.requestState == RequestState.REFUSED ? this.refusal : null;
+	}
+
+	/** WS4: the latest request's reason ({@code world}, {@code quit}), or null. */
+	public @Nullable String requestReason() {
+		return this.requestReason;
+	}
+
+	/** WS4: when the latest request went out. */
+	public long requestedAt() {
+		return this.requestedAt;
 	}
 
 	/** {@code save.begin} from gen1-bridge. */
@@ -108,6 +216,10 @@ public final class SaveRelay {
 		}
 		record = new Record(id, message.seq(), this.link);
 		this.remember(record);
+		if (this.requestState == RequestState.WRITTEN && this.requestSave == null) {
+			// WS4: the requested save's own save.begin (its save.done ends the request)
+			this.requestSave = id;
+		}
 		if (this.port.toServer(MsgTypes.SAVE_BEGIN, message.data().deepCopy())) {
 			this.stats.relayed++;
 		} else {
@@ -210,6 +322,10 @@ public final class SaveRelay {
 		this.stats.answered++;
 		if (!ok) {
 			this.stats.failed++;
+		}
+		if (this.requestState == RequestState.WRITTEN && record.id.equals(this.requestSave)) {
+			// WS4: the requested save's Minecraft side is done
+			this.requestState = RequestState.DONE;
 		}
 		this.deliver(record, now);
 	}

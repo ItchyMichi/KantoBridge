@@ -1,7 +1,9 @@
 -- kb_save: saving and session pairing (docs/PLAN.md section 4.1 "Saving and
 -- sessions", flow 12; docs/PROTOCOL.md "Saving").
 --
---   save.begin{save, reason:"menu"|"center", pair, at?}   G->M
+--   save.begin{save, reason:"menu"|"center"|"world"|"quit", pair, at?}   G->M
+--   save.request{reason:"world"|"quit"}                 M->G (WORLD_SESSIONS_PLAN WS4)
+--                 -> act.result{kind:"save", ok, reason?}
 --   save.done{save, ok}                                   M->G (log only)
 --   session.bind{world, multiplayer}                      M->G
 --   session.bound{slot, switched}                         G->M (re set)
@@ -24,6 +26,20 @@
 -- once the nurse's lines are done and the player stands, which sends
 -- save.begin{reason:"center"}. A save that is vetoed or fails is a counted
 -- warning; the hidden game's own start-menu SAVE always works as before.
+--
+-- WORLD_SESSIONS_PLAN WS4 (§2.4, D5): save.request{reason} asks the hidden
+-- game for a save of its own when Minecraft saves the world ("world": the
+-- autosave, /save-all) or leaves it ("quit"). It takes the center save's
+-- path: kb_engine.writeSaveAs(reason) (Game:writeSave; Gen 3 saveGame) once
+-- the engine's quick-save gate is open (kb_engine.switchGateOpen), or, for a
+-- game held by the region hold, once no battle runs (WS0: a held game saves);
+-- it waits up to SAVE_WAIT steps for that. The save announces itself as
+-- save.begin with the request's reason and pairs as any other. Answers:
+-- ok true once written; ok false with not_ingame (the title), not_idle (no
+-- free moment within SAVE_WAIT: a battle, a text box, a walk), vetoed (the
+-- save.write veto or a failed write), failed (writeSave threw). One request
+-- waits at a time (a newer one replaces it: the older is answered busy);
+-- a dropped connection drops it.
 --
 -- save.done is log only: the hidden game's save already happened and is
 -- never blocked or rolled back. ok false is a counted warning
@@ -84,6 +100,8 @@
 local Save = {}
 
 Save.MAX_SENT = 16 -- save ids remembered for save.done
+Save.SAVE_WAIT = 600 -- WS4: steps a save.request waits for a free moment
+Save.REQUEST_REASONS = { world = true, quit = true }
 Save.PAIR_KEY = "savePair"
 Save.PAIR_DIGITS = 16
 
@@ -138,7 +156,12 @@ function Save.new(opts)
     -- M10: save pairs
     pairs = 0, pairsKept = 0, pairStoreFailed = 0, legacyPairs = 0, loads = 0, newGames = 0,
     loadedSent = 0, opsSent = 0,
+    -- WS4: save.request
+    world = 0, quit = 0, requests = 0, requestWritten = 0, requestNotIngame = 0, requestNotIdle = 0,
+    requestVetoed = 0, requestFailed = 0, requestReplaced = 0,
   }
+  local request -- WS4: the save.request waiting { reason, seq, gen, since }
+  local requestSteps = 0
   local fallback = {} -- the identity's home before game.ready (no process slot yet)
 
   local function remember(id, reason)
@@ -289,7 +312,7 @@ function Save.new(opts)
       end
       return
     end
-    local reason = saving == "center" and "center" or "menu"
+    local reason = (saving == "center" or saving == "world" or saving == "quit") and saving or "menu"
     local pair = newPair(meta)
     writeRecord({ pair = pair, at = meta.savedAt, ops = 0 })
     local id, replaced = engine.queueSave(reason, { pair = pair, at = meta.savedAt })
@@ -361,6 +384,73 @@ function Save.new(opts)
         log.info("save.begin", { save = q.save, reason = q.reason, pair = short(pair), count = counts.begun })
       end
     end
+  end
+
+  -- WS4: save.request{reason} from the session (role already checked). Returns
+  -- true, or false plus "bad_message"; out (optional) gets a replaced
+  -- request's busy answer.
+  function saves.request(data, seq, gen)
+    if type(data) ~= "table" or not Save.REQUEST_REASONS[data.reason] then return false, "bad_message" end
+    counts.requests = counts.requests + 1
+    if request then
+      counts.requestReplaced = counts.requestReplaced + 1
+      request.replaced = true
+      saves.replacedRequest = request
+    end
+    request = { reason = data.reason, seq = seq, gen = gen, since = requestSteps }
+    return true
+  end
+
+  local function answerRequest(out, r, ok, why)
+    local res = { kind = "save", ok = ok }
+    if why then res.reason = why end
+    out[#out + 1] = { "act.result", res, "answer", re = r.seq, gen = r.gen }
+  end
+
+  -- WS4: one step of the waiting save.request (before saves.step, so its
+  -- save.begin goes out in this very step). f: kb_engine.observe();
+  -- link = { live, generation }.
+  function saves.requestStep(f, out, link)
+    requestSteps = requestSteps + 1
+    if saves.replacedRequest then
+      local old = saves.replacedRequest
+      saves.replacedRequest = nil
+      if link and link.live and old.gen == link.generation then answerRequest(out, old, false, "busy") end
+    end
+    local r = request
+    if not r then return end
+    if not (link and link.live) or r.gen ~= link.generation then
+      request = nil
+      return
+    end
+    if engine.playthrough() == "title" then
+      request = nil
+      counts.requestNotIngame = counts.requestNotIngame + 1
+      return answerRequest(out, r, false, "not_ingame")
+    end
+    local held = engine.awayHeld and engine.awayHeld() or false
+    local free = engine.switchGateOpen() or (held and not (f and f.battle))
+    if not free then
+      if requestSteps - r.since > Save.SAVE_WAIT then
+        request = nil
+        counts.requestNotIdle = counts.requestNotIdle + 1
+        if log then log.info("save.request_not_idle", { reason = r.reason, count = counts.requestNotIdle }) end
+        return answerRequest(out, r, false, "not_idle")
+      end
+      return
+    end
+    request = nil
+    local res = engine.writeSaveAs(r.reason)
+    if res == "written" then
+      counts.requestWritten = counts.requestWritten + 1
+      if log then log.info("save.request_written", { reason = r.reason, held = held, count = counts.requestWritten }) end
+      return answerRequest(out, r, true)
+    elseif res == "refused" then
+      counts.requestVetoed = counts.requestVetoed + 1
+      return answerRequest(out, r, false, "vetoed")
+    end
+    counts.requestFailed = counts.requestFailed + 1
+    return answerRequest(out, r, false, "failed")
   end
 
   -- After saves.step: save.loaded when a bind was answered or the game was

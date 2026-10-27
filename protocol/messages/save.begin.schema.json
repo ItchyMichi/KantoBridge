@@ -23,7 +23,9 @@
     "reason": {
       "enum": [
         "menu",
-        "center"
+        "center",
+        "world",
+        "quit"
       ]
     },
     "pair": {

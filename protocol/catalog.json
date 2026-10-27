@@ -543,6 +543,13 @@
       "redact": [],
       "schema": "messages/save.mismatch.schema.json"
     },
+    "save.request": {
+      "legs": ["m2g", "s2c"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/save.request.schema.json"
+    },
     "session.bind": {
       "legs": ["m2g", "s2c"],
       "re": "never",

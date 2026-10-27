@@ -708,8 +708,9 @@ compat profile (`hello.ok.compat`: Gen 1 151 and 165, Emerald 386 and 354), appl
 
 | Type | Dir | Data | ROM |
 |---|---|---|---|
-| `save.begin` | G→M, C→S | `save` (id), `reason:"menu"\|"center"`, `pair` (the hidden save's lasting id), `at?` (its time, Unix s) | |
+| `save.begin` | G→M, C→S | `save` (id), `reason:"menu"\|"center"\|"world"\|"quit"` (WS4: world and quit answer a `save.request`), `pair` (the hidden save's lasting id), `at?` (its time, Unix s) | |
 | `save.done` | S→C, M→G | `save, ok`; `re` optional | |
+| `save.request` | S→C, M→G | `reason:"world"\|"quit"` (WORLD_SESSIONS_PLAN WS4: Minecraft saves the world, or leaves it: the hidden game is asked for a save of its own) → `act.result{kind:"save", ok, reason?}`; the save then comes as `save.begin` with this reason | |
 | `session.bind` | S→C, M→G | `world, multiplayer, incompatible?:"visitor"\|"leave_out"` (save pairing: the server tells its client the world id; the client passes it on after joining and after every reconnect; `incompatible`, M→G: the link's region record's `rules.compat.onIncompatible`, absent = `visitor`); WORLD_SESSIONS_PLAN: M→G `slot?` (the slot recorded for this player and world), `save?:"current"\|"copy"\|"new"` (the first join's choice), `continue?:"play"\|"park"\|"title"` (WS3); S→C `regions?{<region>:{slot?, save?}}` (the player's recorded choices) | |
 | `session.bound` | G→M, C→S | `slot, switched?:"none"\|"title"\|"saved"\|"moved"`; WORLD_SESSIONS_PLAN `save?` (the choice applied), `started?:"continue"\|"new"\|"none"`, `parked?` (WS3); `re` optional (the client records the pairing on the server, with `save`) | |
 | `session.waiting` | G→M | `slot, reason:"busy"\|"new_game"\|"save_failed"`; `re` optional (the bind) | |
@@ -1386,6 +1387,16 @@ before V1) counts as no pack.
   offline slot itself, applied `current`: D14's fallback); `new` an empty slot of the world's own. The world → slot
   pairing then reuses it; `session.bound.save` says what was applied. `game.status.save{slot, name?, badges}` at the
   title tells a saved game waiting there from a new one.
+- **Saving with the world (WORLD_SESSIONS_PLAN §2.4, D5; WS4).** Before Minecraft saves (Fabric's
+  `ServerLifecycleEvents.BEFORE_SAVE`: the autosave and `/save-all`; the server's own stop is skipped, the quit
+  choreography covers it) the server sends `save.request{reason:"world"}` to every player, at most once a minute per
+  player; a save the server runs for a hidden game's `save.begin` asks nobody (the loop guard). The client sends it on to
+  each bound link whose pairing is open (parked ones too), at most once a minute per link. gen1-bridge takes the center
+  save's path: it waits up to 600 logic steps for the engine's quick-save gate (or, for a game held by `region.park`, for
+  no battle) and writes the save (`Game:writeSave`; Gen 3 `saveGame`), which announces itself as `save.begin{reason:
+  "world"}` (or `"quit"`) and pairs like any other; `act.result{kind:"save"}` answers `ok`, or `not_ingame` (the title),
+  `not_idle` (no free moment: a battle, a text box, a walk), `vetoed`, `failed`, `busy` (a newer request replaced it).
+  Nothing is rolled back: a refusal is a HUD line ("Blue didn't save: …") and the world saves anyway.
 - **Every game continues at join (WORLD_SESSIONS_PLAN §2.3, D4, D13; WS3).** In a world with a record (a region world)
   the client's bind for each listed game carries `continue`: `play` for the region the player follows (the server's
   `region.state`, whose `followed` the server seeds with the record's `start` for a player who never said; else the

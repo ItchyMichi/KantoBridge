@@ -5469,6 +5469,23 @@ function Gen1.new(opts)
     return "written"
   end
 
+  -- WORLD_SESSIONS_PLAN WS4: a save Minecraft asked for (save.request),
+  -- announced with its reason ("world" or "quit"; engine.savingReason):
+  -- "written", "refused" or "error", as switchSave says.
+  function engine.writeSaveAs(reason)
+    local st = bridgeState()
+    if not (st and type(game.writeSave) == "function") then return "error" end
+    st.saving = reason
+    local ok, written = pcall(game.writeSave, game)
+    st.saving = nil
+    if not ok then
+      warnAt("engine.write_save_failed", written)
+      return "error"
+    end
+    if written == false or written == nil then return "refused" end
+    return "written"
+  end
+
   -- Back to the title, as the START menu's QUIT (Game:returnToTitle):
   -- unsaved progress is gone, so callers save first.
   function engine.toTitle()

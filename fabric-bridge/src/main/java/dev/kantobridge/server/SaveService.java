@@ -55,7 +55,7 @@ import org.jetbrains.annotations.Nullable;
  * The hidden game's save happened whatever Minecraft's does, so the pair is kept even when this save fails.
  */
 public final class SaveService {
-	private static final Set<String> REASONS = Set.of("menu", "center");
+	private static final Set<String> REASONS = Set.of("menu", "center", "world", "quit");
 	/** Answers kept per player for repeated ids (gen1-bridge sends a save again after a reconnect until answered). */
 	static final int REMEMBERED = 16;
 
@@ -71,7 +71,62 @@ public final class SaveService {
 	/** Call once from common init, after the relay. */
 	public static void init() {
 		RelayService.get().register(MsgTypes.SAVE_BEGIN, SaveService::onBegin);
-		ServerLifecycleEvents.SERVER_STOPPED.register(server -> ANSWERS.clear());
+		ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
+			ANSWERS.clear();
+			ASKED.clear();
+		});
+		// WORLD_SESSIONS_PLAN WS4 (§2.4, D5): Minecraft's own saves ask the hidden games for theirs
+		ServerLifecycleEvents.BEFORE_SAVE.register(SaveService::beforeSave);
+	}
+
+	/** WS4: one {@code save.request} per player at most this often (the vanilla autosave runs every 5 minutes). */
+	public static final long SAVE_MIN_MS = 60_000;
+	/** WS4: when each player was last asked (wall clock), and the requests sent. */
+	private static final Map<UUID, Long> ASKED = new HashMap<>();
+	private static final AtomicLong REQUESTS = new AtomicLong();
+	/** WS4's loop guard: true while {@link #save} runs Minecraft's save for a hidden save (its BEFORE_SAVE is ours). */
+	private static boolean saving;
+
+	/**
+	 * WS4: Minecraft is about to save the world (the autosave, {@code /save-all}; WS0: the stop too, skipped here: the
+	 * quit choreography saves the hidden games before a client leaves). Every player whose client can hear us gets
+	 * {@code save.request{reason:"world"}} (the client fans it out to its bound links), at most once per
+	 * {@link #SAVE_MIN_MS}; a save {@link #save} itself runs is not asked about (the loop guard).
+	 */
+	static void beforeSave(MinecraftServer server, boolean flush, boolean force) {
+		if (saving || !server.isRunning()) {
+			return;
+		}
+		long now = System.currentTimeMillis();
+		for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+			request(player, now);
+		}
+	}
+
+	/** WS4: sends one player {@code save.request{reason:"world"}} unless they were asked within SAVE_MIN_MS; true when sent. */
+	public static boolean request(ServerPlayer player, long now) {
+		Long last = ASKED.get(player.getUUID());
+		if (last != null && now - last < SAVE_MIN_MS) {
+			return false;
+		}
+		JsonObject data = new JsonObject();
+		data.addProperty("reason", "world");
+		if (!RelayService.get().send(player, MsgTypes.SAVE_REQUEST, data, null)) {
+			return false;
+		}
+		ASKED.put(player.getUUID(), now);
+		REQUESTS.incrementAndGet();
+		return true;
+	}
+
+	/** WS4: {@code save.request}s sent to players. */
+	public static long requests() {
+		return REQUESTS.get();
+	}
+
+	/** WS4 (tests): forgets when the players were asked. */
+	public static void resetRequests() {
+		ASKED.clear();
 	}
 
 	static void onBegin(ServerPlayer player, Envelope message) {
@@ -149,7 +204,15 @@ public final class SaveService {
 				return false;
 			}
 			saveCobblemonData(player);
-			if (!server.saveEverything(true, false, false)) {
+			// WS4's loop guard: this save is the hidden game's own; its BEFORE_SAVE asks nobody
+			boolean levels;
+			saving = true;
+			try {
+				levels = server.saveEverything(true, false, false);
+			} finally {
+				saving = false;
+			}
+			if (!levels) {
 				warn("no_levels");
 				return false;
 			}

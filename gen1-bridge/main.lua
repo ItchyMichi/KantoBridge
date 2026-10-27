@@ -737,6 +737,8 @@ return function(mod)
   for _, op in ipairs({ "give", "battle", "blackout", "leave" }) do
     session.on("route." .. op, queued(function(data, seq, gen) return routeActs.request(op, data, seq, gen) end))
   end
+  -- WORLD_SESSIONS_PLAN WS4: Minecraft's save asks for the hidden game's (act/kb_save.lua), answered by act.result
+  session.on("save.request", queued(saves.request))
   -- MG2: the region acts, answered by act.result (act/kb_region.lua)
   for _, op in ipairs({ "park", "resume", "start" }) do
     session.on("region." .. op, queued(function(data, seq, gen) return regionActs.request(op, data, seq, gen) end))
@@ -1030,6 +1032,12 @@ return function(mod)
     if not okProgress then
       log.once("progress.step_failed", "error", "progress.step_failed",
         { at = type(progressErr) == "string" and progressErr:match("[%w_/%.%-]+%.lua:%d+") or "unknown" })
+    end
+    -- WS4: a save.request's save (its save.begin goes out in this very step's saves.step)
+    local okReq, reqErr = pcall(saves.requestStep, facts, out, link)
+    if not okReq then
+      log.once("save.request_step_failed", "error", "save.request_step_failed",
+        { at = type(reqErr) == "string" and reqErr:match("[%w_/%.%-]+%.lua:%d+") or "unknown" })
     end
     saves.step(out, link)
     -- M10: which save the hidden game runs from, after a bind and on

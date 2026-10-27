@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/save.request.schema.json",
+  "title": "save.request",
+  "description": "WORLD_SESSIONS_PLAN §2.4, D5 (WS4): asks the hidden game for a save of its own because Minecraft saves the world (world: the autosave, /save-all; S→C from the server, which the client fans out to its bound links) or leaves it (quit: the client's quit choreography, WS5). gen1-bridge answers act.result{kind:\"save\", ok, reason?} (reasons: not_ingame, not_idle, vetoed, failed, busy); a written save announces itself as save.begin with this reason.",
+  "x-type": "save.request",
+  "x-legs": [
+    "m2g",
+    "s2c"
+  ],
+  "x-re": "never",
+  "type": "object",
+  "required": [
+    "reason"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "reason": {
+      "enum": [
+        "world",
+        "quit"
+      ]
+    },
+    "region": {
+      "$ref": "../defs.schema.json#/$defs/regionId",
+      "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."
+    }
+  }
+}

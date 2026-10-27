@@ -1,7 +1,1 @@
-[
-  {
-    "type": "save.begin",
-    "seq": 11,
-    "data": {"save": "sv-1", "reason": "menu", "pair": "3f2a9c0d1e4b5a67", "at": 1790000000}
-  }
-]
+[{"type": "save.begin", "seq": 11, "data": {"save": "sv-1", "reason": "menu", "pair": "3f2a9c0d1e4b5a67", "at": 1790000000}}, {"type": "save.begin", "seq": 511, "data": {"save": "sv-1", "reason": "world", "pair": "3f2a9c0d1e4b5a67", "at": 1790000000}}]

@@ -88,6 +88,7 @@ return {
     ["save.done"] = { m2g = true, s2c = true, re = "optional" },
     ["save.loaded"] = { g2m = true, c2s = true, re = "never" },
     ["save.mismatch"] = { s2c = true, re = "never" },
+    ["save.request"] = { m2g = true, s2c = true, re = "never" },
     ["session.bind"] = { m2g = true, s2c = true, re = "never" },
     ["session.bound"] = { g2m = true, c2s = true, re = "optional" },
     ["session.waiting"] = { g2m = true, re = "optional" },

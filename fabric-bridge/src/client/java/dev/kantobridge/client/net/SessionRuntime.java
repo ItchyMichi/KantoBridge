@@ -7,6 +7,7 @@ import dev.kantobridge.client.bridge.BridgeClock;
 import dev.kantobridge.client.bridge.BridgeLink;
 import dev.kantobridge.client.bridge.BridgeRuntime;
 import dev.kantobridge.client.bridge.ConnectionState;
+import dev.kantobridge.client.bridge.ConnectionStatus;
 import dev.kantobridge.client.bridge.Dispatcher;
 import dev.kantobridge.client.bridge.HelloOk;
 import dev.kantobridge.client.bridge.JsonFields;
@@ -277,6 +278,16 @@ public final class SessionRuntime {
 					this.gate.bound(message.re(), this.binder.switched(), SessionRuntime.this.now());
 				}
 			});
+			dispatcher.on(MsgTypes.ACT_RESULT, message -> {
+				// WS4: the answer to a save.request
+				if ("save".equals(JsonFields.str(message.data(), "kind"))) {
+					boolean ok = JsonFields.bool(message.data(), "ok", false);
+					String why = JsonFields.str(message.data(), "reason");
+					if (this.saves.requestResult(message.re(), ok, why) && !ok) {
+						SessionRuntime.this.saveRefused(this.link, why);
+					}
+				}
+			});
 			dispatcher.on(MsgTypes.SESSION_WAITING, message -> this.gate.waiting(JsonFields.str(message.data(), "reason"), message.re(),
 					SessionRuntime.this.now()));
 			dispatcher.on(MsgTypes.ERROR, message -> {
@@ -387,6 +398,11 @@ public final class SessionRuntime {
 		InputLock.holdWhile(() -> runtime.pc().pending());
 		UiRuntime.suspendWhile(() -> runtime.pc().pending());
 		bridge.addHudLine(() -> runtime.gate().hudLine(runtime.now()));
+		// WORLD_SESSIONS_PLAN WS4: the server's save.request (Minecraft saves the world) to every bound link
+		if (hasLeg(MsgTypes.SAVE_REQUEST, Catalog.Leg.S2C)) {
+			runtime.links.onServer(MsgTypes.SAVE_REQUEST, false, (link, message) -> runtime.saveAll(JsonFields.str(message.data(), "reason")));
+		}
+		bridge.addHudLine(() -> runtime.saveHudLine(runtime.now()));
 		bridge.addDebugLine(runtime::debugSaves);
 		bridge.addDebugLine(runtime::debugWorld);
 		bridge.addDebugLine(runtime::debugGate);
@@ -473,6 +489,52 @@ public final class SessionRuntime {
 			this.askFirstJoin(minecraft);
 		}
 	}
+
+	/** WS4: a refused save's HUD line stays this long. */
+	static final long SAVE_NOTICE_MS = 8_000;
+	private ConnectionStatus.@Nullable Line saveNotice;
+	private long saveNoticeUntil = -1;
+
+	/**
+	 * WS4 (D5): asks every bound link's hidden game for a save of its own ({@code world}: Minecraft saved the world;
+	 * {@code quit}: WS5's leaving). Held (parked) games are asked too. Returns the links asked.
+	 */
+	public int saveAll(@Nullable String reason) {
+		if (!"world".equals(reason) && !"quit".equals(reason)) {
+			return 0;
+		}
+		long now = this.now();
+		int asked = 0;
+		for (LinkSession session : this.sessions.values()) {
+			if (session.link.connected() && session.binder.bound() && session.gate.serverOpen()
+					&& session.saves.request(reason, now, data -> session.link.client().sendTracked(MsgTypes.SAVE_REQUEST, data))) {
+				asked++;
+			}
+		}
+		if (asked > 0) {
+			LOGGER.info("save: asked {} hidden game(s) for a {} save", asked, reason);
+		}
+		return asked;
+	}
+
+	/** WS4: "Blue didn't save: in a battle", for a while after a refusal. */
+	private ConnectionStatus.@Nullable Line saveHudLine(long now) {
+		return now < this.saveNoticeUntil ? this.saveNotice : null;
+	}
+
+	void saveRefused(BridgeLink link, @Nullable String reason) {
+		if ("not_ingame".equals(reason)) {
+			return; // a game at its title has nothing to save
+		}
+		String why = reason == null ? "failed" : reason;
+		String game = link.game() == null ? "?" : I18n.get("kantobridge.game." + link.game());
+		this.saveNotice = new ConnectionStatus.Line("kantobridge.hud.save.refused." + (SAVE_REFUSALS.contains(why) ? why : "failed"),
+				List.of(game), true);
+		this.saveNoticeUntil = this.now() + SAVE_NOTICE_MS;
+		LOGGER.info("save: a hidden game didn't save ({})", why);
+	}
+
+	static final java.util.Set<String> SAVE_REFUSALS = java.util.Set.of("not_idle", "vetoed", "failed", "busy");
 
 	/** WS3: the server's presence is waited for at most this long after entering a world (an older server sends none). */
 	static final long PRESENCE_WAIT_MS = 3000;

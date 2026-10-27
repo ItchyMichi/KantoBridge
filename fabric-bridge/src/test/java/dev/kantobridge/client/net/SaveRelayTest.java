@@ -192,4 +192,30 @@ class SaveRelayTest {
 		this.relay.fromBridge(begin(8, "sv-10", "menu"), 70_000);
 		assertEquals(2, this.links.server.size());
 	}
+
+	@Test
+	void aSaveRequestIsSentOnceAMinuteAndFollowedToItsSaveDone() throws Exception {
+		// WORLD_SESSIONS_PLAN WS4: save.request -> act.result{kind:save} -> save.begin -> save.done
+		java.util.List<JsonObject> requests = new java.util.ArrayList<>();
+		long[] seq = {40};
+		assertTrue(this.relay.request("world", 1_000, data -> {
+			requests.add(data.deepCopy());
+			return ++seq[0];
+		}));
+		assertEquals(SaveRelay.RequestState.SENT, this.relay.request());
+		assertEquals("{\"reason\":\"world\"}", dev.kantobridge.proto.ProtoJson.write(requests.get(0)));
+		assertFalse(this.relay.request("world", 30_000, data -> ++seq[0]), "a world request within a minute is skipped");
+		assertFalse(this.relay.requestResult(99L, true, null), "another request's answer");
+		assertTrue(this.relay.requestResult(41L, true, null));
+		assertEquals(SaveRelay.RequestState.WRITTEN, this.relay.request());
+		this.relay.fromBridge(begin(12, "sv-req", "world"), 1_100);
+		this.relay.fromServer(done("sv-req", true), 1_200);
+		assertEquals(SaveRelay.RequestState.DONE, this.relay.request());
+		// quit is never limited; a refusal is kept with its reason
+		assertTrue(this.relay.request("quit", 2_000, data -> ++seq[0]));
+		assertTrue(this.relay.requestResult(seq[0], false, "not_idle"));
+		assertEquals(SaveRelay.RequestState.REFUSED, this.relay.request());
+		assertEquals("not_idle", this.relay.refusal());
+		assertTrue(this.relay.request("world", 61_001, data -> ++seq[0]), "a minute later: sent again");
+	}
 }

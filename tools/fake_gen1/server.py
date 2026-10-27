@@ -97,6 +97,7 @@ class FakeGen1:
         # WORLD_SESSIONS_PLAN WS1: where route.leave takes the hidden player home, per zone (map, x, y, facing);
         # a zone without an entry goes back to the synthetic town's start cell
         self.route_back = {}
+        self.save_requests = []  # WS4: the save.request reasons received
         self._route_sent = None
 
     # --- lifecycle -------------------------------------------------------------------------------
@@ -255,6 +256,16 @@ class FakeGen1:
             await self._start(conn, seq)
         elif msg_type == "route.leave":
             await self._leave(conn, seq, data["zone"])
+        elif msg_type == "save.request":
+            # WORLD_SESSIONS_PLAN WS4: a save of the hidden game's own, announced with the request's reason
+            self.save_requests.append(data["reason"])
+            if not self.ingame:
+                await conn.send("act.result", {"ok": False, "kind": "save", "reason": "not_ingame"}, re=seq)
+            elif not self._idle() or self.open_ui is not None:
+                await conn.send("act.result", {"ok": False, "kind": "save", "reason": "not_idle"}, re=seq)
+            else:
+                await conn.send("act.result", {"ok": True, "kind": "save"}, re=seq)
+                await self.save(data["reason"])
         elif msg_type in ("export.index", "export.get"):
             await self._export(conn, message)
         elif msg_type == "debug.status":

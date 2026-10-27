@@ -127,7 +127,7 @@ public class SaveGameTests implements FabricGameTest {
 			// No reason: an error, and ok:false for its id. A bad reason: the same. No usable id: an error only. No pair (M10): an
 			// error and ok:false, and the player's save pair stays as it was.
 			RelayService.get().receive(player, saveBegin(1, "{\"save\":\"sv-x\",\"pair\":\"aa11bb22\"}"));
-			RelayService.get().receive(player, saveBegin(2, "{\"save\":\"sv-y\",\"reason\":\"quit\",\"pair\":\"aa11bb22\"}"));
+			RelayService.get().receive(player, saveBegin(2, "{\"save\":\"sv-y\",\"reason\":\"shutdown\",\"pair\":\"aa11bb22\"}"));
 			RelayService.get().receive(player, saveBegin(3, "{\"save\":5,\"reason\":\"menu\",\"pair\":\"aa11bb22\"}"));
 			RelayService.get().receive(player, saveBegin(4, "{\"save\":\"sv-z\",\"reason\":\"menu\"}"));
 			RelayService.get().receive(player, saveBegin(5, "{\"save\":\"sv-w\",\"reason\":\"menu\",\"pair\":\"NOT-HEX\"}"));
@@ -143,6 +143,33 @@ public class SaveGameTests implements FabricGameTest {
 			assertDone(helper, sent.get(8), "sv-w", false, 5);
 			helper.assertTrue(SaveService.saves() == saves, "a malformed request saved");
 			helper.assertTrue(SavePairService.of(player).pair() == null, "a malformed save.begin changed the save pair");
+		}));
+		helper.succeed();
+	}
+
+	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH, timeoutTicks = 400)
+	public void minecraftsSaveAsksEachPlayersHiddenGamesOnceAMinuteWithoutALoop(GameTestHelper helper) {
+		// WORLD_SESSIONS_PLAN WS4 (§2.4, D5): BEFORE_SAVE sends save.request{world} per player; the rate limit; the loop guard
+		MinecraftServer server = helper.getLevel().getServer();
+		MockPlayers.with(helper, player -> RelayTap.capture(player, sent -> {
+			SaveService.resetRequests();
+			server.saveEverything(true, false, false); // the autosave's own call
+			long asked = sent.stream().filter(m -> m.type().equals(MsgTypes.SAVE_REQUEST)).count();
+			helper.assertTrue(asked == 1, "save.request sent " + asked + " times");
+			Envelope request = sent.stream().filter(m -> m.type().equals(MsgTypes.SAVE_REQUEST)).findFirst().orElseThrow();
+			helper.assertTrue("world".equals(request.data().get("reason").getAsString()), "reason " + request.data());
+			server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), "save-all");
+			helper.assertTrue(sent.stream().filter(m -> m.type().equals(MsgTypes.SAVE_REQUEST)).count() == 1, "asked again within a minute");
+			// a hidden save's own Minecraft save asks nobody, even when the minute is over
+			SaveService.resetRequests();
+			int before = sent.size();
+			SaveService.save(player, "world");
+			helper.assertTrue(sent.subList(before, sent.size()).stream().noneMatch(m -> m.type().equals(MsgTypes.SAVE_REQUEST)),
+					"the hidden game's save asked for another (a loop)");
+			// the save.begin of a requested save pairs as any other
+			RelayService.get().receive(player, saveBegin(77, "{\"save\":\"v-ws4-1\",\"reason\":\"world\",\"pair\":\"0123456789abcdef\"}"));
+			Envelope done = sent.stream().filter(m -> m.type().equals(MsgTypes.SAVE_DONE)).reduce((a, b) -> b).orElse(null);
+			helper.assertTrue(done != null && done.data().get("ok").getAsBoolean(), "a world save.begin wasn't saved: " + (done == null ? null : done.data()));
 		}));
 		helper.succeed();
 	}

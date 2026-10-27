@@ -3492,9 +3492,42 @@ the volume), stopped after each job. Choices where the plan was silent keep toda
 | # | Phase | Status | Date | Commits |
 |---|---|---|---|---|
 | WS0 | Facts on a pod | **done**: the bug reproduced (scene A), the cause is none of H1–H3 (below) | 2026-10-27 | `a91f735`, `f5b2ba2` |
-| WS3 | Continue at join | **done**; C2's checks passed on the pod (engine level), B1 and B2 fixed and checked | 2026-10-27 | `828d151`, WS3 record commit |
+| WS4 | Save with the world | **done**; C3's parts checked (server GameTest, real engines on the pod); checkpoint below | 2026-10-27 | WS4 commit |
+| WS3 | Continue at join | **done**; C2's checks passed on the pod (engine level), B1 and B2 fixed and checked | 2026-10-27 | `828d151`, `0e11171` |
 | WS2 | The protocol and the world record | **done** (server-side tests; no pod step in the plan) | 2026-10-27 | `46abf70` |
 | WS1 | The wild route rule (and the bind fix) | **done**; C1 passed on the pod (engine and client) | 2026-10-27 | `a95d2ec` |
+
+### Worlds and sessions: WS4 notes
+
+1. **gen1-bridge** (`act/kb_save.lua`): `save.request{reason:"world"|"quit"}` waits up to `SAVE_WAIT` 600 steps for the
+   engine's quick-save gate (or, held by `region.park`, for no battle: WS0 showed a held game saves), then
+   `kb_engine.writeSaveAs(reason)` (Gen 1 `Game:writeSave`; Gen 2's and Gen 3's `write`); the save announces itself as
+   `save.begin` with the request's reason and pairs as any other. `act.result{kind:"save"}`: ok, or `not_ingame`,
+   `not_idle`, `vetoed`, `failed`, `busy` (a newer request replaced it). `save.begin`'s reasons gain `world` and `quit`.
+2. **The server** (`SaveService`): a `ServerLifecycleEvents.BEFORE_SAVE` handler sends every player
+   `save.request{reason:"world"}`, at most once a minute per player (`SAVE_MIN_MS`); skipped while the server stops
+   (WS0: the stop reaches `BEFORE_SAVE`; the quit choreography, WS5, saves the hidden games before a client leaves)
+   and while `SaveService.save` runs Minecraft's save for a hidden `save.begin` (the loop guard).
+3. **The client** (`SaveRelay`, `SessionRuntime.saveAll`): the server's request goes to every link whose pairing is
+   open (parked ones too), at most once a minute per link for `world` (`quit` always); where each request stands
+   (`SENT` → `WRITTEN` → `DONE` on its `save.done`, or `REFUSED`) is kept for WS5's quit; a refusal other than
+   `not_ingame` is a HUD line for 8 s ("Blue didn't save: it was busy …"). Nothing is rolled back (D5).
+4. **Checks:** GameTest `minecraftsSaveAsksEachPlayersHiddenGamesOnceAMinuteWithoutALoop` (the autosave's call: 1
+   request with reason world; `/save-all` within the minute: none more; `SaveService.save` itself: none, no loop; a
+   `save.begin{world}` saved and answered ok). On the pod (`test_ws4_save.py`, fake_minecraft in the client's role, each
+   game continued by a bind's `continue:"play"`):
+
+   | | idle | held (`region.park`) | text box open (Blue) | at the title |
+   |---|---|---|---|---|
+   | Blue | ok, `save.begin{world}` | ok, `save.begin{world}` | `not_idle` | `not_ingame` |
+   | Crystal | ok, `save.begin{world}` | ok, `save.begin{world}` | (not run) | `not_ingame` |
+   | Emerald | ok, `save.begin{world}` | ok, `save.begin{world}` | (not run) | `not_ingame` |
+
+   Lua `test_lua_save_request.py` (6), `SaveRelayTest` +1. C3's full form (two games of one player saving once on a
+   real `/save-all` with a real client) is not run: the server's half (one request per player, the rate limit, no loop,
+   the pairing of a `world` save) and the engines' half (each family saves on a request, a busy one refuses) are checked
+   apart. The old GameTest that used `quit` as a bad save reason now uses `shutdown`.
+5. **Checkpoint (the full suite):** see the WS4 checkpoint line below.
 
 ### Worlds and sessions: WS3 notes
 

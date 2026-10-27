@@ -67,6 +67,8 @@ function Saves.install(b)
     return "written"
   end
   def("switchSave", function() return write("switch") end)
+  -- WORLD_SESSIONS_PLAN WS4: a save asked for by Minecraft (save.request), announced with its reason
+  def("writeSaveAs", function(reason) return write(reason) end)
 
   -- Back to the title (unsaved progress is gone; callers save first):
   -- Game2:returnToTitle (Game2.lua:374-381).
