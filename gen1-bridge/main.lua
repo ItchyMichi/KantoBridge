@@ -867,7 +867,7 @@ return function(mod)
   -- WORLD_SESSIONS_PLAN WS0, for test drivers only: the running engine adapter
   -- (lib/kb_engine.lua), so a driver can run the adapter's own seams
   -- (startFromTitle, holdAway, switchSave, toTitle) on any game family
-  status.engine = function() return engine end
+  status.testEngine = function() return engine end
   -- M10, for test drivers: start the per-step cost counts over (a scenario's
   -- own numbers, without the boot, the export or the handshake)
   status.perfReset = function() perf.reset() end

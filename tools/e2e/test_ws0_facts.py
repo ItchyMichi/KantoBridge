@@ -1,9 +1,8 @@
 """WORLD_SESSIONS_PLAN WS0 items 3-5 on the real engine, per game family (Blue, Crystal, Emerald: whichever are
-imported in the test install): a copy of the boot slot's save (SaveData.duplicateSlot, D14's safe copy), the title's
+imported in the test install): a game of the driver's own saved in a scratch slot, a copy of it (SaveData.duplicateSlot, D14's safe copy), the title's
 summary of it, CONTINUE, the region hold, a save written while the hold is up (a parked game saving), a return to the
 title after it and the held save loading again. The driver is drivers/kb_ws0facts.lua; it runs gen1-bridge's own engine
-adapter so one script serves every family. The install's own saves are only read (copied), never written; the copy is
-deleted at the end.
+adapter so one script serves every family. The install's own saves are never touched; both scratch slots are deleted at the end.
 
 Output: markers with map symbols, slot numbers, counts and booleans only.
 """
@@ -53,13 +52,10 @@ def test_ws0_held_save_title_summary_and_copy(game):
     with launch("kb_ws0facts.lua", game=game, extra_env={"KB_TEST_PORT": str(TEST_PORT), "KB_DATASET_MEMO": "30"}) as running:
         booted = running.wait_marker("KB_BOOTED", timeout=300)
         assert booted is not None, running.result.summary()
-        if "homeSave=true" not in booted:
-            running.kill()
-            pytest.skip(f"{game}: the test install's boot slot holds no save to copy")
         begins = asyncio.run(_serve(TEST_PORT, lambda: running.result.marker("KB_CONTINUED_AGAIN") is not None
                                     or running.result.marker("KB_FAIL") is not None, 1200))
         result = running.wait(timeout=120)
-    names = ("KB_BOOTED", "KB_COPY", "KB_TITLE_SUMMARY", "KB_CONTINUED", "KB_INGAME", "KB_HELD", "KB_HELD_SAVE",
+    names = ("KB_BOOTED", "KB_MADE", "KB_COPY", "KB_TITLE_SUMMARY", "KB_CONTINUED", "KB_INGAME", "KB_HELD", "KB_HELD_SAVE",
              "KB_TO_TITLE", "KB_TITLE_AGAIN", "KB_CONTINUED_AGAIN", "KB_CLEANED", "KB_FAIL")
     for name in names:
         print(game, result.marker(name))

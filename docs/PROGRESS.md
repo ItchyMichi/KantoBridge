@@ -3483,6 +3483,63 @@ taken from what already arrived. `test_battle` and `test_route1` fail on cpu3g p
 **Deviation.** A real gym leader was not walked to (the drivers start trainer battles by script, as before); the Name
 Rater is its write to the record, not the walk to his house.
 
+## Worlds and sessions (2026-10-27, specs/WORLD_SESSIONS_PLAN.md)
+
+Execution of [specs/WORLD_SESSIONS_PLAN.md](specs/WORLD_SESSIONS_PLAN.md) (WS0–WS8), run unattended from the user's
+go of 2026-10-27; decisions D1–D14 as written. Pods: `kb-dev54` (iny8834ymxxc2i, cpu3g x4 / 16 GB, $0.16/h, EU-RO-1 with
+the volume), stopped after each job. Choices where the plan was silent keep today's behaviour and are listed per phase.
+
+| # | Phase | Status | Date | Commits |
+|---|---|---|---|---|
+| WS0 | Facts on a pod | **done**: the bug reproduced (scene A), the cause is none of H1–H3 (below) | 2026-10-27 | `a91f735` + this record |
+
+### Worlds and sessions: WS0 findings
+
+1. **The user's bug, reproduced (scene A, the client under Xvfb, `showcase.py --rejoin reconnect`).** A fresh Kanto world,
+   the walk into Viridian's zone, the hidden game saved on the route map (`KB_SAVED map=KB_ROUTE_VIRIDIAN_FOREST_ZONE
+   x=1 y=0`), the pause menu's "Save and Quit to Title", the same world opened again with Gen1Recomp still running. After
+   the rejoin the body stood where it was in the zone (block 1359,63,3488, zone cell 22,-17) and `away` was true, but the
+   movement lock read `NOT_IN_GAME` for the whole 20 s watch and a 4 s walk forward moved the body 0.0 blocks: the
+   player could not move. **The cause is none of H1, H2 or H3:** `SessionBinder.world(null, …)` on leaving forgot the
+   world but kept `sentLink`/`sentWorld`, so entering the same world again on the same live link sent **no
+   `session.bind`**; `SessionGate` closed on the world's entry and held the player until a `session.bound` that never
+   came (`MoveRuntime.pairing()` → `NOT_IN_GAME`). It happens on any reopen of the same world with the engine left
+   running (the default: `launch.ps1` never stops it), not only in a zone; in a zone it looks exactly like the user's
+   report because the hidden player stands on the 2×2 route map. Not reproduced: the body put back in the town. Nothing
+   in the runs moved it there (no rejoin teleport, `syncs` unchanged, no `body_jump`); H2 (the vanilla position at the
+   clearing) remains the likeliest way the user saw the town, and WS1's rule covers it.
+2. **Scene B (Gen1Recomp killed after the save, relaunched on the same data home, CONTINUE once the client bound;
+   `showcase.py --rejoin relaunch`)** works as is: for 2 s after the rejoin the hidden player read as the title's boot
+   skeleton (`REDS_HOUSE_2F 3,6`, `ingame=false`, lock `NOT_IN_GAME`, nothing moved), then the CONTINUE put it on
+   `KB_ROUTE_VIRIDIAN_FOREST_ZONE 1,0`, `away` true, lock `NONE`, and the walk moved the body 4.9 blocks. A relaunched
+   link binds again (its link counter changed), which is why B never froze.
+3. **The engine's half (`test_wild_routes.py -k ws0`, real Blue, fake_minecraft).** A: after the reconnect the snapshot
+   says `ingame:true` on `KB_ROUTE_VIRIDIAN_FOREST_ZONE 1,0`. B: at the title the snapshot carries the boot skeleton
+   (`REDS_HOUSE_2F 3,6`, `ingame:false`); the CONTINUE loads `KB_ROUTE_VIRIDIAN_FOREST_ZONE 1,0` (`map.entered via=boot`,
+   no warp message, a `player.pos sync`), `scrubMaps` remapped nothing (`remapped=0`, `lastHeal` PALLET_TOWN untouched),
+   and a step west onto A took the hidden player home (`VIRIDIAN_CITY 38,28` facing left, `routesWarpsBack` 1): it was
+   free, not stuck. So the hidden player's "only turns" in the user's report is the route map's own closed moves seen
+   from a held body, not an engine fault.
+4. **`BEFORE_SAVE` (item 2; `BeforeSaveGameTests`, a counting handler).** fabric-lifecycle-events 2.6.0 injects it into
+   `MinecraftServer.saveAllChunks`: the autosave's `saveEverything(true,false,false)` 1 call, `/save-all` 1 call (the only
+   forced one), and the server's own stop 1 call (`flush=true`, after "Stopping server"). So all three reach it; a
+   dedicated server's stop disconnects players first (the plan's §2.4 note stands). All 144 GameTests passed in that run.
+5. **A parked game saves, the title is clean after it, a slot can be copied (items 3–5; `test_ws0_facts.py`, one driver
+   for all three families through gen1-bridge's own adapter, `status.testEngine` for test drivers).** Blue, Crystal and
+   Emerald each: a game of the driver's own saved in a scratch slot, `SaveData.duplicateSlot` into a second slot
+   (exists, a new `playthroughId`; the copy CONTINUEs onto the same map: Blue `REDS_HOUSE_2F`, Crystal
+   `G2_PLAYERS_HOUSE_2F`, Emerald `EM_INSIDE_OF_TRUCK`), the title's summary of the copy (`listSlots` → `slotSummary`:
+   a name, badges 0, dex 0, a play time, on all three), CONTINUE, `holdAway`, then `switchSave` **while the hold is up:
+   `written` on all three**, `toTitle` → `playthrough=title`, no overworld, hold gone (Blue `TitleState`, Crystal
+   `Gen2TitleState`, Emerald's title has no `screenId`), and the held save CONTINUEs again. Gen 2's adapter reports a
+   continued save as `playthrough=fresh` (Gen 1 and Gen 3 `saved`): WS3's B1 rule must use `game.status.save`, not the
+   playthrough. **D14 holds:** the engine's own `duplicateSlot` is a safe copy (no fallback needed).
+6. **Harness** (`a91f735`): `kb_wild.lua` scenes `save` / `continue` / `cleanup` on a scratch slot (the install's own
+   slots are never written), `test_wild_routes.py`'s WS0 test, the autopilot's `-Pkb.autopilotRejoin=reconnect|relaunch`
+   ("save in the zone, leave the world, rejoin": its watch logs the body's block, the zone, `away`, the lock's reason,
+   the hidden cell, the counters and every body jump) with `showcase.py --rejoin`, `BeforeSaveGameTests`,
+   `kb_ws0facts.lua` + `test_ws0_facts.py`. Logs: `/workspace/reports/ws0_*.log` on the volume.
+
 ## Step speed (2026-10-26, specs/STEP_SPEED_PLAN.md)
 
 Run unattended with every default (D1-D9) except one small addition (below). Pod: **kb-dev49** (hdneg2aj34eulb, cpu3g x8

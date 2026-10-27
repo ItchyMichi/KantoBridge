@@ -1,13 +1,17 @@
 -- Kanto Bridge test driver (WORLD_SESSIONS_PLAN WS0 items 3-5, on every game
 -- family; tools/e2e/test_ws0_facts.py). It runs gen1-bridge's own engine
--- adapter (status.engine(), lib/kb_engine.lua) so the same steps work on
+-- adapter (status.testEngine(), lib/kb_engine.lua) so the same steps work on
 -- Gen 1, Gen 2 and Gen 3:
---   copy      the slot active at boot (the install's own save, never written)
---             is copied into a new slot with the engine's own
+--   make      a scratch slot (label KB_WS0) made active, a game of the
+--             driver's own started there the way each family's drivers do it
+--             (Gen 1 Game:startNewGame without the intro; Gen 2 driver mode's
+--             field; Gen 3 the boot action new_game) and saved (writeSave;
+--             Gen 3 saveGame): KB_MADE; then back to the title.
+--   copy      that slot copied into a new one with the engine's own
 --             SaveData.duplicateSlot (src/core/SaveData.lua:1937-1990):
---             KB_COPY ok= exists= newid= (the copy's playthroughId differs
---             from the source's, its player map is the same) -- WS0 item 5,
---             D14. The copy is made active; nothing touches the source.
+--             KB_COPY ok= exists= (the copy's playthroughId differs from the
+--             source's, its player map is the same) -- WS0 item 5, D14. The
+--             copy is made active. The install's own slots are never touched.
 --   title     KB_TITLE_SUMMARY: what the launcher's and the title's summary
 --             (SaveData.listSlots -> slotSummary, :1499-1560) gives for the
 --             copy at the title: whether a name is there (never the name),
@@ -20,7 +24,7 @@
 --   release, then engine.toTitle(): KB_TITLE_AGAIN playthrough= top= -- item
 --             4 (a clean title after a save); then startFromTitle again:
 --             KB_CONTINUED_AGAIN map= (the held save loads).
--- At the end the copy is deleted and the boot slot made active again
+-- At the end both scratch slots are deleted and the boot slot made active again
 -- (KB_CLEANED). KB_SCENE=cleanup does only that (slots labelled KB_WS0).
 --
 -- Markers carry map symbols, slot numbers, counts and booleans only. Runs
@@ -112,11 +116,14 @@ end
 return function(game)
   local started = love.timer.getTime()
   local phase, wait = "ready", 0
-  local copy, engine
+  local copy, engine, made, gen
   while true do
     local status = game and game.mods and game.mods.exports and game.mods.exports["gen1-bridge"]
     if phase == "ready" then
-      if status and status.ready then
+      -- Gen 1 has its state stack up; Gen 2 and Gen 3 say their phase (boot, play, field)
+      local stacked = type(game.stack) == "table" and type(game.stack.top) == "function" and game.stack:top() ~= nil
+      local ready = status and status.ready and (stacked or game.phase == "boot" or game.phase == "play" or game.phase == "field")
+      if ready then
         status.configure({ port = PORT })
         if DATASET_MEMO > 0 then memoDatasetChecks(DATASET_MEMO) end
         homeRef = active()
@@ -126,24 +133,54 @@ return function(game)
           print("KB_QUIT sessions=0 code=0")
           return
         end
-        engine = status.engine()
-        local row = slotRow(homeRef)
-        print(("KB_BOOTED game=%s home=%d homeSave=%s precleaned=%d"):format(word(version()), num(homeRef),
-          word(row and row.exists), pre))
-        if not (row and row.exists) then fail("no_home_save") end
-        local srcMap, srcId = playerMapOf(homeRef)
-        local ok, id, err = pcall(SaveData.duplicateSlot, version(), homeRef, LABEL)
-        if not ok or not id then fail("duplicate " .. word(ok and err or id)) end
-        copy = id
-        local map, pid = playerMapOf(copy)
-        local crow = slotRow(copy)
-        print(("KB_COPY ok=true slot=%d exists=%s sameMap=%s newPlaythrough=%s map=%s"):format(num(copy),
-          word(crow and crow.exists), word(map ~= nil and map == srcMap), word(pid ~= nil and pid ~= srcId), word(map)))
-        if SaveData.setActiveSlot(version(), copy) ~= copy then fail("activate") end
-        phase = "boot"
+        engine = status.testEngine()
+        local info = GameVersion.info(version()) or {}
+        gen = tonumber(info.generation) or 1
+        made = SaveData.createSlot(version())
+        if not made then fail("no_slot") end
+        SaveData.renameSlot(version(), made, LABEL)
+        if SaveData.setActiveSlot(version(), made) ~= made then fail("activate") end
+        print(("KB_BOOTED game=%s gen=%d home=%d slot=%d precleaned=%d phase=%s"):format(word(version()), gen,
+          num(homeRef), num(made), pre, word(game.phase)))
+        -- a game of the driver's own in the scratch slot, the way each family's test drivers start one
+        if gen == 2 and game.phase ~= "play" then
+          fail("gen2_not_in_play phase=" .. word(game.phase))
+        elseif gen == 3 then
+          local ok, err = pcall(game._handleBootAction, game, { action = "new_game", name = "TEST", gender = 0 })
+          if not ok then fail("new_game " .. word(err):sub(1, 40)) end
+        elseif gen == 1 then
+          game:startNewGame({ intro = false })
+        end
+        phase, wait = "make", 0
+      end
+    elseif phase == "make" then
+      if ingameMap(engine) then
+        wait = wait + 1
+        if wait > 60 then
+          local ok, written
+          if gen == 3 then ok, written = pcall(game.saveGame, game) else ok, written = pcall(game.writeSave, game) end
+          local row = slotRow(made)
+          print(("KB_MADE map=%s ok=%s exists=%s"):format(word(ingameMap(engine)), word(ok and written ~= false),
+            word(row and row.exists)))
+          if not (row and row.exists) then fail("no_save_made") end
+          engine.toTitle()
+          local srcMap, srcId = playerMapOf(made)
+          local okD, id, err = pcall(SaveData.duplicateSlot, version(), made, LABEL)
+          if not okD or not id then fail("duplicate " .. word(okD and err or id)) end
+          copy = id
+          local map, pid = playerMapOf(copy)
+          local crow = slotRow(copy)
+          print(("KB_COPY ok=true slot=%d exists=%s sameMap=%s newPlaythrough=%s map=%s"):format(num(copy),
+            word(crow and crow.exists), word(map ~= nil and map == srcMap), word(pid ~= nil and pid ~= srcId), word(map)))
+          if SaveData.setActiveSlot(version(), copy) ~= copy then fail("activate") end
+          phase, wait = "boot", 0
+        end
+      else
+        wait = wait + 1
+        if wait > 3600 then fail("make_ingame") end
       end
     elseif phase == "boot" then
-      if game.stack and game.stack:top() ~= nil then
+      do
         wait = wait + 1
         if wait > 30 then
           local row = slotRow(copy)
