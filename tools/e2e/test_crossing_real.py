@@ -333,7 +333,9 @@ async def _b1(far_port, far_region, far_map, route):
     assert into["kind"] == "script", into
     await park(blue, "kanto")
     status = await find_or_wait(far, "game.status", 30, 0, lambda m: True)
-    report["far_status"] = {k: status["data"].get(k) for k in ("playthrough", "started", "save")}
+    save = status["data"].get("save")
+    report["far_status"] = {"playthrough": status["data"].get("playthrough"), "started": status["data"].get("started"),
+                            "save_slot": save.get("slot") if isinstance(save, dict) else None}  # never the name
     assert status["data"]["playthrough"] == "title" and status["data"].get("save") is not None, report
     since = len(far.received)
     started = (await far.request("region.start", {"region": far_region}, reply_type="act.result", timeout=180))["data"]

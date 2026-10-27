@@ -9,6 +9,10 @@
 --   cleanup  the world's pairing forgotten (KB_WORLD), every KB_WS3 slot and
 --            every slot the pairing made for the world deleted, the boot slot
 --            active again: KB_CLEANED.
+-- WORLD_SESSIONS_PLAN WS4: the request file may also say "text" (Gen 1: a text
+-- box of the driver's own, made-up words, pushed over the overworld: the
+-- quick-save gate closes; KB_TEXT) or "title" (back to the title: KB_TITLE).
+-- Each request runs once (the file's line is compared with the last one run).
 -- While serving, a line "save" in KB_WS3_DIR/request.txt makes the driver
 -- save the running game (Game:writeSave; Gen 3 saveGame) once: KB_SAVED
 -- map= x= y= slot=. KB_ACTIVE slot= ingame= whenever either changes.
@@ -95,6 +99,7 @@ return function(game)
   local started = love.timer.getTime()
   local phase, wait, gen, engine, made = "ready", 0, 1, nil, nil
   local saved = false
+  local lastRun
   local lastActive, lastIngame
   while true do
     local status = game and game.mods and game.mods.exports and game.mods.exports["gen1-bridge"]
@@ -107,6 +112,22 @@ return function(game)
         engine = status.testEngine()
         gen = tonumber((GameVersion.info(version()) or {}).generation) or 1
         homeRef = HOME or active()
+        if SCENE == "cleanup" or SCENE == "list" then
+          -- the registry by ids, whether each holds a save and its label's kind (ours or not; never the text)
+          local okL, list = pcall(SaveData.listSlots, version())
+          local parts = {}
+          for _, row in ipairs(okL and list or {}) do
+            local kind = row.label == nil and "none" or row.label == LABEL and "ws3"
+              or (type(row.label) == "string" and row.label:find("^MULTIPLAYER ") and "mp")
+              or (type(row.label) == "string" and row.label:find("^KB_") and "kb") or "other"
+            parts[#parts + 1] = ("%d:%s:%s"):format(num(row.id), row.exists and "save" or "empty", kind)
+          end
+          print(("KB_SLOTS active=%d home=%d %s"):format(num(active()), num(homeRef), table.concat(parts, ",")))
+        end
+        if SCENE == "list" then
+          print("KB_QUIT sessions=0 code=0")
+          return
+        end
         if SCENE == "cleanup" then
           print(("KB_CLEANED deleted=%d active=%d"):format(cleanup(status, homeRef), num(active())))
           print("KB_QUIT sessions=0 code=0")
@@ -154,7 +175,17 @@ return function(game)
         lastActive, lastIngame = a, ingame
         print(("KB_ACTIVE slot=%d ingame=%s map=%s"):format(num(a), word(ingame), word(map)))
       end
-      if not saved and ingame and readRequest() == "save" then
+      local want = readRequest()
+      if want == "text" and lastRun ~= "text" and ingame and gen == 1 then
+        lastRun = "text"
+        local TextBox = require("src.render.TextBox")
+        game.stack:push(TextBox.new(game, "KANTO BRIDGE\nTEST LINE.", function() end))
+        print("KB_TEXT pages=1")
+      elseif want == "title" and lastRun ~= "title" then
+        lastRun = "title"
+        print(("KB_TITLE ok=%s"):format(word(engine.toTitle())))
+      end
+      if not saved and ingame and want == "save" then
         local ok
         if gen == 3 then ok = pcall(game.saveGame, game) else ok = pcall(game.writeSave, game) end
         local m, x, y = ingameMap(engine)

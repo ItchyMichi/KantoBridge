@@ -3492,8 +3492,55 @@ the volume), stopped after each job. Choices where the plan was silent keep toda
 | # | Phase | Status | Date | Commits |
 |---|---|---|---|---|
 | WS0 | Facts on a pod | **done**: the bug reproduced (scene A), the cause is none of H1–H3 (below) | 2026-10-27 | `a91f735`, `f5b2ba2` |
+| WS3 | Continue at join | **done**; C2's checks passed on the pod (engine level), B1 and B2 fixed and checked | 2026-10-27 | `828d151`, WS3 record commit |
 | WS2 | The protocol and the world record | **done** (server-side tests; no pod step in the plan) | 2026-10-27 | `46abf70` |
 | WS1 | The wild route rule (and the bind fix) | **done**; C1 passed on the pod (engine and client) | 2026-10-27 | `a95d2ec` |
+
+### Worlds and sessions: WS3 notes
+
+1. **gen1-bridge** (`act/kb_continue.lua`): a bind whose `continue` is `play` or `park` is handed over once the slot is
+   settled; `play` at the title runs `startFromTitle` through `kb_region`'s queue (a new internal request kind, answered
+   to its caller), `park` CONTINUEs then parks (it waits up to 600 steps for an idle world after the load), a game
+   already in play is left or held; `session.bound` carries `started`/`parked` and goes out only when that is done (the
+   pairing sends it from its next step). `continue:"title"` answers at once with `started:"none"`.
+2. **The client's decision** (`JoinDecision`, plain Java, per link and tick): a legacy world binds as before; an
+   unlisted game `title`; else `play` for the server's followed region (else the record's start) and `park` for the
+   others, after the server's `region.state` (at most 3 s, `PRESENCE_WAIT_MS`); a recorded slot is bound with its choice;
+   without one: the first-join screen's answer, `new` without asking when the title says no save, else ask
+   (`FirstJoinScreen`: one cycling button per game, Done; Esc declines this join). `session.no_slot` for a recorded slot
+   clears it and asks again. `Links` keeps whether the server's presence came and what it named.
+3. **The server** seeds a fresh player's presence with the record's start on join (`RegionPresenceService.seed`, D2).
+4. **B1:** `PassChoreography` stashes only when the far game at its title has no `game.status.save`
+   (`LinkPort.titleSave`); a saved one is `region.start`ed at once (stat `continuedAtTitle`). **B2:** after a pick on Gen
+   1's title menu that opens the CONTINUE info box (`kb_engine.continueInfoOpen`: its own fields, it has no screen id),
+   gen1-bridge presses A for it within 120 steps (stat `uiContinueConfirms`).
+5. **Fixed after the first pod run:** `copy` copied the pairing file's remembered home (an older test's slot) instead of
+   the slot the player plays offline now: the active slot comes first when it isn't a world's. The C2 harness's Gen 2
+   relaunch went straight into the field (driver mode); it now returns to the title first, like a real relaunch.
+6. **Checks (pod, `kb-dev54`):**
+
+   | Check | Blue | Crystal | Emerald |
+   |---|---|---|---|
+   | title status carries `save{slot}` | yes | yes | yes |
+   | first join `save:"copy"`: `session.bound` | copy, continue, not parked, slot 3 (offline 2) | copy, continue, **parked**, slot 17 (offline 16) | copy, continue, **parked**, slot 22 (offline 21) |
+   | the world slot's game is the offline save's (same map) | yes | yes | yes |
+   | offline slot's file unchanged (listing) | yes | yes | yes |
+   | relaunch, rejoin with the recorded slot: `started` | continue, on the saved cell's map | continue | continue |
+
+   (Blue played: a step down, then a save; the rejoin continued that save on `REDS_HOUSE_2F`, the copy's map.)
+   **B1** (`test_crossing_real.py -k b1`, Blue on the Hoenn pass, Emerald launched with a saved slot but not continued):
+   Emerald's title status had `save`, `region.start` → `continue`, `save.loaded{fresh:false}`, in game; no stash was
+   needed. **B2** (`fp_stone.py --client-continue`, the real dev client): the client picked CONTINUE on Blue's mirrored
+   title menu, gen1-bridge answered the summary box, `KB_CONTINUED via=client party=2`; all 8 checks of the stone run
+   passed. Regressions on the pod: `test_regions.py` 2, `test_multiplayer.py` 2 (after narrowing its pairing-file check:
+   other games' own files may sit beside Blue's), `test_wild_routes.py` 2. Server: GameTests 146 (the seeded presence
+   and the start/games in `world.regions` in `RegionBuildGameTests`, recorded choices in `SessionGameTests`), JUnit
+   `JoinDecisionTest` (5), `PassChoreographyTest` +1, Lua `test_lua_continue.py` (7), `test_lua_pairing.py` +1.
+7. **Not checked in a real client:** the first-join screen itself and the multi-link join of a real two-game world
+   (two engines beside one client): the decision and the screen are unit-tested, the engine half is checked per game
+   above. C2's "a world with Blue and Crystal joined" ran as two single-engine joins (Blue `play`, Crystal `park`).
+   **Data safety:** the first C2 run printed two default save names into its pod log; the test now prints no names and
+   the log line was redacted in place.
 
 ### Worlds and sessions: WS2 notes
 
