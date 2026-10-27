@@ -760,3 +760,34 @@ def test_a_ride_walks_on_at_the_bikes_frames_and_refuses_steps():
             await mc.close()
             await gen1.stop()
     run(scenario())
+
+
+def test_route_state_and_route_leave():
+    """WORLD_SESSIONS_PLAN WS1: on a route map the stand-in reports route{zone, map} in player.state and the snapshot;
+    route.leave takes it home (act.result, then a warp of kind script); off the route map it's refused."""
+    async def scenario():
+        gen1, mc = await _pair()
+        try:
+            await mc.hello()
+            await mc.expect("snapshot")
+            refused = await mc.leave_route("test_zone")
+            assert refused["data"] == {"ok": False, "kind": "route.leave", "reason": "not_on_route"}
+            gen1.route_back["test_zone"] = ("TEST_TOWN", 4, 4, "down")
+            await gen1.warp_to("KB_ROUTE_TEST_ZONE", 1, 0, "right", kind="script")
+            state = await mc.expect("player.state")
+            assert state["data"]["route"] == {"zone": "test_zone", "map": "KB_ROUTE_TEST_ZONE"}
+            snap = (await mc.request("resync", reply_type="snapshot"))["data"]
+            assert snap["route"] == {"zone": "test_zone", "map": "KB_ROUTE_TEST_ZONE"}
+            other = await mc.leave_route("other_zone")
+            assert other["data"]["reason"] == "not_on_route"
+            ok = await mc.leave_route("test_zone")
+            assert ok["data"] == {"ok": True, "kind": "route.leave"}
+            arrive = await mc.expect("warp")
+            arrive = arrive if arrive["data"]["phase"] == "arrive" else await mc.expect("warp")
+            assert arrive["data"]["kind"] == "script" and arrive["data"]["to"]["map"] == "TEST_TOWN"
+            assert "route" not in (await mc.request("resync", reply_type="snapshot"))["data"]
+            assert not mc.conn.problems
+        finally:
+            await mc.close()
+            await gen1.stop()
+    run(scenario())

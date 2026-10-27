@@ -335,7 +335,8 @@ public final class SessionRuntime {
 			for (LinkSession session : runtime.sessions.values()) {
 				session.saves.serverLeft(now);
 				session.pc.serverLeft(now);
-				session.binder.world(null, false);
+				// WS1: a world entered again (the same one too) is bound again on every link
+				session.binder.leftWorld();
 			}
 			runtime.serverWorld = null;
 		});

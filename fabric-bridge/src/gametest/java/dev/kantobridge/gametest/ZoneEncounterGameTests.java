@@ -80,4 +80,37 @@ public class ZoneEncounterGameTests implements FabricGameTest {
 		}));
 		helper.succeed();
 	}
+
+	@GameTest(template = EMPTY_STRUCTURE)
+	public void aPlayerWhoLeavesInTheZoneReturnsToTheSameVisit(GameTestHelper helper) {
+		// WORLD_SESSIONS_PLAN D10 (WS1): the visit is kept on the player (kantobridge:zone_visit) across a leave
+		WorldIndex index = index();
+		MockPlayers.with(helper, player -> RelayTap.capture(player, sent -> {
+			player.teleportTo(AX + 17.0, 64, AZ + 1.0);
+			long t = 5_000;
+			ZoneService.tickPlayer(player, index, t);
+			JsonObject result = new JsonObject();
+			result.addProperty("op", "battle");
+			result.addProperty("ok", true);
+			result.addProperty("route", "gt_zone");
+			result.addProperty("id", "a1.t1");
+			result.addProperty("outcome", "win");
+			RelayService.get().handler(MsgTypes.ROUTE_RESULT).handle(player, new Envelope(MsgTypes.ROUTE_RESULT, 9, null, result));
+			helper.assertTrue(ZoneService.encounters().beaten(player.getUUID()).contains("a1.t1"), "the win wasn't kept");
+			ZoneService.leave(player);
+			helper.assertTrue(ZoneService.encounters().zone(player.getUUID()) == null, "the server forgot the visit");
+			helper.assertTrue(dev.kantobridge.server.ZoneVisitRecord.stored(player) != null, "the visit wasn't kept on the player");
+			ZoneService.join(player);
+			helper.assertTrue(dev.kantobridge.server.ZoneVisitRecord.stored(player) == null, "the kept visit is read once");
+			int before = (int) sent.stream().filter(m -> m.type().equals(MsgTypes.ROUTE_SIGHT)).count();
+			for (long k = t + 10; k < t + 70; k++) {
+				ZoneService.tickPlayer(player, index, k);
+			}
+			helper.assertTrue(sent.stream().filter(m -> m.type().equals(MsgTypes.ROUTE_SIGHT)).count() == before,
+					"challenged again on the continued visit");
+			helper.assertTrue(ZoneService.encounters().beaten(player.getUUID()).contains("a1.t1"), "the continued visit lost its win");
+			ZoneService.encounters().forget(player.getUUID());
+		}));
+		helper.succeed();
+	}
 }

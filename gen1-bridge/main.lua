@@ -146,6 +146,14 @@ return function(mod)
     routes = nil
     log.error("routes.install_failed", {})
   end
+  -- WORLD_SESSIONS_PLAN WS1 (§2.7): { zone, map } when the map is a route map
+  -- this boot registered (a zone's 2x2 holding map), else nil: player.state's
+  -- and the snapshot's `route`, so the client never guesses from map ids
+  local function routeStateOf(map)
+    local zone = routes and type(map) == "string" and routes.byMap[map] or nil
+    if type(zone) == "table" and type(zone.id) == "string" then return { zone = zone.id, map = map } end
+    return nil
+  end
 
   -- The port is a mod option (F10 manager, or the launcher's mod settings);
   -- drivers can move it through exports.configure before the first bind. A
@@ -346,6 +354,8 @@ return function(mod)
       set = function(key, value) mod.save:set(key, value) end,
     },
     has = function(registry, id) return contentRecord(registry, id) ~= nil end,
+    -- WORLD_SESSIONS_PLAN WS1: route.leave's way home, the step script's own back warp
+    warpBack = function(zone) return routes ~= nil and kb.Routes.warpTo(routes, zone, "back") end,
   })
   -- MG2: the region acts (act/kb_region.lua): region.park holds the hidden
   -- game where it stands while another region is followed, region.resume
@@ -459,6 +469,10 @@ return function(mod)
       -- MG2: the parked cell, while a region.park hold is up or its marker is
       -- still in the save after a link drop
       away = regionActs.marker(),
+      -- WS1: the zone of the route map the hidden player stands on (at the
+      -- title: the loaded save's position, when it is a route map)
+      route = routeStateOf(facts.inGame and facts.map or (type(engine.saveView()) == "table"
+        and type(engine.saveView().player) == "table" and engine.saveView().player.map) or nil),
     })
     routeActs.rebase()
     -- MG2: game.status follows every snapshot
@@ -714,7 +728,7 @@ return function(mod)
   session.on("act.button", queued(uiAct.button))
   -- Wild Routes (WR2): item balls, trainer battles and blackouts the server
   -- decides, answered by route.result (act/kb_route.lua)
-  for _, op in ipairs({ "give", "battle", "blackout" }) do
+  for _, op in ipairs({ "give", "battle", "blackout", "leave" }) do
     session.on("route." .. op, queued(function(data, seq, gen) return routeActs.request(op, data, seq, gen) end))
   end
   -- MG2: the region acts, answered by act.result (act/kb_region.lua)
@@ -924,6 +938,8 @@ return function(mod)
         for _, e in ipairs(type(rev.entered) == "table" and rev.entered or {}) do capped(ev.entered, e) end
       end
     end
+    -- WORLD_SESSIONS_PLAN WS1: the zone whose route map the hidden player stands on (player.state.route)
+    facts.route = routeStateOf(facts.inGame and facts.map or nil)
     local mode = kb.Player.classify(facts)
     local out = player.update(facts) -- player.state, then player.pos
     -- warp start/arrive go after player.state and before player.pos (the

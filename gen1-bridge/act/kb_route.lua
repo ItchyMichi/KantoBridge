@@ -9,6 +9,13 @@
 --   route.blackout{}                  -> route.result{op:"blackout", ok, reason?}
 --   route.progress{routes}            whenever a zone's progress changes, after
 --                                     a save loads, and in the snapshot
+--   route.leave{zone}                 -> act.result{kind:"route.leave", ok, reason?}
+--                                     (WORLD_SESSIONS_PLAN WS1, D9: the body is
+--                                     nowhere in the zone; the hidden player walks
+--                                     home through the route's back warp: the
+--                                     step script's own warp, Gen 3's way back
+--                                     through the adapter; the warp follows as
+--                                     a warp. Reasons: not_on_route, busy, failed)
 --
 -- The hidden game does the work with its own commands, through a queued
 -- script (mod.world:queueScript, src/world/WorldAPI.lua:626-632) whose
@@ -58,10 +65,13 @@ local ROUTE_ID, OBJECT_ID, UPPER = "^[a-z][a-z0-9_]*$", "^[a-z0-9][a-z0-9_.%-]*$
 --   json      kb_json
 --   store     { get(key), set(key, value) }: mod.save
 --   has       function(registry, id) -> true when the content id exists
+--   warpBack  function(zone) -> true when the zone's back warp was queued
+--             (lib/kb_routes.lua Routes.warpTo(rt, zone, "back"); WS1)
 --   log       kb_log logger (optional)
 function Route.new(opts)
   local engine, routes, world, json, store, has, log =
     opts.engine, opts.routes, opts.world, opts.json, opts.store, opts.has, opts.log
+  local warpBack = opts.warpBack
   local act = {}
   local queue = {}        -- requests waiting, oldest first
   local current           -- the request at the head: waiting, or its script running
@@ -70,7 +80,7 @@ function Route.new(opts)
   local progress = {}     -- route id -> { taken = { [id] = true }, wins = { [id] = n } }
   local dirty = {}        -- route ids whose progress changed since it last went out
   local counts = { requests = 0, ok = 0, failed = 0, busy = 0, given = 0, full = 0, battles = 0, wins = 0,
-                   losses = 0, blackouts = 0, progressSent = 0, stale = 0 }
+                   losses = 0, blackouts = 0, progressSent = 0, stale = 0, leaves = 0, leftHome = 0 }
 
   -- A route's zone in this game: its `from` end (a free-roam zone's only one) is keyed by the route's id, a
   -- connecting route's `to` end by "<id>:to" (lib/kb_routes.lua); the server names the route only, so the end is
@@ -197,6 +207,11 @@ function Route.new(opts)
       r.route, r.id, r.class, r.party, r.line = data.route, data.id, data.class, party, line
     elseif op == "blackout" then
       -- nothing to check
+    elseif op == "leave" then
+      -- WS1: route.leave{zone}
+      if not sym(data.zone, ROUTE_ID) then return false, "bad_message" end
+      r.route = data.zone
+      counts.leaves = counts.leaves + 1
     else
       return false, "bad_message"
     end
@@ -210,6 +225,15 @@ function Route.new(opts)
   end
 
   local function answer(out, r, ok, reason, outcome)
+    if r.op == "leave" then
+      -- WS1: route.leave is answered by act.result
+      local res = { kind = "route.leave", ok = ok }
+      if reason then res.reason = reason end
+      out[#out + 1] = { "act.result", res, "answer", re = r.seq, gen = r.gen }
+      if ok then counts.ok = counts.ok + 1 else counts.failed = counts.failed + 1 end
+      if log then log.debug("route.leave", { route = r.route, ok = ok, reason = reason }) end
+      return
+    end
     local data = { op = r.op, ok = ok }
     if r.route then data.route = r.route end
     if r.id then data.id = r.id end
@@ -243,6 +267,29 @@ function Route.new(opts)
 
   local function start(f, mode, out)
     local r = current
+    if r.op == "leave" then
+      -- WS1 (D9): only while the hidden player stands on that zone's route map
+      local zone = zoneOf(r.route, f.map)
+      if not (zone and f.inGame and f.map == zone.mapId) then return finish(out, false, "not_on_route") end
+      if not idle(f, mode) then
+        if steps - r.since > Route.WAIT then return finish(out, false, "busy") end
+        return
+      end
+      local routeStep = rawget(engine, "routeStep")
+      local ok, taken
+      if type(routeStep) == "function" and zone.own then
+        -- Gen 3 (MG8): the adapter's own way back, the step onto A
+        ok, taken = pcall(routeStep, "left")
+      elseif type(warpBack) == "function" then
+        ok, taken = pcall(warpBack, zone)
+      end
+      if ok and taken == true then
+        counts.leftHome = counts.leftHome + 1
+        return finish(out, true)
+      end
+      if steps - r.since > Route.WAIT then return finish(out, false, ok and "busy" or "failed") end
+      return
+    end
     if r.op ~= "blackout" then
       local zone = zoneOf(r.route, f.map)
       if not (zone and zone.active) then return finish(out, false, "unknown_route") end

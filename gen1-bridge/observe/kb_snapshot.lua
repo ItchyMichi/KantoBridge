@@ -74,6 +74,9 @@ end
 --                           blocks, and every dark map while flashLit)
 --   routes                  Wild Routes (WR2): act/kb_route.lua's progress(),
 --                           already shaped (a json object), or nil
+--   route                   WORLD_SESSIONS_PLAN WS1: { zone, map } while the
+--                           hidden player stands on a zone's route map (at
+--                           the title: the loaded save's), or nil
 --   away                    MG2: act/kb_region.lua's marker { map, x, y }, the
 --                           cell the hidden player was parked on (present
 --                           while the hold is up, or left in the save by a
@@ -230,6 +233,14 @@ function Snapshot.build(ctx)
     npcs = { map = npcMap, list = json.array(npcList) },
   })
   if type(ctx.routes) == "table" then data.routes = ctx.routes end
+  local route = ctx.route
+  if type(route) == "table" then
+    if sym(route.zone, "^[a-z][a-z0-9_]*$") and sym(route.map, UPPER) then
+      data.route = { zone = route.zone, map = route.map }
+    else
+      dropped = dropped + 1
+    end
+  end
   local away = ctx.away
   if type(away) == "table" then
     if sym(away.map, UPPER) and coord(away.x) and coord(away.y) then

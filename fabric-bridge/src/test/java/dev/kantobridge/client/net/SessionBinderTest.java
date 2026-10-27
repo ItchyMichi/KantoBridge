@@ -112,6 +112,27 @@ class SessionBinderTest {
 	}
 
 	@Test
+	void theSameWorldReopenedOnALiveLinkIsBoundAgain() {
+		// WORLD_SESSIONS_PLAN WS0's scene A: "Save and Quit", then the same world opened again while gen1-bridge stayed
+		// connected. Before WS1 no bind went out, the gate waited for its answer and held the player for good.
+		SessionBinder binder = new SessionBinder(this.links, false);
+		binder.linkUp();
+		binder.world(WORLD, false);
+		binder.tick();
+		assertEquals(1, this.links.bridge.size());
+		binder.leftWorld();
+		binder.tick();
+		assertFalse(binder.bound());
+		assertNull(binder.slot());
+		binder.world(WORLD, false);
+		binder.tick();
+		binder.tick();
+		assertEquals(2, this.links.bridge.size(), "the reopened world is bound again, once");
+		assertBind(this.links.bridge.get(1), WORLD, false);
+		assertTrue(binder.bound());
+	}
+
+	@Test
 	void anotherWorldOrViewBindsAgainAndNoWorldBindsNothing() {
 		SessionBinder binder = new SessionBinder(this.links, false);
 		binder.linkUp();

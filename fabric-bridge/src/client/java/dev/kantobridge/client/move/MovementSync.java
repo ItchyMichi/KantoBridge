@@ -8,6 +8,7 @@ import dev.kantobridge.world.Scale;
 import dev.kantobridge.world.WorldIndex;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeMap;
 import org.jetbrains.annotations.Nullable;
 
@@ -82,7 +83,21 @@ public final class MovementSync {
 		/** BIKE_PLAN B9: drop the forced path being walked (a predicted cell the engine didn't take). */
 		default void stopWalk() {
 		}
+
+		/**
+		 * WORLD_SESSIONS_PLAN WS1 (D9): send {@code route.leave{zone}}: the body is nowhere in that zone while the hidden
+		 * player stands on its route map, so gen1-bridge walks it home through the route's back warp.
+		 */
+		default void leaveRoute(String zone) {
+		}
 	}
+
+	/** WS1: the route state gen1-bridge reports ({@code player.state.route}, {@code snapshot.route}). */
+	public record RouteState(String zone, String map) {
+	}
+
+	/** WS1: a {@code route.leave} is asked again after this long while nothing changed. */
+	public static final long ROUTE_LEAVE_MS = 3000;
 
 	public static final String IDLE = "idle";
 	/** The player's feet height at the last tick (a teleport onto a two-floor cell keeps the floor nearest it); NaN before. */
@@ -159,6 +174,9 @@ public final class MovementSync {
 		/** MG4: followed-link changes relinked here, and resumes refused because the hidden player was over a step away. */
 		public long relinks;
 		public long relinkFar;
+		/** WS1: {@code route.leave} sent (the body outside the zone of the hidden player's route map), and join or settle teleports onto a route map skipped. */
+		public long routeLeaves;
+		public long routeTeleportsSkipped;
 		/** BIKE_PLAN B9: cells pre-moved on a ride's key press, confirmed by the engine, and taken back. */
 		public long predicted;
 		public long predictConfirmed;
@@ -222,6 +240,10 @@ public final class MovementSync {
 	private long rideAt = Long.MIN_VALUE / 2;
 	/** The last tick found the player out in a Wild Routes zone (the ride is free there: nothing follows). */
 	private boolean away;
+	/** WS1: the route state, and when the last {@code route.leave} for it went out (-1: none since it changed). */
+	private @Nullable RouteState route;
+	private long routeLeaveAt = -1;
+	private @Nullable String routeLeaveZone;
 	/** The {@code warp.take} sent at the far end, waiting for its answer and its warp; -1 for none. */
 	private long takeSeq = -1;
 	private long takeSentAt;
@@ -295,6 +317,25 @@ public final class MovementSync {
 		this.away = away;
 		if (away) {
 			this.stats.zoneTicks++;
+		}
+		// WS1 (D9): the hidden player on a zone's route map, the body anywhere else: it walks home, the body stays
+		String stray = ready && !away ? this.strayZone(here, x, z) : null;
+		if (stray != null) {
+			this.rejoinWanted = false;
+			this.settleWanted = false;
+			this.driftSince = -1;
+			if (!stray.equals(this.routeLeaveZone) || this.routeLeaveAt < 0 || now - this.routeLeaveAt >= ROUTE_LEAVE_MS) {
+				this.routeLeaveZone = stray;
+				this.routeLeaveAt = now;
+				this.stats.routeLeaves++;
+				this.port.leaveRoute(stray);
+			}
+			this.calm();
+			this.last = here;
+			this.lastX = x;
+			this.lastZ = z;
+			this.hasLast = true;
+			return;
 		}
 		boolean moved = false;
 		if (ready && this.rejoinWanted) {
@@ -383,6 +424,21 @@ public final class MovementSync {
 		this.relinking = !allowTeleport;
 		this.relinkStep = !allowTeleport;
 		this.stats.relinks++;
+	}
+
+	/**
+	 * WS1: {@code player.state.route} / {@code snapshot.route}: the zone whose route map the hidden player stands on, or
+	 * null when it stands on none. A change lets the next {@code route.leave} go out at once.
+	 */
+	public void onRoute(@Nullable RouteState route) {
+		if (!Objects.equals(route, this.route)) {
+			this.route = route;
+			this.routeLeaveAt = -1;
+		}
+	}
+
+	public @Nullable RouteState route() {
+		return this.route;
 	}
 
 	/** {@code player.state}'s mode. */
@@ -658,7 +714,66 @@ public final class MovementSync {
 
 	/** True when the hidden player stands on a map this world doesn't have (a partial build). */
 	public boolean hiddenUnbuilt() {
-		return this.index != null && this.hidden != null && this.index.map(this.hidden.map()) == null;
+		// WS1 (D9): a route map never counts as unbuilt (the body is out in its zone, or the hidden player walks home)
+		return this.index != null && this.hidden != null && this.index.map(this.hidden.map()) == null && !this.onRouteMap();
+	}
+
+	/** WS1: the hidden player stands on a route map (by the route state; without one, by the index's ROUTE placement). */
+	private boolean onRouteMap() {
+		if (this.hidden == null) {
+			return false;
+		}
+		if (this.route != null && this.route.map().equals(this.hidden.map())) {
+			return true;
+		}
+		MapPlacement map = this.index == null ? null : this.index.map(this.hidden.map());
+		return map != null && map.kind() == MapPlacement.Kind.ROUTE;
+	}
+
+	/** WS1: the body stands on one of the map's cells (a route map's: the zone's trailhead). */
+	private boolean onCellsOf(@Nullable Spot here, String map) {
+		CellPos cell = here == null || this.index == null ? null : here.cell(this.index);
+		return cell != null && cell.map().equals(map);
+	}
+
+	/** WS1: the zone of the route map the hidden player stands on, or null. */
+	private @Nullable String hiddenZone() {
+		if (this.hidden == null || this.index == null) {
+			return null;
+		}
+		if (this.route != null && this.route.map().equals(this.hidden.map())) {
+			return this.route.zone();
+		}
+		for (WorldIndex.Zone zone : this.index.zones()) {
+			if (zone.routeMap().equals(this.hidden.map())) {
+				return zone.id();
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * WS1 (D9): the zone to leave when the hidden player stands on its route map and the body is nowhere in it: not in
+	 * its box, not in the dungeon region, not on the route map's own cells (the trailhead); else null.
+	 */
+	private @Nullable String strayZone(@Nullable Spot here, double x, double z) {
+		String zone = this.hiddenZone();
+		if (zone == null || this.index == null) {
+			return null;
+		}
+		if (this.onCellsOf(here, this.hidden.map())) {
+			return null;
+		}
+		int bx = (int) Math.floor(x);
+		int bz = (int) Math.floor(z);
+		WorldIndex.Zone at = this.index.zoneAt(bx, bz);
+		if (at != null && at.id().equals(zone)) {
+			return null;
+		}
+		if (this.index.inDungeons(bx, bz)) {
+			return null;
+		}
+		return zone;
 	}
 
 	public int pendingSteps() {
@@ -947,10 +1062,11 @@ public final class MovementSync {
 		int bz = (int) Math.floor(z);
 		WorldIndex.Zone zone = this.index.zoneAt(bx, bz);
 		if (zone != null) {
-			return zone.routeMap().equals(this.hidden.map());
+			// WS1: the route state says which zone's route map it is (an older bridge: the map id's match)
+			String hiddenZone = this.hiddenZone();
+			return hiddenZone != null ? zone.id().equals(hiddenZone) : zone.routeMap().equals(this.hidden.map());
 		}
-		MapPlacement map = this.index.inDungeons(bx, bz) ? this.index.map(this.hidden.map()) : null;
-		return map != null && map.kind() == MapPlacement.Kind.ROUTE;
+		return this.index.inDungeons(bx, bz) && this.onRouteMap();
 	}
 
 	private void drift(@Nullable Spot here, long now) {
@@ -982,6 +1098,11 @@ public final class MovementSync {
 		if (target == null || target.equals(here)) {
 			return false;
 		}
+		if (this.onRouteMap() && !this.onCellsOf(here, this.hidden.map())) {
+			// WS1 (D9): a route map is never a place the body is put
+			this.stats.routeTeleportsSkipped++;
+			return false;
+		}
 		this.stats.syncs++;
 		this.teleport(target, now);
 		return true;
@@ -994,6 +1115,11 @@ public final class MovementSync {
 		boolean relink = this.relinkStep;
 		this.relinkStep = false;
 		if (target == null || target.equals(here)) {
+			return false;
+		}
+		if (this.onRouteMap() && !this.onCellsOf(here, this.hidden.map())) {
+			// WS1 (D9): a route map is never a place the body is put
+			this.stats.routeTeleportsSkipped++;
 			return false;
 		}
 		if (relink) {

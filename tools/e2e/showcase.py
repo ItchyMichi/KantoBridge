@@ -180,7 +180,8 @@ def main(argv=None) -> int:
     parser.add_argument("--game-display", help="Gen1Recomp's X display (default: DISPLAY)")
     parser.add_argument("--export-timeout", type=int, default=3600)
     parser.add_argument("--timeout", type=int, default=5400, help="the client run's limit, seconds")
-    parser.add_argument("--rejoin", choices=("reconnect", "relaunch"), help="WS0: save in the zone, leave, rejoin")
+    parser.add_argument("--rejoin", choices=("reconnect", "relaunch", "clearing"),
+                        help="WS0: save in the zone, leave, rejoin (clearing, WS1 C1: then the body put on the clearing)")
     args = parser.parse_args(argv)
 
     pf = preflight()

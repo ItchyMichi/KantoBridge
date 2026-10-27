@@ -174,7 +174,7 @@ optional ones. The schemas give the exact types and limits.
 | `ping` | G→M, M→G | `t` (sender's ms clock) | |
 | `pong` | G→M, M→G | `t` (echoed); `re` required | |
 | `resync` | M→G | `{}`; asks for a `snapshot` | |
-| `snapshot` | G→M | `ingame` (false at the title screen and intro: `player` is then only the save's last position and must not move the Minecraft player), `player{map,x,y,facing}, state{…player.state}, flags[], toggles{map:{obj:bool}}, blocks[{map,bx,by,block}], lit[], bag{item:qty}, money, coins, badges[], party[{uid?,dex,level,nick?,moves[],hp?,maxhp?,status?}], dex{seen[],owned[]}, npcs{map,list[]}`, and (Wild Routes, WR2) `routes{<zone>:{taken[],wins{}}}`, and (MG2) `away?{map,x,y}` while a `region.park` hold is up; `re` optional (set when answering `resync`). `ui` is reserved and never sent: open UIs follow as `ui.open` messages (UI rules) | yes |
+| `snapshot` | G→M | `ingame` (false at the title screen and intro: `player` is then only the save's last position and must not move the Minecraft player), `player{map,x,y,facing}, state{…player.state}, flags[], toggles{map:{obj:bool}}, blocks[{map,bx,by,block}], lit[], bag{item:qty}, money, coins, badges[], party[{uid?,dex,level,nick?,moves[],hp?,maxhp?,status?}], dex{seen[],owned[]}, npcs{map,list[]}`, and (Wild Routes, WR2) `routes{<zone>:{taken[],wins{}}}`, and (MG2) `away?{map,x,y}` while a `region.park` hold is up, and (WORLD_SESSIONS_PLAN WS1) `route?{zone,map}` while the hidden player stands on a zone's route map; `re` optional (set when answering `resync`). `ui` is reserved and never sent: open UIs follow as `ui.open` messages (UI rules) | yes |
 | `log` | G→M | `level, code, msg` (bridge diagnostics, never game text) | |
 | `error` | G→M, M→G, C→S, S→C | `code, msg`; `re` optional (the offending message) | |
 
@@ -188,7 +188,7 @@ optional ones. The schemas give the exact types and limits.
 | `move.ride` | M→G | `dir` (a direction or null), `b`: the rider's held intent while the hidden player is on a bike (BIKE_PLAN D1); sent on change, held like the brake | |
 | `player.pos` | G→M | `map, x, y, facing, kind:"walk"\|"bike"\|"surf"\|"ledge"\|"script"\|"spin"\|"current"\|"slope"\|"push"\|"sync"\|"ice", frames, n?`. Sent at step start (target cell) and on non-step changes. `ice` (FA0): optional, sent by no adapter before FA8. BIKE_PLAN `jump?:"low"\|"normal"\|"high"` (Gen 3): the step is a bike's hop (low a bunny hop onto the next cell, normal a side jump, high a wheelie's ledge hop: kind `ledge`, 32 frames) | |
 | `player.blocked` | G→M | `dir, reason:"tile"\|"entity"\|"bounds"\|"script", map, x, y, n?` | |
-| `player.state` | G→M | `mode:"idle"\|"screen"\|"forced"\|"cutscene"\|"busy", bike, surf, slope, hidden, dark, lit` (all required); SE6 (Gen 3) `weather`: the weather the hidden game draws now (`none`, `clouds`, `sunny`, `rain`, `snow`, `thunder`, `fog`, `ash`, `sand`, `fog_diagonal`, `underwater`, `shade`, `drought`, `downpour`, `bubbles`; Emerald's abnormal weather is drought and downpour in turn, as the game draws it), absent where the game has no weather; FA0 `run?`: the hidden player is running (Emerald's running shoes; optional, sent by no adapter before FA8); BIKE_PLAN `bikeKind?:"bike"\|"mach"\|"acro"` (present whenever `bike` is true: Blue and Crystal `bike`), `trick?:"none"\|"wheelie"\|"hop"` and `gear?:0..2` (Gen 3 only: the Acro's pose, the Mach's gear) | |
+| `player.state` | G→M | `mode:"idle"\|"screen"\|"forced"\|"cutscene"\|"busy", bike, surf, slope, hidden, dark, lit` (all required); SE6 (Gen 3) `weather`: the weather the hidden game draws now (`none`, `clouds`, `sunny`, `rain`, `snow`, `thunder`, `fog`, `ash`, `sand`, `fog_diagonal`, `underwater`, `shade`, `drought`, `downpour`, `bubbles`; Emerald's abnormal weather is drought and downpour in turn, as the game draws it), absent where the game has no weather; FA0 `run?`: the hidden player is running (Emerald's running shoes; optional, sent by no adapter before FA8); BIKE_PLAN `bikeKind?:"bike"\|"mach"\|"acro"` (present whenever `bike` is true: Blue and Crystal `bike`), `trick?:"none"\|"wheelie"\|"hop"` and `gear?:0..2` (Gen 3 only: the Acro's pose, the Mach's gear); WORLD_SESSIONS_PLAN WS1 `route?{zone, map}`: present while the hidden player stands on a zone's route map (Wild Routes rules) | |
 | `warp` | G→M | `phase:"start"\|"arrive", kind:"door"\|"stairs"\|"edge"\|"hole"\|"pad"\|"fly"\|"teleport"\|"dig"\|"rope"\|"blackout"\|"script"\|"elevator"\|"ladder"\|"escalator"\|"dive", to?{map,x,y,facing}` (required on arrive; `ladder`, `escalator`, `dive` are FA0's optional values, sent by no adapter before FA8); `re` optional: the `warp.take` it answers | |
 | `warp.take` | M→G | `from{map,x,y}, to{map,x,y,facing}, kind:"ladder"\|"hole"`: the player climbed or fell through a cave's shaft to its far end | |
 | `warp.taken` | G→M | `ok, reason?:"busy"\|"mode"\|"map"\|"far"`; `re` required | |
@@ -810,6 +810,7 @@ compat profile (`hello.ok.compat`: Gen 1 151 and 165, Emerald 386 and 354), appl
 | `route.progress` | G→M, C→S | `routes{<zone>:{taken[id], wins{id:n}}}` (the zones whose progress changed, each whole) | |
 | `route.sight` | S→C | `route, id, x, y, frames` (WR5: a zone trainer saw the player; it walks to cell `x, y` of the zone's route-map grid over `frames` after its "!") | |
 | `route.fade` | S→C | `ticks` (WR7: the server moves the player in about that many ticks: into a dungeon, down its stairs, out) | |
+| `route.leave` | M→G | `zone` (WORLD_SESSIONS_PLAN WS1: the body is nowhere in that zone while the hidden player stands on its route map) → `act.result{kind:"route.leave", ok, reason?}`; the back warp follows as a warp | |
 
 #### Wild Routes rules (WR2)
 
@@ -878,6 +879,19 @@ compat profile (`hello.ok.compat`: Gen 1 151 and 165, Emerald 386 and 354), appl
   that player `route.give` with `keep:false` (given, never recorded: a dungeon's items are new each
   visit); the display goes once the answer says it's in the bag. No Rare Candy or Master Ball, at
   most one Nugget a visit. A cleared slot takes its entities with it.
+- **Route state and the way home (WORLD_SESSIONS_PLAN §2.7, D9; WS1).** While the hidden player stands on a route
+  map gen1-bridge registered, `player.state` and the `snapshot` carry `route{zone, map}` (the zone is the route's id;
+  at the title the snapshot names the loaded save's route map when it is one). The client decides by it, never by
+  guessing from map ids: with the body inside that zone's box, or in the dungeon region, the body stays where it is
+  (away: no steps, no drift fixes, no join or settle teleport, ever, in that state); with the body anywhere else (the
+  clearing, the town, a Pokémon Center after a blackout, another zone) the client sends `route.leave{zone}` (once, then
+  again after 3 s while nothing changed) and gen1-bridge walks the hidden player home through the route's own back
+  warp (the step script's `warp` to the clearing's second-to-last cell, facing the town; Gen 3's adapter its own way
+  back), which the body follows as an ordinary warp. A route map is never a place the body is put (a join, a settle
+  or a drift fix whose target is a route map does nothing) and never counts as an unbuilt map. Reasons:
+  `not_on_route` (the hidden player isn't on that zone's route map), `busy` (the world can't take the warp now),
+  `failed`. A save whose route map no longer exists (the zone left the route list) is moved to its last heal point
+  by the engine's own load check before anything is sent (`scrubMaps`).
 - **The client (WR5)** forwards the server's `route.give`, `route.battle` and `route.blackout` to
   gen1-bridge, and gen1-bridge's `route.result` for them back to the server with the server's own
   `seq` as `re`; every `route.progress` goes up too. The save pairing's gate decides, as for the

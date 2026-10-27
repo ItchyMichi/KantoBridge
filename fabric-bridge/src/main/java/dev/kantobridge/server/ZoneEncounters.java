@@ -6,6 +6,7 @@ import dev.kantobridge.world.WorldIndex;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -157,6 +158,22 @@ public final class ZoneEncounters {
 
 	public void forget(UUID player) {
 		this.visits.remove(player);
+	}
+
+	/**
+	 * WORLD_SESSIONS_PLAN D10 (WS1): the visit {@code player} is on, to keep across a disconnect ({@link ZoneVisitRecord}),
+	 * or null off a zone. An encounter under way is not kept (the trainer looks again).
+	 */
+	public @Nullable ZoneVisitRecord snapshot(UUID player) {
+		Visit visit = this.visits.get(player);
+		return visit == null ? null : new ZoneVisitRecord(visit.region, visit.zone, List.copyOf(visit.beaten));
+	}
+
+	/** D10: the visit kept across a disconnect continues; the next tick ends it unless the player stands in that zone. */
+	public void restore(UUID player, ZoneVisitRecord record) {
+		Visit visit = new Visit(record.region(), record.zone());
+		visit.beaten.addAll(record.beaten());
+		this.visits.put(player, visit);
 	}
 
 	/** The trainers {@code player} beat on this visit (empty off a zone). */

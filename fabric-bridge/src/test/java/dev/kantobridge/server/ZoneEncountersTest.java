@@ -72,6 +72,28 @@ class ZoneEncountersTest {
 	}
 
 	@Test
+	void aVisitKeptAcrossALeaveContinuesInItsZoneAndEndsElsewhere() {
+		// WORLD_SESSIONS_PLAN D10 (WS1): the visit survives the player's leaving the world
+		ZoneEncounters encounters = new ZoneEncounters();
+		long t = startBattle(encounters, EAST, 6, 0, 10);
+		encounters.onResult(PLAYER, "battle", true, "z_zone", "a1.t1", "win", t);
+		ZoneVisitRecord kept = encounters.snapshot(PLAYER);
+		assertEquals(new ZoneVisitRecord(null, "z_zone", List.of("a1.t1")), kept);
+		encounters.forget(PLAYER);
+		// the server restarts or the player rejoins: a fresh ZoneEncounters, the kept visit restored
+		ZoneEncounters again = new ZoneEncounters();
+		again.restore(PLAYER, kept);
+		assertNull(again.tick(PLAYER, INDEX, bx(6), bz(0), true, t + 1), "still beaten on the continued visit");
+		assertEquals(Set.of("a1.t1"), again.beaten(PLAYER));
+		// restored, but the player stands outside the zone: the visit ends as leaving the box does
+		ZoneEncounters elsewhere = new ZoneEncounters();
+		elsewhere.restore(PLAYER, kept);
+		assertNull(elsewhere.tick(PLAYER, INDEX, 0, 0, true, t + 2));
+		assertNull(elsewhere.zone(PLAYER));
+		assertNull(new ZoneEncounters().snapshot(PLAYER), "off a zone: nothing to keep");
+	}
+
+	@Test
 	void anythingButAWinLetsTheTrainerLookAgainLater() {
 		ZoneEncounters encounters = new ZoneEncounters();
 		long t = startBattle(encounters, EAST, 6, 0, 10);

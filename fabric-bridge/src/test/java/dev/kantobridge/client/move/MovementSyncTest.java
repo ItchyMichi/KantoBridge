@@ -1,6 +1,7 @@
 package dev.kantobridge.client.move;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.kantobridge.builder.TestData;
@@ -80,6 +81,11 @@ class MovementSyncTest {
 			long seq = this.nextTake < 0 ? -1 : this.nextTake++;
 			this.calls.add("take " + from.key() + " " + to + " " + kind + " #" + seq);
 			return seq;
+		}
+
+		@Override
+		public void leaveRoute(String zone) {
+			this.calls.add("leave " + zone);
 		}
 
 		List<String> take() {
@@ -200,6 +206,100 @@ class MovementSyncTest {
 		rig.sync.onSnapshot(true, new Place("KB_ROUTE_TEST_ZONE", 1, 0, Dir.RIGHT), "idle");
 		rig.sync.setLinked(true);
 		assertEquals(List.of(), rig.ticks(40), "the hidden player waits on x1; you stay out in the zone");
+	}
+
+	// ---- WORLD_SESSIONS_PLAN WS1: the route state and the rule of D9 ----
+
+	private static final MovementSync.RouteState ON_ROUTE = new MovementSync.RouteState("test_zone", "KB_ROUTE_TEST_ZONE");
+
+	/** The hidden player on the zone's route map (x1), the route state saying so, the body wherever the test puts it. */
+	private static Rig onRoute(WorldIndex index, String bodyMap, int cx, int cy) {
+		Rig rig = new Rig(index);
+		rig.moveTo(bodyMap, cx, cy);
+		rig.sync.onRoute(ON_ROUTE);
+		rig.sync.onSnapshot(true, new Place("KB_ROUTE_TEST_ZONE", 1, 0, Dir.RIGHT), "idle");
+		rig.sync.setLinked(true);
+		return rig;
+	}
+
+	@Test
+	void d9TheBodyInTheZoneStaysWhereItIs() {
+		Rig rig = onRoute(zoned(), "KB_ROUTE_TEST_ZONE", 1, 0);
+		rig.x += 90;
+		rig.z += 40;
+		assertEquals(List.of(), rig.ticks(80), "away in the zone: no step, no teleport, no route.leave");
+		assertTrue(rig.sync.away());
+		assertEquals(0, rig.sync.stats().routeLeaves);
+	}
+
+	@Test
+	void d9TheBodyInTheDungeonRegionStaysWhereItIs() {
+		Rig rig = onRoute(zoned(), "KB_ROUTE_TEST_ZONE", 1, 0);
+		rig.x = 3_200_300;
+		rig.z = 3_190_050;
+		assertEquals(List.of(), rig.ticks(80));
+		assertTrue(rig.sync.away());
+	}
+
+	@Test
+	void d9TheBodyAtTheClearingWalksTheHiddenPlayerHomeAndIsNeverTeleported() {
+		// the join at the clearing (a save made right after entering, the body's vanilla position in the town)
+		Rig rig = onRoute(zoned(), "TEST_TOWN", 5, 8);
+		List<String> calls = rig.ticks(10);
+		assertEquals(List.of("leave test_zone"), calls, "one route.leave, no teleport onto the route map");
+		assertEquals(List.of(), rig.ticks((int) (MovementSync.ROUTE_LEAVE_MS / 50) - 12), "asked once while nothing changed");
+		assertEquals(List.of("leave test_zone"), rig.ticks(4), "then again after ROUTE_LEAVE_MS");
+		// the back warp arrives: the hidden player is home, the route state goes, the body follows as ever
+		rig.sync.onRoute(null);
+		rig.pos("TEST_TOWN", 5, 8, Dir.DOWN, "sync", 0, null);
+		assertEquals(List.of(), rig.ticks(20), "standing on the hidden cell: nothing more");
+		assertEquals(0, rig.sync.stats().routeTeleportsSkipped + rig.sync.stats().teleports);
+	}
+
+	@Test
+	void d9AfterABlackoutInAPokemonCenterTheHiddenPlayerIsWalkedHome() {
+		// the body was warped elsewhere (a Center, a building, another town) while the hidden player stayed on x1
+		Rig rig = onRoute(zoned(), "TEST_TOWN", 5, 7);
+		assertTrue(rig.ticks(10).contains("leave test_zone"));
+		assertFalse(rig.sync.away());
+		assertFalse(rig.sync.hiddenUnbuilt());
+	}
+
+	@Test
+	void d9TheTrailheadIsTheRouteMapsOwnCellsAndStillWalksAsBefore() {
+		Rig rig = onRoute(zoned(), "KB_ROUTE_TEST_ZONE", 1, 0);
+		rig.yaw = Dir.RIGHT.yaw();
+		assertEquals(List.of(), rig.ticks(20), "on x1 itself: no route.leave");
+		rig.moveTo("KB_ROUTE_TEST_ZONE", 0, 0);
+		assertEquals(List.of("step left 1"), rig.tick(), "A is an ordinary step west");
+	}
+
+	@Test
+	void d9ARouteMapTheIndexLacksIsNeverUnbuiltAndTheHiddenPlayerIsWalkedHome() {
+		// a world without the zone (built before it, or the route list changed): the route state still names it
+		Rig rig = new Rig(world);
+		rig.moveTo("TEST_TOWN", 5, 8);
+		rig.sync.onRoute(ON_ROUTE);
+		rig.sync.onSnapshot(true, new Place("KB_ROUTE_TEST_ZONE", 1, 0, Dir.RIGHT), "idle");
+		rig.sync.setLinked(true);
+		assertFalse(rig.sync.hiddenUnbuilt(), "never the UNBUILT_MAP hold for a route map");
+		assertEquals(List.of("leave test_zone"), rig.ticks(10));
+	}
+
+	@Test
+	void d9TheJoinAfterARelaunchWaitsForTheTitleThenStaysInTheZone() {
+		// WS0's scene B: the title's snapshot (the boot skeleton's house, ingame false), then CONTINUE on the route map
+		WorldIndex zoned = zoned();
+		Rig rig = new Rig(zoned);
+		rig.moveTo("KB_ROUTE_TEST_ZONE", 1, 0);
+		rig.x += 60;
+		rig.sync.onSnapshot(false, new Place("TEST_TOWN", 3, 6, Dir.UP), "screen");
+		assertEquals(List.of(), rig.ticks(20), "at the title nothing moves");
+		rig.sync.onRoute(ON_ROUTE);
+		rig.pos("KB_ROUTE_TEST_ZONE", 1, 0, Dir.DOWN, "sync", 0, null);
+		rig.sync.setLinked(true);
+		assertEquals(List.of(), rig.ticks(60), "continued on the route map: the body stays in the zone");
+		assertTrue(rig.sync.away());
 	}
 
 	@Test

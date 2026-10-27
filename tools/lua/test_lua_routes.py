@@ -557,3 +557,66 @@ def test_route_map_ids_name_every_installed_route_map():
     c["to"]["games"] = ["blue"]
     g = R.RouteGame(zones=[R.ZONE, c])
     assert route_map_ids(g) == sorted([R.ROUTE_MAP, R.PASS_MAP, R.PASS_MAP_TO])
+
+
+# ------------------------------------------------------------ WORLD_SESSIONS_PLAN WS1: route state and route.leave
+
+
+def test_the_route_state_names_the_zone_while_on_its_route_map_and_goes_off_the_map():
+    g = R.RouteGame(start=("TEST_WOODS", 2, 1, "up"))
+    g.run(3)
+    first = g.peer.send("resync", {})
+    snap = g.until(lambda m: m["type"] == "snapshot" and m.get("re") == first)
+    assert "route" not in snap["data"] and "route" not in snap["data"]["state"], "in the town: no route state"
+    assert g.step_script("TEST_WOODS", 3, 0) is True
+    g.until(lambda m: m["type"] == "warp" and m["data"]["phase"] == "arrive")
+    g.run(3)
+    states = [m["data"] for m in g.received("player.state")]
+    assert states[-1]["route"] == {"zone": "test_zone", "map": R.ROUTE_MAP}
+    snap_seq = g.peer.send("resync", {})
+    snap = g.until(lambda m: m["type"] == "snapshot" and m.get("re") == snap_seq)
+    assert snap["data"]["route"] == {"zone": "test_zone", "map": R.ROUTE_MAP}
+    # home through A: the route state goes
+    assert g.step_script(R.ROUTE_MAP, 0, 0) is True
+    g.until(lambda m: m["type"] == "warp" and m["data"]["phase"] == "arrive" and m["data"]["to"]["map"] == "TEST_WOODS")
+    g.run(3)
+    assert "route" not in [m["data"] for m in g.received("player.state")][-1]
+
+
+def leave(g, zone="test_zone"):
+    seq = g.peer.send("route.leave", {"zone": zone})
+    return g.until(lambda m: m["type"] == "act.result" and m.get("re") == seq)["data"]
+
+
+def test_route_leave_walks_the_hidden_player_home_through_the_back_warp():
+    g = R.RouteGame()
+    assert g.where() == (R.ROUTE_MAP, 1, 0)
+    assert leave(g) == {"kind": "route.leave", "ok": True}
+    assert g.queued()[-1] == [["warp", "TEST_WOODS", 2, 1, "down"]], "the step script's own back warp"
+    arrive = g.until(lambda m: m["type"] == "warp" and m["data"]["phase"] == "arrive")
+    assert arrive["data"]["kind"] == "script" and g.where() == ("TEST_WOODS", 2, 1)
+    st = g.status()
+    assert (st["routeLeaves"], st["routeLeftHome"], st["routesWarpsBack"]) == (1, 1, 1)
+
+
+def test_route_leave_off_the_route_map_or_for_another_zone_is_refused():
+    t = R.RouteGame(start=("TEST_WOODS", 4, 4, "down"))
+    assert leave(t) == {"kind": "route.leave", "ok": False, "reason": "not_on_route"}
+    g = R.RouteGame()
+    assert leave(g, zone="no_such_zone") == {"kind": "route.leave", "ok": False, "reason": "not_on_route"}
+    assert g.where() == (R.ROUTE_MAP, 1, 0)
+    seq = g.peer.send("route.leave", {"zone": "Bad Zone"})
+    err = g.until(lambda m: m["type"] == "error" and m.get("re") == seq)
+    assert err["data"]["code"] == "bad_message"
+
+
+def test_route_leave_waits_for_a_free_world():
+    g = R.RouteGame()
+    g.script([["show_text", "WAIT A MOMENT."]])
+    g.run(2)
+    seq = g.peer.send("route.leave", {"zone": "test_zone"})
+    g.run(5)
+    assert not any(m.get("re") == seq for m in g.received("act.result")), "waits while a script runs"
+    g.read_texts(until=lambda g: any(m.get("re") == seq for m in g.received("act.result")))
+    got = [m for m in g.received("act.result") if m.get("re") == seq][-1]["data"]
+    assert got == {"kind": "route.leave", "ok": True}

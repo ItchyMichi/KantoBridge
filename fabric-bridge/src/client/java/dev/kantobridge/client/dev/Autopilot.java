@@ -171,6 +171,10 @@ public final class Autopilot {
 	private double rejoinX;
 	private double rejoinZ;
 	private long syncsBefore;
+	/** WS1's C1 ("clearing"): the town cell the scene started on, where the body is put after the rejoin. */
+	private int startX;
+	private int startY;
+	private boolean movedToClearing;
 	private final List<PilotPlan.Shot> shots = new ArrayList<>();
 	private int shot;
 	private int requestSeq;
@@ -350,6 +354,8 @@ public final class Autopilot {
 		this.stableTicks = ok ? this.stableTicks + 1 : 0;
 		if (this.stableTicks >= 2 * TICKS) {
 			this.startMap = state.map();
+			this.startX = state.x();
+			this.startY = state.y();
 			this.walkYaw = yawOf(state.facing());
 			this.mark("linked map=" + state.map() + " x=" + state.x() + " y=" + state.y() + " facing=" + state.facing());
 			this.next(this.pilot ? Phase.PILOT_PLAN : this.tour ? Phase.TOUR_SETTLE : Phase.SETTLE);
@@ -653,7 +659,7 @@ public final class Autopilot {
 		line.append(" state=").append(state == null ? "-" : state.map() + "," + state.x() + "," + state.y() + " ingame=" + state.ingame());
 		MovementSync.Stats stats = MoveRuntime.stats();
 		if (stats != null) {
-			line.append(" syncs=").append(stats.syncs).append(" teleports=").append(stats.teleports).append(" steps=").append(stats.steps)
+			line.append(" leaves=").append(stats.routeLeaves).append(" syncs=").append(stats.syncs).append(" teleports=").append(stats.teleports).append(" steps=").append(stats.steps)
 					.append(" faces=").append(stats.faces).append(" blocked=").append(stats.blocked).append(" zoneTicks=").append(stats.zoneTicks);
 		}
 		return line.toString();
@@ -703,6 +709,9 @@ public final class Autopilot {
 			this.mark("link_dropped ticks=" + this.phaseTicks);
 		}
 		boolean waitDrop = "relaunch".equals(this.rejoin) && !this.linkDropped;
+		if (this.phaseTicks == 1) {
+			this.movedToClearing = false;
+		}
 		this.stableTicks = connected && !waitDrop && this.minecraft.screen instanceof TitleScreen ? this.stableTicks + 1 : 0;
 		if (this.stableTicks < 3 * TICKS) {
 			this.limit(10 * 60, "rejoin_title");
@@ -754,6 +763,41 @@ public final class Autopilot {
 		}
 	}
 
+	/**
+	 * WS1's C1, "a rejoin at the clearing walks the hidden player home": the body is put on the town cell the scene began
+	 * on (the clearing) through the integrated server, as if the player's saved position had been there, while the hidden
+	 * player stands on the route map; then ten seconds of watching (route.leave, the back warp, the body following).
+	 */
+	private void clearing(LocalPlayer player) {
+		int t = this.phaseTicks - (REJOIN_WALK_TICKS + 2 * TICKS);
+		WorldIndex index = ClientWorldIndex.current();
+		var server = this.minecraft.getSingleplayerServer();
+		if (!this.movedToClearing) {
+			if (index == null || server == null || this.startMap == null) {
+				this.fail("no_clearing");
+				return;
+			}
+			Vec3 block = index.toBlock(this.startMap, this.startX, this.startY);
+			java.util.UUID id = player.getUUID();
+			server.execute(() -> {
+				var target = server.getPlayerList().getPlayer(id);
+				if (target != null) {
+					target.teleportTo(block.x, block.y, block.z);
+				}
+			});
+			this.movedToClearing = true;
+			this.mark("to_clearing map=" + this.startMap + " x=" + this.startX + " y=" + this.startY + " " + this.where());
+			return;
+		}
+		if (t % TICKS == 0) {
+			MovementSync.Stats stats = MoveRuntime.stats();
+			this.mark("clearing t=" + t / TICKS + " leaves=" + (stats == null ? 0 : stats.routeLeaves) + " " + this.where());
+		}
+		if (t >= 12 * TICKS) {
+			this.next(Phase.OUTRO);
+		}
+	}
+
 	/** Forward for a few seconds (the camera's way): does the body walk, does the hidden player move? */
 	private void rejoinWalk() {
 		LocalPlayer player = this.minecraft.player;
@@ -767,13 +811,18 @@ public final class Autopilot {
 			this.mark("walk_start " + this.where());
 		}
 		this.forward(this.phaseTicks < REJOIN_WALK_TICKS);
-		if (this.phaseTicks >= REJOIN_WALK_TICKS + 2 * TICKS) {
+		if (this.phaseTicks == REJOIN_WALK_TICKS + 2 * TICKS) {
 			this.forward(false);
 			double moved = Math.hypot(player.getX() - this.rejoinX, player.getZ() - this.rejoinZ);
 			MovementSync.Stats stats = MoveRuntime.stats();
 			this.mark(String.format(Locale.ROOT, "walk_end moved=%.1f rejoin_syncs=%d ", moved,
 					(stats == null ? 0 : stats.syncs) - this.syncsBefore) + this.where());
-			this.next(Phase.OUTRO);
+			if (!"clearing".equals(this.rejoin)) {
+				this.next(Phase.OUTRO);
+			}
+		}
+		if ("clearing".equals(this.rejoin) && this.phaseTicks > REJOIN_WALK_TICKS + 2 * TICKS) {
+			this.clearing(player);
 		}
 	}
 

@@ -29,5 +29,23 @@
       "trick": "wheelie",
       "gear": 0
     }
+  },
+  {
+    "type": "player.state",
+    "seq": 911,
+    "data": {
+      "mode": "cutscene",
+      "bike": false,
+      "surf": false,
+      "slope": false,
+      "hidden": false,
+      "dark": false,
+      "lit": false,
+      "weather": "rain",
+      "route": {
+        "zone": "test_zone",
+        "map": "KB_ROUTE_TEST_ZONE"
+      }
+    }
   }
 ]

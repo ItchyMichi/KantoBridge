@@ -257,6 +257,10 @@
         }
       },
       "description": "MG2: present while a region.park hold is up (or its marker is still in the save after a link drop): the cell the hidden player stood on when parked."
+    },
+    "route": {
+      "$ref": "../defs.schema.json#/$defs/routeState",
+      "description": "WORLD_SESSIONS_PLAN §2.7 (WS1): the zone whose route map the hidden player stands on, when it does (in game or, at the title, the loaded save's); absent anywhere else."
     }
   }
 }

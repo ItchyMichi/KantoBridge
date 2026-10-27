@@ -92,6 +92,10 @@ class FakeGen1:
         self.incompatible = "visitor"
         self.party = []
         self.effect_counter = 0
+        # WORLD_SESSIONS_PLAN WS1: where route.leave takes the hidden player home, per zone (map, x, y, facing);
+        # a zone without an entry goes back to the synthetic town's start cell
+        self.route_back = {}
+        self._route_sent = None
 
     # --- lifecycle -------------------------------------------------------------------------------
 
@@ -245,6 +249,8 @@ class FakeGen1:
             await self._resume(conn, seq, data["to"])
         elif msg_type == "region.start":
             await self._start(conn, seq)
+        elif msg_type == "route.leave":
+            await self._leave(conn, seq, data["zone"])
         elif msg_type in ("export.index", "export.get"):
             await self._export(conn, message)
         elif msg_type == "debug.status":
@@ -372,6 +378,45 @@ class FakeGen1:
         if key != self._status_sent:
             self._status_sent = key
             await self._send("game.status", now)
+
+    def route_state(self):
+        """WS1: {zone, map} while the player stands on a bridge route map (KB_ROUTE_<ID>, the zone the id lowercased; a
+        connecting route's far end KB_ROUTE_<ID>_TO is the same zone), else None."""
+        m = self.player.map
+        if not m.startswith(ROUTE_MAP_PREFIX):
+            return None
+        zone = m[len(ROUTE_MAP_PREFIX):].lower()
+        if zone.endswith("_to"):
+            zone = zone[:-3]
+        return {"zone": zone, "map": m}
+
+    def state_data(self):
+        """player.state as gen1-bridge sends it: the state plus (WS1) route while on a route map."""
+        data = self.state.as_data()
+        route = self.route_state() if self.ingame else None
+        if route:
+            data["route"] = route
+        return data
+
+    async def _route_changed(self):
+        """WS1: a player.state goes out when the route state changed (gen1-bridge's rule)."""
+        now = self.route_state() if self.ingame else None
+        if now != self._route_sent:
+            self._route_sent = now
+            await self._send("player.state", self.state_data())
+
+    async def _leave(self, conn, seq, zone):
+        """route.leave (WS1, D9): only on that zone's route map; the back warp (kind script) follows the answer."""
+        here = self.route_state() if self.ingame else None
+        if here is None or here["zone"] != zone:
+            await conn.send("act.result", {"ok": False, "kind": "route.leave", "reason": "not_on_route"}, re=seq)
+            return
+        if not self._idle() or self.parked:
+            await conn.send("act.result", {"ok": False, "kind": "route.leave", "reason": "busy"}, re=seq)
+            return
+        await conn.send("act.result", {"ok": True, "kind": "route.leave"}, re=seq)
+        back = self.route_back.get(zone) or ("TEST_TOWN", 5, 8, "down")
+        await self.warp_to(*back, kind="script")
 
     def _idle(self):
         return self.ingame and self.state.mode == "idle"
@@ -569,7 +614,7 @@ class FakeGen1:
             self.open_ui = None
             self.state.mode = "idle"
             await conn.send("ui.close", {"ui": ui})
-            await conn.send("player.state", self.state.as_data())
+            await conn.send("player.state", self.state_data())
 
     # --- actions for the CLI and tests (no-ops while nobody is connected) -----------------------
 
@@ -581,6 +626,7 @@ class FakeGen1:
         self.player.map, self.player.x, self.player.y = map_id, x, y
         if facing:
             self.player.facing = facing
+        await self._route_changed()
         await self._send("player.pos", self._pos("sync", 0))
 
     async def walk(self, direction, steps=1, frames=WALK_FRAMES, fps=60):
@@ -596,7 +642,7 @@ class FakeGen1:
 
     async def set_mode(self, mode):
         self.state.mode = mode
-        await self._send("player.state", self.state.as_data())
+        await self._send("player.state", self.state_data())
 
     async def _take(self, conn, message):
         """warp.take, a cave shaft's warp (docs/PROTOCOL.md "Ladders and holes (H5)"): taken while idle, on the
@@ -627,6 +673,7 @@ class FakeGen1:
         answer when the warp had no visible step), the new map's NPCs, then any door walk-out."""
         await self._send("warp", {"phase": "start", "kind": kind})
         self.player.map, self.player.x, self.player.y, self.player.facing = map_id, x, y, facing
+        await self._route_changed()
         await self._send("warp", {"phase": "arrive", "kind": kind, "to": self.player.as_data()})
         await self._send("player.pos", self._pos("sync", 0, n))
         await self._send("npc.set", self._npc_set())
@@ -640,7 +687,7 @@ class FakeGen1:
         ui = self.ui_counter
         self.open_ui = {"ui": ui, "page": 0, "pages": len(pages)}
         self.state.mode = "screen"
-        await self._send("player.state", self.state.as_data())
+        await self._send("player.state", self.state_data())
         await self._send("ui.open", {"ui": ui, "kind": "text", "pages": pages,
                                      "cont": [[False] * len(page) for page in pages]})
         return ui
@@ -715,7 +762,7 @@ class FakeGen1:
         data = {
             "ingame": self.ingame,  # false at the title (MG2 state title): player is the save's position
             "player": self.player.as_data(),
-            "state": self.state.as_data(),
+            "state": self.state_data(),
             "flags": sorted(story.flags),
             "toggles": story.toggles,
             "blocks": [],
@@ -730,6 +777,10 @@ class FakeGen1:
         }
         if self.parked:  # MG2: the hold is up
             data["away"] = dict(self.away)
+        route = self.route_state()  # WS1: in game, or at the title the save's position
+        if route:
+            data["route"] = route
+        self._route_sent = route if self.ingame else None
         self._status_sent = (len(story.badges), tuple(sorted((n, f in story.flags) for n, f in self.markers.items())))
         return data
 

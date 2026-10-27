@@ -1,0 +1,4 @@
+[
+  {"type": "route.leave", "seq": 41, "data": {"zone": "test_zone"}},
+  {"type": "route.leave", "seq": 42, "data": {"zone": "test_zone", "region": "johto"}}
+]

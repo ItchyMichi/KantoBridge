@@ -3491,7 +3491,48 @@ the volume), stopped after each job. Choices where the plan was silent keep toda
 
 | # | Phase | Status | Date | Commits |
 |---|---|---|---|---|
-| WS0 | Facts on a pod | **done**: the bug reproduced (scene A), the cause is none of H1–H3 (below) | 2026-10-27 | `a91f735` + this record |
+| WS0 | Facts on a pod | **done**: the bug reproduced (scene A), the cause is none of H1–H3 (below) | 2026-10-27 | `a91f735`, `f5b2ba2` |
+| WS1 | The wild route rule (and the bind fix) | **done**; C1 passed on the pod (engine and client) | 2026-10-27 | WS1 commit |
+
+### Worlds and sessions: WS1 notes
+
+1. **The fix for the user's freeze:** `SessionBinder.leftWorld()` (called from Minecraft's disconnect for every link)
+   forgets the sent bind too, so a world entered again, the same one included, is bound again on a live link and the
+   gate opens on its answer (`switched:"none"`: the same save). JUnit `SessionBinderTest.theSameWorldReopenedOnALiveLinkIsBoundAgain`.
+2. **The route state (§2.7, D9):** gen1-bridge puts `route{zone, map}` into `player.state` (sent when it changes) and the
+   `snapshot` (at the title: the loaded save's position when it is a route map) from `rt.byMap`; `route.leave{zone}` →
+   `act.result{kind:"route.leave"}` runs the step script's own back warp (Gen 3: the adapter's way back, `routeStep`),
+   refused `not_on_route` off that zone's route map, `busy` after 120 steps without a free world. A save whose route
+   map left the route list needs nothing new: the engine's `scrubMaps` already moves it to its last heal point at load
+   (WS0 saw it never fire on a registered map).
+3. **The client:** `MovementSync` reads the route state (an older bridge: the old map-id match); with the body in the
+   zone's box or the dungeon region it stays away as before; anywhere else (not on the route map's own trailhead cells)
+   it sends `route.leave` (again after `ROUTE_LEAVE_MS` 3 s while nothing changed) and makes no join, settle or drift
+   move; a join or settle onto a route map from outside it is skipped (`routeTeleportsSkipped`); a route map never
+   counts as unbuilt. Counters `routeLeaves`, `routeTeleportsSkipped`.
+4. **The server (D10):** a visit is kept on the player when they leave (`kantobridge:zone_visit`: zone, region, the
+   trainers beaten) and continued on the next join (`ZoneEncounters.restore`); the first tick outside that zone ends
+   it as leaving the box does. **Deviation:** the plan put the zone into `kantobridge:presence`; that record is replaced
+   whole by every client `region.state`, so the visit has an attachment of its own.
+5. **Check C1 (pod, `kb-dev54`):** engine (`test_wild_routes.py -k ws0`, now asserting): after the reconnect the
+   snapshot carries `route{viridian_forest_zone, KB_ROUTE_VIRIDIAN_FOREST_ZONE}`, `route.leave` → ok and the back warp
+   to `VIRIDIAN_CITY 38,28` facing left; after the relaunch the CONTINUE's `player.state` carries the route, nothing
+   remapped, a step onto A goes home. Client (`showcase.py --rejoin`, world "Kanto (5)"):
+
+   | Scene | After the rejoin | Walk 4 s | Route leaves |
+   |---|---|---|---|
+   | reconnect (A) | away, lock `NONE` from the first second | 4.9 blocks | 0 |
+   | relaunch (B) | 2 s at the title (`NOT_IN_GAME`), then away, `NONE` | 4.9 blocks | 0 |
+   | clearing | body put on Viridian (35, 29) with the hidden player on x1 | (in the zone first: 4.9) | 1: the hidden player home at (38, 28), the body followed, lock `NONE` |
+
+   The C6 test of WR8 still passes. Tests: Lua `test_lua_routes.py` +4 (route state, `route.leave` home, refusals,
+   waiting for a free world); stand-ins `test_route_state_and_route_leave`; JUnit `MovementSyncTest` +7 (D9's cases,
+   the join after a relaunch, an unbuilt route map), `SessionBinderTest` +1, `ZoneEncountersTest` +1; GameTest
+   `aPlayerWhoLeavesInTheZoneReturnsToTheSameVisit` (all 145 GameTests pass); pytest 2,481 passed.
+6. **Protocol:** `defs` `routeState`; `snapshot.route`, `player.state.route`; new `route.leave` (M→G); PROTOCOL.md's
+   Wild Routes rules; the catalog and `kb_catalog.lua` regenerated; `fake_gen1` reports the route state and answers
+   `route.leave` (`route_back` per zone); `fake_minecraft.leave_route`. PLAYTEST's rejoin-in-zone item reworded for your
+   check (with the engine left running, after a relaunch, and at the clearing).
 
 ### Worlds and sessions: WS0 findings
 

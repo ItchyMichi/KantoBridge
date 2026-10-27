@@ -135,7 +135,24 @@ function Player.state(f)
     bikeKind = f.bike == true and (BIKE_KINDS[f.bikeKind] and f.bikeKind or "bike") or nil,
     trick = f.bike == true and TRICKS[f.trick] and f.trick or nil,
     gear = f.bike == true and type(f.gear) == "number" and f.gear >= 0 and f.gear <= 2 and f.gear == floor(f.gear) and f.gear or nil,
+    -- WORLD_SESSIONS_PLAN WS1 (§2.7): the zone whose route map the hidden player stands on (the core's facts.route)
+    route = Player.route(f),
   }
+end
+
+-- WS1: facts.route as the protocol's routeState, or nil (a malformed one is left out)
+function Player.route(f)
+  local r = f and f.route
+  if type(r) ~= "table" or type(r.zone) ~= "string" or not r.zone:find("^[a-z][a-z0-9_]*$") or #r.zone > 64
+      or type(r.map) ~= "string" or not r.map:find("^[A-Z0-9_]+$") or #r.map > 64 then
+    return nil
+  end
+  return { zone = r.zone, map = r.map }
+end
+
+local function routeKey(state)
+  local r = state and state.route
+  return r and (r.zone .. "/" .. r.map) or ""
 end
 
 -- Where the player is, for a snapshot: the target cell while stepping.
@@ -214,7 +231,7 @@ function Player.new()
     local out = {}
     elevNow = Player.elev(f)
     local state = Player.state(f)
-    if not same(state, sentState, STATE_KEYS) then
+    if not same(state, sentState, STATE_KEYS) or routeKey(state) ~= routeKey(sentState) then
       sentState = state
       out[#out + 1] = { "player.state", copy(state), "state" }
     end

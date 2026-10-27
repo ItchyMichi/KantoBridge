@@ -758,7 +758,12 @@ Kanto world, or the headless build); a world made before then keeps its flat cav
       the maze onto the land. Ponds keep you out (a barrier, as in Kanto until Surf).
 - [ ] Walk back to the trailhead and step west off its first cell: a fade, and you're back in Viridian City beside the
       clearing, facing the town.
-- [ ] Rejoin the world while in the zone: you stay where you were (no teleport to the town).
+- [ ] Rejoin the world while in the zone (WORLD_SESSIONS_PLAN WS1, your bug of 2026-10-27): walk a few lanes in, save in
+      the hidden game's start menu, "Save and Quit to Title", then open the same world again **without closing
+      Gen1Recomp**. You stand where you were and can walk at once (before WS1 you were held for good: the world was
+      never paired again). Then the same with Gen1Recomp closed and started again (CONTINUE in its window or through
+      Minecraft): you stay in the zone and walk. Finally rejoin while standing on the clearing in the town with the
+      hidden player still on the route map: the hidden player walks home on its own (a short fade) and you play on.
 
 ### WR5: trainers and items
 

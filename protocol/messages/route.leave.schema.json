@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/route.leave.schema.json",
+  "title": "route.leave",
+  "description": "WORLD_SESSIONS_PLAN §2.7, D9 (WS1): the body is nowhere in zone `zone` while the hidden player stands on that zone's route map (after a rejoin at the clearing, a blackout's Pokémon Center, a reload): gen1-bridge walks the hidden player home through the route's own back warp (the step script's path), which arrives as an ordinary warp. Answered act.result{kind:\"route.leave\", ok, reason?}: not_on_route (the hidden player is on no route map of that zone), busy (the world can't take the warp now: ask again), failed.",
+  "x-type": "route.leave",
+  "x-legs": [
+    "m2g"
+  ],
+  "x-re": "never",
+  "type": "object",
+  "required": [
+    "zone"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "zone": {
+      "$ref": "../defs.schema.json#/$defs/routeId"
+    },
+    "region": {
+      "$ref": "../defs.schema.json#/$defs/regionId",
+      "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."
+    }
+  }
+}

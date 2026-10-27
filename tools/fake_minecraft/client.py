@@ -136,6 +136,11 @@ class FakeMinecraft:
         message = await self.send(msg_type, data)
         return await self.expect(reply_type or msg_type, timeout, re=message["seq"])
 
+    async def leave_route(self, zone, timeout=5.0):
+        """WORLD_SESSIONS_PLAN WS1: route.leave{zone} as the client sends it when the body is nowhere in the zone;
+        returns gen1-bridge's act.result (the back warp follows as a warp)."""
+        return await self.request("route.leave", {"zone": zone}, "act.result", timeout)
+
     async def hello(self, protocol=PROTOCOL_NUMBER, start_pings=True, **extra):
         data = {"protocol": protocol, "role": self.role, "mod": MOD_VERSION}
         data.update(extra)

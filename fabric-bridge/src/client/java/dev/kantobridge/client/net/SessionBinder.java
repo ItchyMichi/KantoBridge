@@ -114,6 +114,20 @@ public final class SessionBinder {
 		this.slot = null;
 	}
 
+	/**
+	 * WORLD_SESSIONS_PLAN WS1 (the cause WS0 found): the player left the world (Minecraft's disconnect). The next entry
+	 * into any world, the same one included, binds again on this link: without this a world reopened while gen1-bridge
+	 * stayed connected was never bound, so the pairing's gate held the player for good.
+	 */
+	public void leftWorld() {
+		this.world(null, false);
+		this.sentLink = -1;
+		this.sentSeq = -1;
+		this.sentWorld = null;
+		this.sentIncompatible = null;
+		this.slot = null;
+	}
+
 	/** FP1: the link's region's onIncompatible ({@code visitor}, {@code leave_out}; anything else or null: none). */
 	public void incompatible(@Nullable String value) {
 		this.incompatible = value != null && INCOMPATIBLE.contains(value) ? value : null;

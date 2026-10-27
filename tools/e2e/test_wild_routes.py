@@ -62,7 +62,7 @@ class Visitor(StoryWalker):
 
     def __init__(self, mc):
         super().__init__(mc)
-        self.results = []
+        self.route_results = []  # route.result data (UiWalker's own results is a dict of act.result by re)
         self.progress = []
         self.bag = {}
 
@@ -70,7 +70,7 @@ class Visitor(StoryWalker):
         super().handle(m)
         t, d = m["type"], m["data"]
         if t == "route.result":
-            self.results.append(d)
+            self.route_results.append(d)
         elif t == "route.progress":
             self.progress.append(d["routes"])
         elif t == "bag.sync":
@@ -81,12 +81,12 @@ class Visitor(StoryWalker):
                 self.progress.append(d["routes"])
 
     def result(self, op, oid=None):
-        found = [r for r in self.results if r["op"] == op and (oid is None or r.get("id") == oid)]
+        found = [r for r in self.route_results if r["op"] == op and (oid is None or r.get("id") == oid)]
         return found[-1] if found else None
 
     async def ask(self, op, data, oid, count_before):
         await self.mc.send(f"route.{op}", data)
-        await self.drive(lambda: len([r for r in self.results if r["op"] == op and r.get("id") == oid]) > count_before,
+        await self.drive(lambda: len([r for r in self.route_results if r["op"] == op and r.get("id") == oid]) > count_before,
                          timeout=60)
         await self.settle()
         return self.result(op, oid)
@@ -295,6 +295,14 @@ async def _ws0_first(port, f, seq):
     await w.bind()
     await w.settle()
     facts["a_after"] = w.pos
+    facts["a_route"] = next((e[5] for e in reversed(w.seq) if e[0] == "snapshot"), None)
+    # WS1 (D9): route.leave walks the hidden player home through the back warp
+    warps = len(w.warps)
+    leave = await w.mc.send("route.leave", {"zone": ROUTE})
+    await w.until(lambda: any(d["phase"] == "arrive" for d in w.warps[warps:]), 30, "the back warp after route.leave")
+    await w.settle()
+    facts["a_leave"] = w.results.get(leave["seq"])
+    facts["a_home"] = w.pos
     status = await w.status()
     facts["a_status"] = {k: v for k, v in sorted(status.items()) if k.startswith(("route", "playthrough", "ingame"))}
     await w.mc.send("debug.quit", {"code": 0})
@@ -313,7 +321,7 @@ async def _ws0_second(port, f, seq):
     await w.bind()
     await w.until(lambda: any(e[0] == "save.loaded" for e in w.seq), 120, "save.loaded after the CONTINUE")
     await w.settle()
-    facts = {"b_after": w.pos}
+    facts = {"b_after": w.pos, "b_route": next((e[2] for e in reversed(w.seq) if e[0] == "state" and e[2]), None)}
     warps = len(w.warps)
     if w.pos and w.pos[0] == ROUTE_MAP:
         await w.step("left")
@@ -334,8 +342,9 @@ async def _ws0_second(port, f, seq):
 @pytest.mark.timeout(1500)
 def test_ws0_a_save_on_the_route_map_then_a_reconnect_and_a_relaunch():
     """WORLD_SESSIONS_PLAN WS0 (1), the engine's half: what the bridge says after a save on the route map, (A) across a
-    reconnect with the engine running, (B) across a relaunch and CONTINUE. Prints the sequence; asserts only that the
-    scenes ran (WS1 turns them into check C1)."""
+    reconnect with the engine running, (B) across a relaunch and CONTINUE. WS1 (check C1, the engine's part): the route
+    state is in the snapshot after A and in player.state after B's CONTINUE; route.leave in A walks the hidden player
+    home through the back warp; in B the hidden player is free (a step onto A goes home)."""
     pf = preflight()
     if not pf.ok:
         pytest.skip("pre-flight not done: " + "; ".join(pf.reasons))
@@ -377,3 +386,12 @@ def test_ws0_a_save_on_the_route_map_then_a_reconnect_and_a_relaunch():
                 print("cleanup:", running.wait(timeout=120).marker("KB_CLEANED"))
     assert facts1["saved_at"][0] == ROUTE_MAP, facts1
     assert r2.marker("KB_CONTINUED") is not None, r2.summary()
+    # WS1, C1 (engine side)
+    zone = {"zone": ROUTE, "map": ROUTE_MAP}
+    assert facts1["a_after"][0] == ROUTE_MAP and facts1["a_route"] == zone, facts1
+    assert facts1["a_leave"] == {"kind": "route.leave", "ok": True}, facts1
+    bx, by, facing = way_back(f)
+    assert facts1["a_home"] == (f["map"], bx, by, facing), facts1
+    assert facts2["b_after"][0] == ROUTE_MAP and facts2["b_route"] == zone, facts2
+    assert facts2["b_home"][0] == f["map"], facts2
+    assert "remapped=0" in r2.marker("KB_CONTINUED")

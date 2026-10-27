@@ -487,6 +487,13 @@
       "redact": [],
       "schema": "messages/route.give.schema.json"
     },
+    "route.leave": {
+      "legs": ["m2g"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/route.leave.schema.json"
+    },
     "route.progress": {
       "legs": ["g2m", "c2s"],
       "re": "never",

@@ -80,6 +80,7 @@ return {
     ["route.blackout"] = { m2g = true, s2c = true, re = "never" },
     ["route.fade"] = { s2c = true, re = "never" },
     ["route.give"] = { m2g = true, s2c = true, re = "never" },
+    ["route.leave"] = { m2g = true, re = "never" },
     ["route.progress"] = { g2m = true, c2s = true, re = "never" },
     ["route.result"] = { g2m = true, c2s = true, re = "required" },
     ["route.sight"] = { s2c = true, re = "never" },

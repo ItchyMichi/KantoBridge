@@ -284,8 +284,19 @@
         "weather": {"enum": ["none", "clouds", "sunny", "rain", "snow", "thunder", "fog", "ash", "sand", "fog_diagonal", "underwater", "shade", "drought", "downpour", "bubbles"], "description": "SE6 (Gen 3): the weather the hidden game draws now (its field weather; Emerald's abnormal weather shows as drought and downpour in turn, as the game draws it). Absent: the game has no weather."},
         "bikeKind": {"enum": ["bike", "mach", "acro"], "description": "BIKE_PLAN D10: which bike the hidden player rides (Emerald's Mach or Acro; Blue's and Crystal's one bike). Optional; present whenever bike is true."},
         "trick": {"enum": ["none", "wheelie", "hop"], "description": "BIKE_PLAN D11 (Gen 3 only): the Acro bike's pose: a wheelie (standing or moving) or a bunny hop. Optional."},
-        "gear": {"type": "integer", "minimum": 0, "maximum": 2, "description": "BIKE_PLAN D11 (Gen 3 only): the Mach Bike's gear (16, 8, 4 frames a cell). Optional."}
+        "gear": {"type": "integer", "minimum": 0, "maximum": 2, "description": "BIKE_PLAN D11 (Gen 3 only): the Mach Bike's gear (16, 8, 4 frames a cell). Optional."},
+        "route": {"$ref": "#/$defs/routeState"}
       }
+    },
+    "routeState": {
+      "type": "object",
+      "required": ["zone", "map"],
+      "additionalProperties": false,
+      "properties": {
+        "zone": {"$ref": "#/$defs/routeId", "description": "The zone (the route's id) whose route map the hidden player stands on."},
+        "map": {"$ref": "#/$defs/mapId", "description": "That route map (KB_ROUTE_<ID>)."}
+      },
+      "description": "WORLD_SESSIONS_PLAN §2.7 (WS1): present while the hidden player stands on a route map gen1-bridge registered (a Wild Routes zone's 2x2 holding map); absent anywhere else."
     },
     "shadowMon": {
       "type": "object",

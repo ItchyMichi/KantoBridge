@@ -46,7 +46,26 @@ public final class ZoneService {
 		ServerTickEvents.END_SERVER_TICK.register(ZoneService::tick);
 		// WR6: a lost natural wild battle blacks the player out, in zones and in Kanto
 		WildBlackouts.init();
-		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> ENCOUNTERS.forget(handler.getPlayer().getUUID()));
+		// WORLD_SESSIONS_PLAN D10 (WS1): a visit survives the player's leaving; the next join in the same zone continues it
+		ZoneVisitRecord.init();
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> leave(handler.getPlayer()));
+		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> join(handler.getPlayer()));
+	}
+
+	/** D10: the player leaves: the visit they are on (if any) is kept with them, and forgotten here. */
+	public static void leave(ServerPlayer player) {
+		ZoneVisitRecord.set(player, ENCOUNTERS.snapshot(player.getUUID()));
+		ENCOUNTERS.forget(player.getUUID());
+	}
+
+	/** D10: the player joins: a kept visit continues (the next tick ends it unless they stand in that zone). */
+	public static void join(ServerPlayer player) {
+		ZoneVisitRecord kept = ZoneVisitRecord.stored(player);
+		if (kept != null) {
+			ENCOUNTERS.restore(player.getUUID(), kept);
+			ZoneVisitRecord.set(player, null);
+			KantoBridge.LOGGER.debug("zone: a visit of {} continues ({} beaten)", kept.zone(), kept.beaten().size());
+		}
 	}
 
 	public static ZoneEncounters encounters() {

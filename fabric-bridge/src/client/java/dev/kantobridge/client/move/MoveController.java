@@ -294,6 +294,8 @@ public final class MoveController {
 		switch (message.type()) {
 			case MsgTypes.SNAPSHOT -> {
 				JsonObject state = JsonFields.obj(data, "state");
+				// WS1: the route state before the snapshot's own handling, so its join decision sees it
+				this.sync.onRoute(routeOf(JsonFields.obj(data, "route")));
 				this.sync.onSnapshot(JsonFields.bool(data, "ingame", false), Place.fromJson(data.get("player")),
 						state == null ? null : JsonFields.str(state, "mode"));
 			}
@@ -332,6 +334,7 @@ public final class MoveController {
 				if (mode != null) {
 					this.sync.onMode(mode);
 				}
+				this.sync.onRoute(routeOf(JsonFields.obj(data, "route")));
 				this.bikeKind = JsonFields.str(data, "bikeKind");
 				this.slope = JsonFields.bool(data, "slope", false);
 			}
@@ -340,6 +343,13 @@ public final class MoveController {
 			default -> {
 			}
 		}
+	}
+
+	/** WS1: {@code route{zone, map}} as the sync's route state, or null. */
+	static MovementSync.@Nullable RouteState routeOf(@Nullable JsonObject route) {
+		String zone = route == null ? null : JsonFields.str(route, "zone");
+		String map = route == null ? null : JsonFields.str(route, "map");
+		return zone == null || map == null ? null : new MovementSync.RouteState(zone, map);
 	}
 
 	private void onWarp(JsonObject data, @Nullable Long re, long now) {
@@ -502,6 +512,14 @@ public final class MoveController {
 			JsonObject data = new JsonObject();
 			data.addProperty("dir", dir.id());
 			MoveController.this.port.toBridge(MsgTypes.MOVE_FACE, data);
+		}
+
+		@Override
+		public void leaveRoute(String zone) {
+			// WORLD_SESSIONS_PLAN WS1 (D9): the hidden player walks home; the back warp follows as a warp
+			JsonObject data = new JsonObject();
+			data.addProperty("zone", zone);
+			MoveController.this.port.toBridge(MsgTypes.ROUTE_LEAVE, data);
 		}
 
 		@Override
