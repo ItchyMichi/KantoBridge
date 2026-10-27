@@ -713,6 +713,8 @@ compat profile (`hello.ok.compat`: Gen 1 151 and 165, Emerald 386 and 354), appl
 | `save.request` | S→C, M→G | `reason:"world"\|"quit"` (WORLD_SESSIONS_PLAN WS4: Minecraft saves the world, or leaves it: the hidden game is asked for a save of its own) → `act.result{kind:"save", ok, reason?}`; the save then comes as `save.begin` with this reason | |
 | `session.bind` | S→C, M→G | `world, multiplayer, incompatible?:"visitor"\|"leave_out"` (save pairing: the server tells its client the world id; the client passes it on after joining and after every reconnect; `incompatible`, M→G: the link's region record's `rules.compat.onIncompatible`, absent = `visitor`); WORLD_SESSIONS_PLAN: M→G `slot?` (the slot recorded for this player and world), `save?:"current"\|"copy"\|"new"` (the first join's choice), `continue?:"play"\|"park"\|"title"` (WS3); S→C `regions?{<region>:{slot?, save?}}` (the player's recorded choices) | |
 | `session.bound` | G→M, C→S | `slot, switched?:"none"\|"title"\|"saved"\|"moved"`; WORLD_SESSIONS_PLAN `save?` (the choice applied), `started?:"continue"\|"new"\|"none"`, `parked?` (WS3); `re` optional (the client records the pairing on the server, with `save`) | |
+| `session.close` | M→G | `{}` (WORLD_SESSIONS_PLAN WS5: Minecraft left the world after this game's quit save) → `session.closed` | |
+| `session.closed` | G→M | `title, home?` (the game is at its title; `home`: the offline slot made active again); `re` required | |
 | `session.waiting` | G→M | `slot, reason:"busy"\|"new_game"\|"save_failed"`; `re` optional (the bind) | |
 | `save.loaded` | G→M, C→S | `fresh, ops, pair?, at?, daycare?, boarded?` (which save the hidden game runs from; M10 crash recovery; `boarded`: every uid the daycare holds when it holds more than one) | |
 | `save.mismatch` | S→C | `kind:"hidden_behind"\|"world_behind"\|"hidden_older"\|"hidden_newer"\|"new_game"\|"other", ops?, hiddenAt?, worldAt?` | |
@@ -1397,6 +1399,16 @@ before V1) counts as no pack.
   "world"}` (or `"quit"`) and pairs like any other; `act.result{kind:"save"}` answers `ok`, or `not_ingame` (the title),
   `not_idle` (no free moment: a battle, a text box, a walk), `vetoed`, `failed`, `busy` (a newer request replaced it).
   Nothing is rolled back: a refusal is a HUD line ("Blue didn't save: …") and the world saves anyway.
+- **Closing with the world (WORLD_SESSIONS_PLAN §2.5, D6, D7; WS5).** The pause menu's "Save and Quit to Title" and the
+  window's close first send `save.request{reason:"quit"}` to every bound link and wait for each to save (`act.result` ok)
+  or refuse, at most 10 s (the window's close 5 s), showing "Saving Blue, Crystal…"; then Minecraft's own leave runs (an
+  integrated server saves as always). After it, in a world with a record (a region world), `session.close` goes to every
+  link that saved or had nothing to save (at its title): gen1-bridge releases the hold, returns a game in play to its
+  title and, when the active slot is a world's, makes the home slot active again (`session.closed{title, home?}`); the
+  next join continues it (WS3). A game whose save failed (refused or out of time) is named on the HUD and left as it is:
+  never returned to its title, never stopped (D7). In a legacy world (no region table) nothing continues a game at join,
+  so no `session.close` is sent there: the game is saved and keeps running as before. A crash of Minecraft changes
+  nothing: the engines run on and the next join continues or binds them.
 - **Every game continues at join (WORLD_SESSIONS_PLAN §2.3, D4, D13; WS3).** In a world with a record (a region world)
   the client's bind for each listed game carries `continue`: `play` for the region the player follows (the server's
   `region.state`, whose `followed` the server seeds with the record's `start` for a player who never said; else the

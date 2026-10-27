@@ -46,6 +46,11 @@
 --             KB_SCRATCH_SLOT at debug.quit the home slot is made active again
 --             and the scratch slot deleted (KB_CLEANED); with KB_CONTINUE_AT=
 --             never the game stays at its title (a client's own CONTINUE).
+--   titlesave WORLD_SESSIONS_PLAN WS5's client chain: as save, but the game is
+--             saved right on the spot (in town, facing the trees) and taken
+--             back to its title (Game:returnToTitle): KB_TITLESAVE slot= home=;
+--             then it serves at the title, where the client's join continues
+--             it (WS3). KB_INGAME map= x= y= whenever the overworld comes back.
 --   cleanup   only that clean-up, then quits (after a failed run).
 --
 -- Runs unsandboxed as a POKEPORT_DRIVER coroutine, resumed once per frame
@@ -128,6 +133,7 @@ return function(game)
   local arrived = false
   local nextFrame
   local savedAt, idleFrames, continued = nil, 0, false
+  local lastHere
   if SCENE ~= "continue" and SCENE ~= "cleanup"
       and not (SPOT_X and SPOT_Y and ({ up = true, down = true, left = true, right = true })[FACING]) then
     fail("no_spot")
@@ -155,7 +161,7 @@ return function(game)
           print(("KB_BOOTED scene=continue top=%s"):format(word(top and top.screenId)))
           phase = "serve"
         else
-          if SCENE == "save" then
+          if SCENE == "save" or SCENE == "titlesave" then
             local SaveData = require("src.core.SaveData")
             local version = require("src.core.GameVersion").get()
             local home = SaveData.activeSlot(version)
@@ -187,7 +193,14 @@ return function(game)
       end
     elseif phase == "warping" then
       local ow = overworld(game)
-      if arrived and ow and game.stack:top() == ow and ow.map and ow.map.id == MAP then
+      if arrived and ow and game.stack:top() == ow and ow.map and ow.map.id == MAP and SCENE == "titlesave" then
+        local written = game:writeSave()
+        game:returnToTitle()
+        local SaveData = require("src.core.SaveData")
+        print(("KB_TITLESAVE slot=%d ok=%s"):format(slotNum(SaveData.activeSlot(require("src.core.GameVersion").get())),
+          word(written == true)))
+        phase = "serve"
+      elseif arrived and ow and game.stack:top() == ow and ow.map and ow.map.id == MAP then
         local p = ow.player
         print(("KB_WILD_READY map=%s x=%s y=%s facing=%s party=%d port=%s"):format(
           word(ow.map.id), word(p.cellX), word(p.cellY), word(p.facing), #game.save.party, word(status.port)))
@@ -200,6 +213,15 @@ return function(game)
         if nextFrame > now then love.timer.sleep(nextFrame - now) end
       end
       local ow = overworld(game)
+      if SCENE == "titlesave" then
+        local here = ow and ow.map and (ow.map.id .. ":" .. tostring(ow.player and ow.player.cellX) .. ":" .. tostring(ow.player and ow.player.cellY))
+        if here ~= lastHere then
+          lastHere = here
+          if ow and ow.map then
+            print(("KB_INGAME map=%s x=%s y=%s"):format(word(ow.map.id), word(ow.player.cellX), word(ow.player.cellY)))
+          end
+        end
+      end
       if SCENE == "save" and not savedAt then
         local p = ow and ow.player
         local still = ow and game.stack:top() == ow and ow.map and ow.map.id == ROUTE_MAP and p and not p.moving

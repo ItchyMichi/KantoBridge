@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/session.close.schema.json",
+  "title": "session.close",
+  "description": "WORLD_SESSIONS_PLAN §2.5, D6 (WS5): Minecraft has left the world and this game's quit save worked (or it had nothing to save): gen1-bridge releases the region hold, returns a game in play to its title and, when the active slot is a world's, makes the home (offline) slot active again; answered session.closed. Never sent for a game whose quit save failed (D7).",
+  "x-type": "session.close",
+  "x-legs": [
+    "m2g"
+  ],
+  "x-re": "never",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "region": {
+      "$ref": "../defs.schema.json#/$defs/regionId",
+      "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."
+    }
+  }
+}

@@ -739,6 +739,8 @@ return function(mod)
   end
   -- WORLD_SESSIONS_PLAN WS4: Minecraft's save asks for the hidden game's (act/kb_save.lua), answered by act.result
   session.on("save.request", queued(saves.request))
+  -- WS5: Minecraft left the world: the hold released, the title, the home slot (act/kb_pairing.lua), answered session.closed
+  session.on("session.close", queued(function(data, seq, gen) return pairing.close(data, seq, gen) end))
   -- MG2: the region acts, answered by act.result (act/kb_region.lua)
   for _, op in ipairs({ "park", "resume", "start" }) do
     session.on("region." .. op, queued(function(data, seq, gen) return regionActs.request(op, data, seq, gen) end))

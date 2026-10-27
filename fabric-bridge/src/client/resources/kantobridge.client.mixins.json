@@ -12,7 +12,9 @@
 		"KeyboardInputMixin",
 		"LevelRendererMixin",
 		"LivingEntityRendererMixin",
-		"LocalPlayerMixin"
+		"LocalPlayerMixin",
+		"MinecraftStopMixin",
+		"PauseScreenMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

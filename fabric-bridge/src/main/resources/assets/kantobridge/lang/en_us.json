@@ -292,5 +292,7 @@
   "kantobridge.hud.save.refused.not_idle": "%s didn't save: it was busy (a battle, a text box or a walk)",
   "kantobridge.hud.save.refused.vetoed": "%s didn't save: the game refused",
   "kantobridge.hud.save.refused.failed": "%s didn't save",
-  "kantobridge.hud.save.refused.busy": "%s didn't save: another save was asked for"
+  "kantobridge.hud.save.refused.busy": "%s didn't save: another save was asked for",
+  "kantobridge.quit.saving": "Saving %s…",
+  "kantobridge.hud.quit.unsaved": "Not saved, left running: %s"
 }

@@ -83,6 +83,11 @@ public final class FirstJoinScreen extends Screen {
 				.bounds(centre - 100, y + list.size() * 28 + 10, 200, 20).build());
 	}
 
+	/** The dev autopilot's Done (the choices as shown: continue every save). */
+	public void acceptShown() {
+		this.finish(answers(this.keep, this.multiplayer));
+	}
+
 	private void finish(Map<String, String> out) {
 		if (this.done) {
 			return;

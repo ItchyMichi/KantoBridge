@@ -358,7 +358,7 @@ public final class Autopilot {
 			this.startY = state.y();
 			this.walkYaw = yawOf(state.facing());
 			this.mark("linked map=" + state.map() + " x=" + state.x() + " y=" + state.y() + " facing=" + state.facing());
-			this.next(this.pilot ? Phase.PILOT_PLAN : this.tour ? Phase.TOUR_SETTLE : Phase.SETTLE);
+			this.next(this.pilot ? Phase.PILOT_PLAN : this.tour ? Phase.TOUR_SETTLE : "quit".equals(this.rejoin) ? Phase.REJOIN_SAVE : Phase.SETTLE);
 		} else {
 			this.limit(5 * 60, "link");
 		}
@@ -627,6 +627,12 @@ public final class Autopilot {
 			this.minecraft.setScreen(null);
 			return true;
 		}
+		if (this.minecraft.screen instanceof dev.kantobridge.client.net.FirstJoinScreen first) {
+			// WS3 (D13): the first join's question, answered as a player keeping their save would
+			this.mark("first_join_answered continue");
+			first.acceptShown();
+			return true;
+		}
 		return false;
 	}
 
@@ -675,16 +681,27 @@ public final class Autopilot {
 						.getFileName().toString();
 			}
 		}
-		if (this.phaseTicks >= 8 * TICKS) {
+		if (this.phaseTicks >= ("quit".equals(this.rejoin) ? 2 : 8) * TICKS) {
 			this.mark("rejoin_saved level=" + this.levelId + " " + this.where());
 			this.next(Phase.REJOIN_LEAVE);
 		}
 	}
 
-	/** "Save and Quit to Title", as the pause menu runs it (PauseScreen.onDisconnect). */
+	/** "Save and Quit to Title", as the pause menu runs it (PauseScreen.onDisconnect); WS5's quit mode through the choreography. */
 	private void rejoinLeave() {
 		this.stopRecording();
 		this.mark("left_world " + this.where());
+		if ("quit".equals(this.rejoin)) {
+			dev.kantobridge.client.net.SessionRuntime session = dev.kantobridge.client.net.SessionRuntime.get();
+			boolean took = session != null && session.quit(() -> dev.kantobridge.client.net.Leave.vanilla(this.minecraft));
+			this.mark("quit_choreography took=" + took);
+			if (!took) {
+				dev.kantobridge.client.net.Leave.vanilla(this.minecraft);
+			}
+			this.linkDropped = false;
+			this.next(Phase.REJOIN_TITLE);
+			return;
+		}
 		boolean local = this.minecraft.isLocalServer();
 		if (this.minecraft.level != null) {
 			this.minecraft.level.disconnect();

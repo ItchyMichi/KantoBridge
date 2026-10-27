@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/session.closed.schema.json",
+  "title": "session.closed",
+  "description": "WORLD_SESSIONS_PLAN §2.5 (WS5): the answer to session.close: title (the game is at its title now), home (the slot made active again, when the world's slot was active).",
+  "x-type": "session.closed",
+  "x-legs": [
+    "g2m"
+  ],
+  "x-re": "required",
+  "type": "object",
+  "required": [
+    "title"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "title": {
+      "type": "boolean"
+    },
+    "home": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 255
+    },
+    "region": {
+      "$ref": "../defs.schema.json#/$defs/regionId",
+      "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."
+    }
+  }
+}

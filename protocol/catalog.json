@@ -564,6 +564,20 @@
       "redact": [],
       "schema": "messages/session.bound.schema.json"
     },
+    "session.close": {
+      "legs": ["m2g"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/session.close.schema.json"
+    },
+    "session.closed": {
+      "legs": ["g2m"],
+      "re": "required",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/session.closed.schema.json"
+    },
     "session.waiting": {
       "legs": ["g2m"],
       "re": "optional",

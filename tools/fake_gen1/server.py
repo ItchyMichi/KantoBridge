@@ -256,6 +256,16 @@ class FakeGen1:
             await self._start(conn, seq)
         elif msg_type == "route.leave":
             await self._leave(conn, seq, data["zone"])
+        elif msg_type == "session.close":
+            # WORLD_SESSIONS_PLAN WS5: the hold released, the title, the offline slot again when a world's was active
+            self.away = None
+            self.playthrough = "title"
+            data_out = {"title": True}
+            if self.slot != 1:
+                self.slot = 1
+                data_out["home"] = 1
+            await conn.send("session.closed", data_out, re=seq)
+            await conn.send("game.status", self.game_status())
         elif msg_type == "save.request":
             # WORLD_SESSIONS_PLAN WS4: a save of the hidden game's own, announced with the request's reason
             self.save_requests.append(data["reason"])

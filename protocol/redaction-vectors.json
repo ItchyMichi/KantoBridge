@@ -897,6 +897,9 @@
       }
     },
     {"type": "session.bound", "seq": 13, "redacted": {"slot": 3, "save": "copy", "region": "johto"}},
+    {"type": "session.close", "seq": 61, "redacted": {}},
+    {"type": "session.closed", "seq": 62, "redacted": {"title": true, "home": 1}},
+    {"type": "session.closed", "seq": 63, "redacted": {"title": true}},
     {"type": "session.waiting", "seq": 12, "redacted": {"slot": 2, "reason": "busy"}},
     {
       "type": "snapshot",

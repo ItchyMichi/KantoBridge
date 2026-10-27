@@ -180,8 +180,12 @@ def main(argv=None) -> int:
     parser.add_argument("--game-display", help="Gen1Recomp's X display (default: DISPLAY)")
     parser.add_argument("--export-timeout", type=int, default=3600)
     parser.add_argument("--timeout", type=int, default=5400, help="the client run's limit, seconds")
-    parser.add_argument("--rejoin", choices=("reconnect", "relaunch", "clearing"),
-                        help="WS0: save in the zone, leave, rejoin (clearing, WS1 C1: then the body put on the clearing)")
+    parser.add_argument("--rejoin", choices=("reconnect", "relaunch", "clearing", "quit"),
+                        help="WS0: save in the zone, leave, rejoin (clearing, WS1 C1: then the body put on the clearing; quit, "
+                             "WS5: the game waits at its title with a save, the first join answers 'continue', the quit "
+                             "choreography leaves, the rejoin continues it)")
+    parser.add_argument("--fresh-session", action="store_true",
+                        help="WS5: the world's kantobridge/session.json is moved aside for the run (a first join) and put back")
     args = parser.parse_args(argv)
 
     pf = preflight()
@@ -208,13 +212,21 @@ def main(argv=None) -> int:
                "KB_SPOT_FACING": f["facing"], "KB_PACE": "60", "KB_DATASET_MEMO": "30",
                "KB_DRIVER_SECONDS": str(args.timeout + args.export_timeout)}
         if args.rejoin:
-            env.update({"KB_SCENE": "save", "KB_ROUTE_MAP": "KB_ROUTE_" + entry_id().upper()})
+            env.update({"KB_SCENE": "titlesave" if args.rejoin == "quit" else "save",
+                        "KB_ROUTE_MAP": "KB_ROUTE_" + entry_id().upper()})
     if args.game_display:
         env["DISPLAY"] = args.game_display
     AUTOPILOT_LOG.unlink(missing_ok=True)
     started = time.monotonic()
     driver, marker = ("kb_pilot.lua", "KB_PILOT_READY") if pilot else ("kb_tour.lua", "KB_TOUR_STOP") if tour else (
-        "kb_wild.lua", "KB_WILD_READY")
+        "kb_wild.lua", "KB_TITLESAVE" if args.rejoin == "quit" else "KB_WILD_READY")
+    moved = None
+    if args.fresh_session and args.world:
+        record = SAVES / args.world / "kantobridge" / "session.json"
+        if record.is_file():
+            moved = record.with_name("session.json.ws5bak")
+            record.rename(moved)
+            print("session.json moved aside", flush=True)
     with launch(driver, game=args.game, extra_env=env, echo=False) as game:
         ready = game.wait_marker(marker, timeout=240)
         print(ready or f"Gen1Recomp: no {marker} " + json.dumps(game.result.summary()), flush=True)
@@ -266,6 +278,13 @@ def main(argv=None) -> int:
                         "KB_TEST_PORT": str(args.port), "KB_SCENE": "cleanup", "KB_HOME_SLOT": f"slot{slots['home']}",
                         "KB_SCRATCH_SLOT": f"slot{slots['slot']}"}) as clean:
                     print("cleanup:", clean.wait(timeout=180).marker("KB_CLEANED"), flush=True)
+    if moved is not None:
+        record = moved.with_name("session.json")
+        record.unlink(missing_ok=True)
+        moved.rename(record)
+        print("session.json put back", flush=True)
+    if args.rejoin == "quit":
+        print("driver:", [line for line in result.lines if line.startswith(("KB_TITLESAVE", "KB_INGAME"))], flush=True)
     print("Gen1Recomp:", json.dumps({k: v for k, v in result.summary().items() if k != "markers"}), flush=True)
     steps = AUTOPILOT_LOG.read_text(encoding="utf-8").splitlines() if AUTOPILOT_LOG.is_file() else []
     done = any(line.endswith("autopilot: done") for line in steps)

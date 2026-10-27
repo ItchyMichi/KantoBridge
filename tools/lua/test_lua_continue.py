@@ -102,3 +102,41 @@ def test_without_continue_the_bind_answers_as_before():
     g.run(2)
     b = bound(g, seq)
     assert b is not None and "started" not in b and not on_overworld(g)
+
+
+# ------------------------------------------------------------ WS5: session.close
+
+
+def close(g, steps=3):
+    seq = g.send("session.close", {})
+    g.run(steps)
+    found = [m["data"] for m in g.received("session.closed") if m.get("re") == seq]
+    return found[-1] if found else None
+
+
+def test_close_from_a_world_slot_returns_to_the_title_and_the_home_slot():
+    g = at_title()
+    seq = g.send("session.bind", {"world": W, "multiplayer": True, "save": "copy", "continue": "play"})
+    g.run(12)
+    assert bound(g, seq)["started"] == "continue" and on_overworld(g), "the world's own slot (a copy), continued"
+    assert g.E.activeSlot == b"slot2"
+    assert close(g) == {"title": True, "home": 1}
+    assert not on_overworld(g)
+    assert g.E.activeSlot == b"slot1", "PROGRESS question 3: the offline slot is active again"
+
+
+def test_close_from_the_title_or_a_singleplayer_slot_says_title_only():
+    g = at_title()
+    assert close(g) == {"title": True}
+    p = at_title()
+    bind(p, "play")  # singleplayer: the current slot
+    assert close(p) == {"title": True}
+    assert not on_overworld(p)
+
+
+def test_close_releases_a_hold():
+    g = at_title()
+    bind(g, "park", steps=20)
+    assert held(g)
+    assert close(g)["title"] is True
+    assert not held(g)

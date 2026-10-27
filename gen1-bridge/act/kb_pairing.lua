@@ -97,6 +97,13 @@
 -- seams below are unchanged. `continue` (WS3) is checked and kept for the
 -- continue step (act/kb_continue.lua).
 --
+-- WORLD_SESSIONS_PLAN WS5 (§2.5, D6): session.close{} M->G after Minecraft
+-- left the world (sent only for a game whose quit save worked, D7): the
+-- region hold is released, a game in play goes back to its title
+-- (engine.toTitle) and, when the active slot is a world's, the home (offline)
+-- slot is made active again (PROGRESS question 3's first option): answered
+-- session.closed{title, home?} (home: the slot switched back to).
+--
 -- Refusals (error, re set): bad_message, session.no_game (no game version),
 -- session.no_slots (no slot API, or a cart), session.no_slot (a slot can't
 -- be created or made active), session.store_failed (the pairing can't be
@@ -610,7 +617,46 @@ function Pairing.new(opts)
   -- can run, and the answer. out gets session.bound or error replies
   -- ({ type, data, re = seq, gen = generation }); link = { live,
   -- generation }: the client that asked must still be there.
+  -- WS5: session.close from the session (role already checked); done in step().
+  local closeReq
+  function pairing.close(d, seq, generation)
+    if type(d) ~= "table" or next(d) ~= nil and not (next(d) == "region" and next(d, "region") == nil) then
+      return nil, "bad_message"
+    end
+    closeReq = { seq = seq, gen = generation }
+    counts.closes = (counts.closes or 0) + 1
+    return true
+  end
+
+  local function close(out, c)
+    if engine.awayHeld and engine.awayHeld() then engine.releaseAway() end
+    local title = true
+    if engine.playthrough(loaded) ~= "title" then title = engine.toTitle() == true end
+    local data = { title = title }
+    local s = engine.slotState()
+    local g = s.version and s.api and not s.cart and gameRec(s.version) or nil
+    local home = g and g.home
+    if g and s.active and worldSlot(g, s.active) and home and not worldSlot(g, home) and engine.slotRegistered(home) then
+      if engine.activateSlot(home) then
+        data.home = protocolSlot(home)
+        counts.closeHomes = (counts.closeHomes or 0) + 1
+        if engine.titleMenuOpen() then engine.toTitle() end
+      end
+    end
+    out[#out + 1] = { "session.closed", data, re = c.seq, gen = c.gen }
+    if log then log.info("session.closed", { title = title, home = data.home ~= nil }) end
+  end
+
   function pairing.step(out, link)
+    -- WS5: a session.close (after Minecraft left the world), before anything else
+    if closeReq then
+      local c = closeReq
+      closeReq = nil
+      if link and link.live and c.gen == link.generation then
+        local ok = pcall(close, out, c)
+        if not ok then out[#out + 1] = { "error", { code = "session.failed", msg = "session.failed" }, re = c.seq, gen = c.gen } end
+      end
+    end
     -- WS3: answers kb_continue finished since the last step (still for this connection)
     if #deferred > 0 then
       for _, m in ipairs(deferred) do

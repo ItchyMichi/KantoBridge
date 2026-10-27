@@ -241,6 +241,39 @@ public final class SessionRuntime {
 					this.gate.unpaired() ? ", unpaired" : "");
 		}
 
+		/** WS5: this link as the quit choreography sees it. */
+		SessionClose.Target target() {
+			LinkSession me = this;
+			return new SessionClose.Target() {
+				@Override
+				public String name() {
+					return me.link.game() == null ? "?" : I18n.get("kantobridge.game." + me.link.game());
+				}
+
+				@Override
+				public boolean requestSave(long now) {
+					return me.saves.request("quit", now, data -> me.link.client().sendTracked(MsgTypes.SAVE_REQUEST, data));
+				}
+
+				@Override
+				public SaveRelay.RequestState saveState() {
+					return me.saves.request();
+				}
+
+				@Override
+				public @Nullable String refusal() {
+					return me.saves.refusal();
+				}
+
+				@Override
+				public void close() {
+					if (me.link.client().sendTracked(MsgTypes.SESSION_CLOSE, new JsonObject()) >= 0) {
+						SessionRuntime.this.closingLinks.add(me.link);
+					}
+				}
+			};
+		}
+
 		/** gen1-bridge's messages for this link (its own dispatcher). */
 		void subscribe() {
 			Dispatcher dispatcher = this.link.dispatcher();
@@ -287,6 +320,10 @@ public final class SessionRuntime {
 						SessionRuntime.this.saveRefused(this.link, why);
 					}
 				}
+			});
+			dispatcher.on(MsgTypes.SESSION_CLOSED, message -> {
+				long home = JsonFields.integer(message.data(), "home", -1);
+				SessionRuntime.this.closed(this.link, JsonFields.bool(message.data(), "title", false), home < 0 ? null : (int) home);
 			});
 			dispatcher.on(MsgTypes.SESSION_WAITING, message -> this.gate.waiting(JsonFields.str(message.data(), "reason"), message.re(),
 					SessionRuntime.this.now()));
@@ -488,6 +525,132 @@ public final class SessionRuntime {
 		if (inWorld) {
 			this.askFirstJoin(minecraft);
 		}
+		this.tickQuit();
+	}
+
+	// ---- WS5: closing with the world ----
+
+	private final SessionClose closing = new SessionClose();
+	/** WS5: the games told session.close and not answered yet (WS7 stops the engines it started once they answer). */
+	private final java.util.Set<BridgeLink> closingLinks = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+	private @Nullable Runnable afterSaves;
+	private boolean closeAfterLeave;
+
+	/** WS5: the bound games the quit asks for a save (pairing open, link up). */
+	private List<SessionClose.Target> quitTargets() {
+		List<SessionClose.Target> out = new ArrayList<>();
+		for (LinkSession session : this.sessions.values()) {
+			if (session.link.connected() && session.binder.bound() && session.gate.serverOpen()) {
+				out.add(session.target());
+			}
+		}
+		return out;
+	}
+
+	/**
+	 * WS5: the pause menu's "Save and Quit to Title". True when the choreography took over (the leave runs once every
+	 * bound game has saved, refused or run out of time); false when there is nothing to wait for (the vanilla leave
+	 * goes on at once).
+	 */
+	public boolean quit() {
+		return this.quit(() -> Leave.vanilla(Minecraft.getInstance()));
+	}
+
+	/** {@link #quit()} with the leave to run afterwards (the dev autopilot passes its own). */
+	public boolean quit(Runnable leave) {
+		if (this.closing.running()) {
+			return true;
+		}
+		Minecraft minecraft = Minecraft.getInstance();
+		if (minecraft.level == null) {
+			return false;
+		}
+		this.closeAfterLeave = ClientRegions.record() != null;
+		if (!this.closing.begin(this.quitTargets(), this.now(), false)) {
+			return false;
+		}
+		this.afterSaves = leave;
+		minecraft.setScreen(new net.minecraft.client.gui.screens.GenericMessageScreen(
+				Component.translatable("kantobridge.quit.saving", String.join(", ", this.closing.names()))));
+		LOGGER.info("quit: saving {} hidden game(s) first", this.closing.names().size());
+		return true;
+	}
+
+	/**
+	 * WS5: the window's close (Minecraft.stop, on the client thread): the same saves with five seconds, the links'
+	 * messages drained here since the client loop no longer runs; then session.close to those that saved, without
+	 * waiting for the answers. Minecraft's own stop follows (its integrated server saves the world).
+	 */
+	public void quitBlocking() {
+		Minecraft minecraft = Minecraft.getInstance();
+		if (minecraft.level == null || this.closing.running()) {
+			return;
+		}
+		this.closeAfterLeave = ClientRegions.record() != null;
+		if (!this.closing.begin(this.quitTargets(), this.now(), true)) {
+			return;
+		}
+		LOGGER.info("quit: the window closes; saving {} hidden game(s) first", this.closing.names().size());
+		while (this.closing.tick(this.now()) == SessionClose.Step.WAIT) {
+			this.links.drain(64);
+			try {
+				Thread.sleep(20);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+				break;
+			}
+		}
+		this.finishQuit();
+	}
+
+	private void tickQuit() {
+		if (!this.closing.running()) {
+			return;
+		}
+		if (this.closing.tick(this.now()) == SessionClose.Step.DISCONNECT) {
+			Runnable leave = this.afterSaves;
+			this.afterSaves = null;
+			if (leave != null) {
+				leave.run();
+			}
+			this.finishQuit();
+		}
+	}
+
+	private void finishQuit() {
+		if (this.closeAfterLeave) {
+			this.closing.afterDisconnect();
+		} else {
+			// a legacy world: nothing continues the games at the next join there, so they keep running as saved (WS5)
+			this.closing.abandon();
+		}
+		List<String> failed = this.closing.failed();
+		if (!failed.isEmpty()) {
+			this.saveNotice = new ConnectionStatus.Line("kantobridge.hud.quit.unsaved", List.of(String.join(", ", failed)), true);
+			this.saveNoticeUntil = this.now() + 3 * SAVE_NOTICE_MS;
+			LOGGER.warn("quit: {} hidden game(s) didn't save and were left as they are", failed.size());
+		}
+	}
+
+	/** WS5: a game answered session.close (WS7 stops the engine it started). */
+	void closed(BridgeLink link, boolean title, @Nullable Integer home) {
+		this.closingLinks.remove(link);
+		LOGGER.info("quit: a hidden game is back at its title ({}{})", title, home == null ? "" : ", offline slot " + home);
+		for (java.util.function.Consumer<BridgeLink> listener : this.closedListeners) {
+			listener.accept(link);
+		}
+	}
+
+	private final List<java.util.function.Consumer<BridgeLink>> closedListeners = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+	/** WS7: called when a link answers session.close (the launcher stops the engine it started). */
+	public void onClosed(java.util.function.Consumer<BridgeLink> listener) {
+		this.closedListeners.add(listener);
+	}
+
+	/** WS5/WS7: the links whose session.close isn't answered yet. */
+	public boolean closing(BridgeLink link) {
+		return this.closingLinks.contains(link);
 	}
 
 	/** WS4: a refused save's HUD line stays this long. */

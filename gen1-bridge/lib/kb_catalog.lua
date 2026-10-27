@@ -91,6 +91,8 @@ return {
     ["save.request"] = { m2g = true, s2c = true, re = "never" },
     ["session.bind"] = { m2g = true, s2c = true, re = "never" },
     ["session.bound"] = { g2m = true, c2s = true, re = "optional" },
+    ["session.close"] = { m2g = true, re = "never" },
+    ["session.closed"] = { g2m = true, re = "required" },
     ["session.waiting"] = { g2m = true, re = "optional" },
     ["snapshot"] = { g2m = true, re = "optional" },
     ["story.blocks"] = { g2m = true, re = "never" },
