@@ -25,15 +25,16 @@ of its games** (`kantobridge/world.json`: the games, their save slots, the start
 lists the games the player runs, takes a tick per game, a "start here" choice and a "continue this save / new game"
 choice, and builds every chosen region in one go with the spawn at the start town; a **join** that continues every saved
 game in the world (CONTINUE run by gen1-bridge itself, as the pass's `region.start` already does), follows the one the
-player was in (else the start region) and parks the rest where they stand; a **save with the world** (Minecraft's save
-events ask each bound game for its own save, which comes back as today's `save.begin` and pairs as today); a **close
-with the world** (the pause menu's quit first saves every game, then returns each engine to its title and its offline
-slot, then, when Minecraft started the engine, stops the process); **Minecraft-owned engines** (the mod starts the games
-a world needs from `launch.json`'s installs and stops them with the world, so `launch.ps1` only starts Minecraft); and
-for the wild routes an explicit **route state** in the snapshot plus one rule on both sides: a hidden player on a zone's
-route map whose body is not in that zone is walked home through the route's own back warp, never left stranded, and a
-body in the zone with its hidden player on the route map stays put. The first phase reproduces the user's bug on the pod
-before anything is changed.
+player was in (else the start region) and parks the rest where they stand, the "continue this save / new game" choice
+being each player's own, asked once on their first join of any world or server and then carried out by every later load,
+relaunch or server join without a screen; a **save with the world** (Minecraft's save events ask each bound game for its
+own save, which comes back as today's `save.begin` and pairs as today); a **close with the world** (the pause menu's
+quit first saves every game, then returns each engine to its title and its offline slot, then, when Minecraft started
+the engine, stops the process); **Minecraft-owned engines** (the mod starts the games a world needs from `launch.json`'s
+installs and stops them with the world, so `launch.ps1` only starts Minecraft); and for the wild routes an explicit
+**route state** in the snapshot plus one rule on both sides: a hidden player on a zone's route map whose body is not in
+that zone is walked home through the route's own back warp, never left stranded, and a body in the zone with its hidden
+player on the route map stays put. The first phase reproduces the user's bug on the pod before anything is changed.
 
 ## 1. What exists (the survey of 2026-10-27)
 
@@ -150,18 +151,24 @@ the server (`Regions`) and the client (`ClientRegions`):
 
 ```json
 {"version": 1, "start": "johto",
- "games": [{"game": "blue", "region": "kanto", "save": "continue", "slot": 1},
-           {"game": "crystal", "region": "johto", "save": "new"}]}
+ "games": [{"game": "blue", "region": "kanto"}, {"game": "crystal", "region": "johto"}]}
 ```
 
 - `games`: the games this world plays, one per world space (D4 of the multi-game plan holds: Red and Blue are one
-  `kanto`); `region` is the catalogue's unless the user typed another; `save` is the creation choice (`continue` the
-  engine's current slot, recorded as `slot`; `new` a fresh slot the engine creates at the first bind), singleplayer
-  only: multiplayer worlds keep their own slot per game as today.
+  `kanto`); `region` is the catalogue's unless the user typed another.
 - `start`: the region whose town is the world's spawn and whose game a fresh player follows first.
-- A world without the file is a legacy world: its games are its regions' games, `start` is slot 0's region, every game
-  `continue`; nothing changes for it until "Add a region" or a rebuild writes the file (as `regions.json` was in MG3).
-- `world.regions` (S→C) gains `start` and the games list, so the client's F7 and the join decision read one source.
+- **The save choice is per player, not per world** (the user's note of 2026-10-27: loading a world, relaunching, or
+  joining a server must all carry out "continue this save" by themselves). It lives where the slot already does: the
+  server's `session.json` (`players{uuid:{regions:{<id>:{slot, save}}}}`, `SessionRecord`) and the player's
+  `kantobridge:save_pairs` attachment, `save` being `current` (singleplayer: the engine's own slot), `copy`
+  (multiplayer: the world's slot started from a copy of the offline save) or `new`. It is made once, on the player's
+  **first join** of a world or server (§2.3), by the creation screen for the player who creates the world; every later
+  join reads it and continues without asking.
+- A world without the file is a legacy world: its games are its regions' games, `start` is slot 0's region, every
+  player's choice `current`; nothing changes for it until "Add a region" or a rebuild writes the file (as `regions.json`
+  was in MG3).
+- `world.regions` (S→C) gains `start` and the games list, and the S→C `session.bind` carries the player's recorded
+  choice and slot per region, so a client joining a server has the same knowledge as one opening its own world.
 
 ### 2.2 Creating a world: one screen, one build
 
@@ -176,17 +183,27 @@ down is refused with a HUD line ("Crystal isn't running"). On Create the flow ex
 link (the pack holds every art set since 2026-10-16), makes the level with the region table filled (slots in the ticked
 order, the start region's town as the spawn: `BuildTask` sets the spawn for the **start** region instead of slot 0),
 writes `world.json`, and files one `BuildRequest` carrying every region; `BuildTask` builds them one after another
-behind the one progress screen (per-region progress lines). "Add a region" stays for adding a game to an existing world
-and now appends to `world.json`. Headless: `build_world.py --games blue,crystal --start johto` (`--game/--region/--slot`
-kept for one region). The autopilot's `wild_zone` scene uses the new flow.
+behind the one progress screen (per-region progress lines). The "continue this save / new game" picks are the creating
+player's first-join choices (§2.1): the flow's first bind sends them, and they are recorded like any other player's.
+"Add a region" stays for adding a game to an existing world and now appends to `world.json`. Headless: `build_world.py
+--games blue,crystal --start johto` (`--game/--region/--slot` kept for one region). The autopilot's `wild_zone` scene
+uses the new flow.
 
 ### 2.3 Joining: every game continues, one is followed
 
 Question 8's option **a**, driven by the client's knowledge of the world (so b's decision stays on the Minecraft side):
 
-- On `session.bind` the client adds `slot` (singleplayer, from `world.json`'s `continue` entry; absent = the engine's
-  current slot, today's rule, or a new slot when `save` is `new` and none is recorded yet: gen1-bridge creates it and
-  answers `session.bound.slot`, which the client writes back into `world.json`) and `continue`: `play` for the game of
+- **The first join** of a world or server: for each game the world lists that this player has no recorded choice for,
+  the client asks once, in one screen over the fade ("First time here. Blue: continue your save (Red, 3 badges) / new
+  game"), only for games whose `game.status.save` says the engine's current slot holds a save; a game with no save is
+  `new` without asking. The answer goes out in `session.bind.save` (`current` | `copy` | `new`), gen1-bridge pairs the
+  world accordingly (`current`: this slot, singleplayer only; `copy`: a new slot written from the offline save's file,
+  DESIGN.md §8's "paired online story save, kept separate from the offline save"; `new`: an empty slot) and answers
+  `session.bound.slot`; the client sends `session.bound` up and the server records `{slot, save}` per region. Opening
+  the world again, relaunching Minecraft, rejoining after a drop, or joining the same server from the same install: no
+  screen, the recorded slot is bound and continued. A creation-screen pick is this choice made in advance. A player who
+  declines the screen (Esc) is bound `title` for that game, as today, and asked again next join.
+- On every `session.bind` the client adds `slot` (the recorded one, when any) and `continue`: `play` for the game of
   the region to follow, `park` for every other game listed in the world, `title` for a connected game the world doesn't
   list (today's behaviour: it stays at its title, never followed, F7 says "not in this world").
 - gen1-bridge, after the slot is settled (the existing switch seams): `play` → `startFromTitle` when at the title
@@ -202,9 +219,11 @@ Question 8's option **a**, driven by the client's knowledge of the world (so b's
 - **B1** falls out: the pass stashes only when the far game's `game.status.save` is absent (a truly new game); a far
   game continued at join is `saved` and resumed. **B2** becomes unreachable in a world (no title pick is needed); the
   mirrored title stays for a game bound with `title`, and its Gen 1 summary-box answer is a small fix in the same phase.
-- Singleplayer slot pairing: a world with a `slot` entry is paired to that slot like a multiplayer world is (the
-  switch seams of M9 do the work; `decide` gets a third branch), so two singleplayer worlds can run two playthroughs of
-  one game.
+- Slot pairing: a world with a recorded `slot` is paired to that slot whether singleplayer or multiplayer (the switch
+  seams of M9 do the work; `decide` gets a third branch for `slot` and the `copy` creation), so two singleplayer worlds
+  can run two playthroughs of one game, and a server world's slot begins as the player's own save when they chose so. A
+  recorded slot the engine no longer has (deleted in the launcher) is reported `session.no_slot`, the choice is cleared,
+  and the first-join screen asks again.
 
 ### 2.4 Saving with the world
 
@@ -285,8 +304,9 @@ Question 8's option **a**, driven by the client's knowledge of the world (so b's
 | Message | Change |
 |---|---|
 | `game.status` | + `save?{slot, name?, badges}`: the active slot's save summary at the title (absent: no save) |
-| `session.bind` | + `slot?` (singleplayer: the world's slot for this game), `continue?: "play" \| "park" \| "title"` |
-| `session.bound` | + `started?: "continue" \| "new" \| "none"`, `parked?: bool` |
+| `session.bind` M→G | + `slot?` (the recorded slot), `save?: "current" \| "copy" \| "new"` (the first join's choice), `continue?: "play" \| "park" \| "title"` |
+| `session.bind` S→C | + `regions{<id>:{slot?, save?}}` (the player's recorded choices, so a server's client knows them) |
+| `session.bound` | + `save?` (the choice gen1-bridge applied), `started?: "continue" \| "new" \| "none"`, `parked?: bool`; C→S records `{slot, save}` |
 | `save.request` M→G, S→C | `reason: "world" \| "quit"` → `act.result{kind:"save", ok, reason?}`; then `save.begin{reason}` as today (`REASONS` + `world`, `quit`) |
 | `session.close` M→G | `{}` → `session.closed{title: bool, home?: slot}` |
 | `snapshot`, `player.state` | + `route?{zone, map}` while the hidden player stands on a registered route map |
@@ -303,7 +323,9 @@ every new type, PROTOCOL.md's tables and rules updated in the phase that adds ea
 |---|---|---|
 | D1 | Which hidden games a world plays | recorded per world in `kantobridge/world.json`; chosen on the creation screen; one game per world space; "Add a region" appends |
 | D2 | The start town | the start region's root town is the world spawn and a fresh player's first followed game; chosen on the creation screen among the ticked games, default the first ticked |
-| D3 | Saves per game in a singleplayer world | "continue this save" (the engine's current slot, recorded) or "new game" (a new slot gen1-bridge creates at the first bind); legacy worlds keep today's rule (the current slot) |
+| D3 | Which save a game plays in a world | per player, chosen once on the first join of any world or server (or in advance on the creation screen) and recorded with the slot: "continue this save" (singleplayer: the engine's current slot; multiplayer: the world's own slot started from a copy of it) or "new game"; every later join, relaunch or server join continues the recorded slot without asking; legacy worlds keep today's rule (the current slot) |
+| D13 | The first-join screen | asked once per game that has a save, over the join's fade; Esc leaves that game at its title for this join and asks again next time; a game without a save is new without asking |
+| D14 | "Continue" on a server | copies the offline save into the world's slot (online and offline stay separate, DESIGN.md §8); if the engine offers no safe copy *(WS0)*, the fallback pairs the offline slot itself, the HUD saying so |
 | D4 | How games continue at join | question 8's option a, decided by the client from the world record: the followed game is continued (or started new when it has no save), every other listed game is continued and held where it saved, an unlisted connected game stays at its title |
 | D5 | What a world save does to the hidden games | asks each bound game (held ones too) for its own save through `save.request`, at most once a minute per link; a game not idle is skipped with a HUD line; never rolled back |
 | D6 | What leaving a world does | saves every bound game first (up to 10 s), then `session.close`: the hold released, the engine back at its title and its offline slot; then the process stopped when Minecraft started it |
@@ -330,8 +352,10 @@ and WS8). Push only on the user's go.
   the integrated server's stop reach `BEFORE_SAVE` (a GameTest with a counting handler, the stop from the log). (3)
   Confirm per adapter that `writeSave` succeeds while the region hold is up (a parked game saving) and what
   `SaveData.load`'s summary offers at the title for Gen 2 and Gen 3 (name, badges). (4) Confirm `engine.toTitle` after a
-  world save leaves a clean title on all three engines (the e2e drivers already do this for Gen 1 and Gen 2). Findings
-  in PROGRESS.md before WS1.
+  world save leaves a clean title on all three engines (the e2e drivers already do this for Gen 1 and Gen 2). (5)
+  Confirm how a slot's save can be copied into a new slot per engine (the save file per slot in the portable folder,
+  `SaveData`'s paths; `newSlot`/`deleteSlot` exist in `kb_pairing.lua`; the registry in `options.lua`), for D14.
+  Findings in PROGRESS.md before WS1.
 - **WS1 The wild route rule** (both sides, §2.7, D9, D10): `snapshot.route` / `player.state.route` and `route.leave`
   in gen1-bridge (`observe/kb_snapshot.lua`, `act/kb_route.lua`, the `save.loaded` handler; Lua tests with the fake
   world); `MovementSync` reads the route state, never rejoins onto a ROUTE placement, never holds for one, sends
@@ -342,15 +366,19 @@ and WS8). Push only on the user's go.
   reworded for the user's own check.
 - **WS2 The protocol and the world record** (§2.1, §2.8): schemas, catalog, `world.json` reader/writer
   (`WorldRecord.java`, shared by server and client; legacy fallback), `world.regions` with `start` and `games`,
-  `game.status.save` in all three adapters (`observe/kb_progress.lua`), `session.bind.slot` in `kb_pairing.lua`'s
-  `decide` (the third branch; its switch seams untouched), the stand-ins. Tests: `tools/tests` protocol and Lua,
-  `WorldRecordTest`, a pairing test for the recorded slot.
+  `game.status.save` in all three adapters (`observe/kb_progress.lua`), `session.bind.slot`/`save` in `kb_pairing.lua`'s
+  `decide` (the third branch and the `copy` creation; its switch seams untouched), the server's `{slot, save}` record
+  and the S→C `session.bind.regions`, the stand-ins. Tests: `tools/tests` protocol and Lua (current, copy, new, a
+  missing slot), `WorldRecordTest`, `SessionRecord` round trips.
 - **WS3 Continue at join** (§2.3, D4, D11): `session.bind.continue` in gen1-bridge (`act/kb_pairing.lua` hands the
   settled slot to a new `act/kb_continue.lua` that reuses `startFromTitle` and `holdAway` through `kb_region`'s queue,
-  answering `session.bound{started, parked}`); the client's join decision (`SessionBinder` from `ClientRegions` +
-  presence + `start`); the server seeds presence with `start`; `PassChoreography` stashes only without
-  `game.status.save`; the Gen 1 title pick answers the summary box. Tests: Lua (continue, park, no save, already in
-  game), `SessionBinderTest`, `PassChoreographyTest` (B1's case), a GameTest for the seeded presence; on the pod
+  answering `session.bound{started, parked}`); the first-join screen (`FirstJoinScreen`, D13) and the client's join
+  decision (`SessionBinder` from `ClientRegions` + the recorded choices + presence + `start`); the server seeds presence
+  with `start`; `PassChoreography` stashes only without `game.status.save`; the Gen 1 title pick answers the summary
+  box. Tests: Lua (continue, park, no save, already in game), `SessionBinderTest` (first join asks, later joins don't, a
+  missing slot asks again), `PassChoreographyTest` (B1's case), a GameTest for the seeded presence and the recorded
+  choices; on the pod `test_multiplayer.py` extended: a client joins the dev server for the first time, chooses
+  "continue", plays, quits, relaunches and rejoins with no screen and its own save continued (C2); then
   `test_crossing_real.py` with the far game launched but not continued (B1's scene) and `fp_stone.py`'s CONTINUE (B2's
   scene), both green.
 - **WS4 Save with the world** (§2.4, D5): `save.request` in gen1-bridge (`act/kb_save.lua`: the center save's path
@@ -389,8 +417,9 @@ and WS8). Push only on the user's go.
   the zone and walks; after an engine restart and CONTINUE, the same; a rejoin at the clearing walks the hidden player
   home.
 - **C2 (WS3):** a world with Blue (saved) and Crystal (saved), joined: both `session.bound{started:"continue"}`,
-  Crystal parked, the player in Blue where its save stands; `test_crossing_real.py` with the far game not continued
-  keeps the party (B1); `fp_stone.py`'s CONTINUE completes (B2).
+  Crystal parked, the player in Blue where its save stands; a first join of the dev server asks once, "continue" gives
+  the world a slot holding the offline save's progress, and a relaunch and rejoin asks nothing and continues it;
+  `test_crossing_real.py` with the far game not continued keeps the party (B1); `fp_stone.py`'s CONTINUE completes (B2).
 - **C3 (WS4):** `/save-all` makes every bound game save once (two `save.begin{reason:"world"}`, two pairs recorded),
   no second request within a minute, no loop; a game in a battle is skipped and the world still saves.
 - **C4 (WS5):** "Save and Quit" from a saved game: both games save, both answer `session.closed{title:true}`, the
