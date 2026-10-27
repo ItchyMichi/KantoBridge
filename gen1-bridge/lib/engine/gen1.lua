@@ -5313,6 +5313,17 @@ function Gen1.new(opts)
     return false
   end
 
+  -- WORLD_SESSIONS_PLAN WS3 (B2): true while the title's CONTINUE info box
+  -- (src/ui/TitleState.lua ContinueInfo: PLAYER / BADGES / POKéDEX / TIME over
+  -- the title menu, waiting for A) is the top state. It has no screen id; it
+  -- is told by its own fields (title, save, titleUiBox, ContinueInfo.new).
+  function engine.continueInfoOpen()
+    local top = type(game) == "table" and type(game.stack) == "table" and type(game.stack.top) == "function"
+      and game.stack:top() or nil
+    return type(top) == "table" and type(top.title) == "table" and type(top.save) == "table"
+      and type(top.titleUiBox) == "table"
+  end
+
   -- WORLD_SESSIONS_PLAN WS2: a slot's save summary as the launcher and the
   -- title show it (SaveData.listSlots -> slotSummary, src/core/SaveData.lua:
   -- 1642-1646, :1505-1560): { slot = n, name = <the player's name>?, badges }

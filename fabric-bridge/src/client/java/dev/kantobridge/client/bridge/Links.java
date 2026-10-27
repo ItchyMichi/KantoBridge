@@ -98,6 +98,9 @@ public final class Links {
 	private boolean followedChosen;
 	/** The region the server's stored presence asks to follow, until a link running its game is up. */
 	private @Nullable String wantedRegion;
+	/** WS3: the server's region.state heard, and the region it named. */
+	private boolean presenceHeard;
+	private @Nullable String serverFollowed;
 	private boolean started;
 	/** The region bound as the followed one ({@link RegionView#followed}), re-checked every tick. */
 	private @Nullable String boundRegion;
@@ -340,7 +343,10 @@ public final class Links {
 	 * {@code followed}.
 	 */
 	public void serverPresence(JsonObject data) {
+		// WORLD_SESSIONS_PLAN WS3: the join decision waits for this (or a timeout): it says which game is played
+		this.presenceHeard = true;
 		String region = JsonFields.str(data, "followed");
+		this.serverFollowed = region;
 		if (region == null) {
 			return;
 		}
@@ -405,6 +411,18 @@ public final class Links {
 	public void serverChanged() {
 		this.sentPresence = null;
 		this.wantedRegion = null;
+		this.presenceHeard = false;
+		this.serverFollowed = null;
+	}
+
+	/** WS3: the server's {@code region.state} arrived since the server joined. */
+	public boolean presenceHeard() {
+		return this.presenceHeard;
+	}
+
+	/** WS3: the region the server's {@code region.state} named as followed (the player's stored or seeded one), or null. */
+	public @Nullable String serverFollowed() {
+		return this.serverFollowed;
 	}
 
 	/** {@code region.state}'s data: the followed link's region and the connected parked links' regions. */

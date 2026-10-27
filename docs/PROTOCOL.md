@@ -1386,6 +1386,25 @@ before V1) counts as no pack.
   offline slot itself, applied `current`: D14's fallback); `new` an empty slot of the world's own. The world → slot
   pairing then reuses it; `session.bound.save` says what was applied. `game.status.save{slot, name?, badges}` at the
   title tells a saved game waiting there from a new one.
+- **Every game continues at join (WORLD_SESSIONS_PLAN §2.3, D4, D13; WS3).** In a world with a record (a region world)
+  the client's bind for each listed game carries `continue`: `play` for the region the player follows (the server's
+  `region.state`, whose `followed` the server seeds with the record's `start` for a player who never said; else the
+  start), `park` for every other listed game; a game the world doesn't list gets `title`. The client waits for the
+  server's `region.state` (at most 3 s) before deciding. With a recorded `slot` the bind carries it (and its `save`); on
+  the first join of a game with no recorded choice the client asks once ("continue your save (NAME, N badges)" / "new
+  game", over the world) when `game.status.save` says the slot holds a save, and sends the answer as `save` (`current`
+  singleplayer, `copy` on a server, else `new`); a game without a save is `new` without asking; Esc leaves that game at
+  its title this join (`continue:"title"`) and asks again next time; `session.no_slot` for a recorded slot asks again.
+  gen1-bridge, once the slot is settled: `play` at the title runs the adapter's `startFromTitle` (CONTINUE when the slot
+  holds a save, else NEW GAME with its intro) and answers `session.bound{started:"continue"|"new"}`; already in game it
+  is left (`started:"none"`). `park` at the title with a save CONTINUEs and then holds the game where it loaded (the
+  region hold, the `away` marker), `started:"continue", parked:true`; at the title without a save it stays there
+  (`started:"none"`); in game it is held where it stands (`parked:true`). `title` answers at once (`started:"none"`). The
+  `session.bound` of a `play` or `park` bind comes only once that is done, so the client's pairing gate holds the player
+  until the game stands where it will be. A legacy world (no region table) binds as before. **B1:** at a pass the
+  client stashes the party only when the far game at its title has no `game.status.save` (a truly new story); a saved
+  one is `region.start`ed (CONTINUE) as it is. **B2:** after a pick on Gen 1's title menu that opens the CONTINUE info
+  box, gen1-bridge presses A for it (the pick of CONTINUE is the answer).
 - **The client's side of pairing:** it sends `session.bind` on entering a Kanto world and after every
   reconnect, and accepts only a `session.bound` whose `re` matches its latest bind. Until then it relays
   nothing between gen1-bridge and the server (story messages wait in order, keeping only the newest

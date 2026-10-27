@@ -3492,7 +3492,7 @@ the volume), stopped after each job. Choices where the plan was silent keep toda
 | # | Phase | Status | Date | Commits |
 |---|---|---|---|---|
 | WS0 | Facts on a pod | **done**: the bug reproduced (scene A), the cause is none of H1–H3 (below) | 2026-10-27 | `a91f735`, `f5b2ba2` |
-| WS2 | The protocol and the world record | **done** (server-side tests; no pod step in the plan) | 2026-10-27 | WS2 commit |
+| WS2 | The protocol and the world record | **done** (server-side tests; no pod step in the plan) | 2026-10-27 | `46abf70` |
 | WS1 | The wild route rule (and the bind fix) | **done**; C1 passed on the pod (engine and client) | 2026-10-27 | `a95d2ec` |
 
 ### Worlds and sessions: WS2 notes

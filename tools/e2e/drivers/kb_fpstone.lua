@@ -37,6 +37,9 @@ local SCENE = os.getenv("KB_SCENE") or "first"
 local MAP = os.getenv("KB_MAP") or "MT_MOON_1F"
 local ITEM = os.getenv("KB_ITEM") or "MOON_STONE"
 local STAND_IN = "KB_VISITOR"
+-- WORLD_SESSIONS_PLAN WS3 (B2): with KB_FP_CLIENT_CONTINUE=1 the again scene leaves the CONTINUE to the client's pick
+-- on the mirrored title menu and only reports the overworld's arrival (KB_CONTINUED via=client)
+local CLIENT_CONTINUE = os.getenv("KB_FP_CLIENT_CONTINUE") == "1"
 
 local function memoDatasetChecks(seconds)
   local ok, DatasetViews = pcall(require, "src.mods.DatasetViews")
@@ -179,6 +182,12 @@ return function(game)
         local p = ow.player
         print(("KB_FP_READY map=%s x=%s y=%s facing=%s port=%s"):format(word(ow.map.id), word(p.cellX), word(p.cellY),
           word(p.facing), word(status.port)))
+        phase = "serve"
+      end
+    elseif phase == "title" and CLIENT_CONTINUE then
+      local ow = game.stack and game.stack.top and game.stack:top()
+      if type(ow) == "table" and ow.isOverworld and ow.map then
+        print(("KB_CONTINUED via=client party=%d"):format(#(game.save.party or {})))
         phase = "serve"
       end
     elseif phase == "title" then

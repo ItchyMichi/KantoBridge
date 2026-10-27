@@ -124,6 +124,12 @@ function Region.new(opts)
   end
 
   local function answer(out, r, ok, reason, detail)
+    if r.onDone then
+      -- WS3: an internal request (act/kb_continue.lua) is answered to its caller, never on the wire
+      if ok then counts.ok = counts.ok + 1 else counts.failed = counts.failed + 1 end
+      pcall(r.onDone, ok, reason, detail)
+      return
+    end
     local data = { ok = ok, kind = r.op }
     if reason then data.reason = reason end
     if detail then data.detail = detail end
@@ -285,6 +291,17 @@ function Region.new(opts)
       elseif current.op == "resume" then startResume(f, out)
       else startStart(f, out) end
     end
+  end
+
+  -- WORLD_SESSIONS_PLAN WS3: a park or a start for act/kb_continue.lua, in the
+  -- same queue as the wire's requests (one at a time), answered by
+  -- onDone(ok, reason, detail) instead of act.result. It belongs to the
+  -- current connection (dropped with it like any request).
+  function act.internal(op, onDone)
+    if op ~= "park" and op ~= "start" then return false end
+    queue[#queue + 1] = { op = op, since = steps, gen = generation, onDone = onDone, region = "kb_continue" }
+    counts.requests = counts.requests + 1
+    return true
   end
 
   function act.busy() return current ~= nil end

@@ -283,5 +283,10 @@
   "kantobridge.field.reason.already": "it's already in use",
   "kantobridge.field.reason.busy": "busy, try again",
   "kantobridge.field.reason.failed": "it didn't work",
-  "kantobridge.field.reason.other": "it can't be used"
+  "kantobridge.field.reason.other": "it can't be used",
+  "kantobridge.first_join.title": "First time here",
+  "kantobridge.first_join.hint": "Which story does each game play in this world? Esc: decide next time.",
+  "kantobridge.first_join.continue": "Continue your save (%s, %s badges)",
+  "kantobridge.first_join.copy": "Continue a copy of your save (%s, %s badges)",
+  "kantobridge.first_join.new": "New game"
 }

@@ -33,6 +33,7 @@ public final class RegionPresenceService {
 	private static final AtomicLong STATES = new AtomicLong();
 	private static final AtomicLong SWAPS = new AtomicLong();
 	private static final AtomicLong OFFERED = new AtomicLong();
+	private static final AtomicLong SEEDED = new AtomicLong();
 
 	private RegionPresenceService() {
 	}
@@ -82,6 +83,30 @@ public final class RegionPresenceService {
 	 * The player's presence: what they last said, else following the world's legacy region (one link, as every world had
 	 * before MG4).
 	 */
+	/**
+	 * WORLD_SESSIONS_PLAN §2.3 (WS3): a player who never said gets the world record's start region as their followed
+	 * region, stored, so their first join follows the start town's game (D2). True when seeded.
+	 */
+	public static boolean seed(ServerPlayer player) {
+		if (RegionPresence.stored(player) != null) {
+			return false;
+		}
+		dev.kantobridge.world.WorldRecord record = WorldIndexSync.worldRecord(player.server);
+		Regions regions = Regions.of(player.server);
+		if (record == null || regions == null || regions.byId(record.start()) == null) {
+			return false;
+		}
+		RegionPresence.set(player, RegionPresence.following(record.start()));
+		SEEDED.incrementAndGet();
+		KantoBridge.LOGGER.info("presence: a new player starts in {}", record.start());
+		return true;
+	}
+
+	/** WS3: fresh players seeded with the start region. */
+	public static long seeded() {
+		return SEEDED.get();
+	}
+
 	public static RegionPresence of(ServerPlayer player) {
 		RegionPresence stored = RegionPresence.stored(player);
 		if (stored != null) {
@@ -110,6 +135,7 @@ public final class RegionPresenceService {
 		if (!WorldIndexSync.isRegionWorld(player.server) || !ServerPlayNetworking.canSend(player, KbJsonPayload.TYPE)) {
 			return;
 		}
+		seed(player);
 		if (RelayService.get().send(player, MsgTypes.REGION_STATE, of(player).toJson(), null)) {
 			OFFERED.incrementAndGet();
 		}

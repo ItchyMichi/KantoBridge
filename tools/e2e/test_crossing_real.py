@@ -319,3 +319,64 @@ def test_a_crossing_between_blue_and_crystal():
     assert any("routes.installed" in line and "own=true" in line for line in crystal_result.lines)
     for name, result in (("blue", blue_result), ("crystal", crystal_result)):
         assert not any("warp.no_arrival" in line for line in result.lines), (name, "a warp ended by the timeout")
+
+
+async def _b1(far_port, far_region, far_map, route):
+    """WORLD_SESSIONS_PLAN WS3 (B1): the far game waits at its title with a saved slot. Its game.status says so
+    (save{slot}), so the client's choreography sends no party.stash: region.start CONTINUEs the save (detail continue,
+    save.loaded fresh false) and the game stands where its save loaded (the choreography then follows it there)."""
+    near = route["from"]
+    blue, far = await connect(BLUE_PORT), await connect(far_port)
+    report = {}
+    since = await walk(blue, near["facing"], steps_to_trigger(near), 1)
+    into = await arrival(blue, since)
+    assert into["kind"] == "script", into
+    await park(blue, "kanto")
+    status = await find_or_wait(far, "game.status", 30, 0, lambda m: True)
+    report["far_status"] = {k: status["data"].get(k) for k in ("playthrough", "started", "save")}
+    assert status["data"]["playthrough"] == "title" and status["data"].get("save") is not None, report
+    since = len(far.received)
+    started = (await far.request("region.start", {"region": far_region}, reply_type="act.result", timeout=180))["data"]
+    report["start"] = started
+    assert started == {"ok": True, "kind": "start", "detail": "continue"}, report
+    loaded = await find_or_wait(far, "save.loaded", 60, since, lambda m: True)
+    report["loaded_fresh"] = loaded["data"]["fresh"]
+    assert loaded["data"]["fresh"] is False, report
+    after = (await far.request("resync", reply_type="snapshot", timeout=30))["data"]
+    report["ingame"] = after["ingame"]
+    report["party"] = len(after["party"])
+    assert after["ingame"] is True, report
+    for mc in (blue, far):
+        assert not mc.conn.problems
+        await mc.send("debug.quit", {"code": 0})
+        await mc.close()
+    return report
+
+
+@pytest.mark.e2e
+@pytest.mark.timeout(1800)
+def test_b1_a_saved_far_game_at_its_title_is_continued_without_a_stash():
+    """WORLD_SESSIONS_PLAN WS3, C2's B1 scene: Blue on the Hoenn pass, Emerald launched with a saved slot but not
+    continued (drivers/kb_emerald.lua title_continue)."""
+    pf = preflight()
+    if not pf.ok:
+        pytest.skip("pre-flight not done: " + "; ".join(pf.reasons))
+    if not {"blue", "emerald"} <= set(rg.kb_games.detect(INSTALL)):
+        pytest.skip("needs Blue and Emerald imports in the test install")
+    near = PASS["from"]
+    with tempfile.TemporaryDirectory(prefix="kb-b1-home-") as tmp:
+        home = second_home(Path(tmp))
+        with launch("kb_union_off.lua", game="emerald", install=home, echo=False) as off:
+            assert off.wait(timeout=180).marker("KB_UNION_OFF") is not None
+        blue_env = {"KB_TEST_PORT": str(BLUE_PORT), "KB_SPOT_MAP": near["map"], "KB_SPOT_X": str(near["x"]),
+                    "KB_SPOT_Y": str(near["y"]), "KB_SPOT_FACING": near["facing"]}
+        emerald_env = {"KB_TEST_PORT": str(EMERALD_PORT), "KB_SCENE": "title_continue"}
+        with launch("kb_wild.lua", game="blue", extra_env=blue_env) as blue_run, \
+                launch("kb_emerald.lua", game="emerald", extra_env=emerald_env, install=home) as emerald_run:
+            assert blue_run.wait_marker("KB_WILD_READY", timeout=300) is not None, blue_run.result.summary()
+            assert emerald_run.wait_marker("KB_TITLE", timeout=300) is not None, emerald_run.result.summary()
+            report = asyncio.run(asyncio.wait_for(_b1(EMERALD_PORT, "hoenn", HOENN_MAP, PASS), 600))
+            blue_result, emerald_result = blue_run.wait(timeout=120), emerald_run.wait(timeout=120)
+    print("b1:", report)
+    for name, result in (("blue", blue_result), ("emerald", emerald_result)):
+        assert result.marker("KB_FAIL") is None, (name, result.summary())

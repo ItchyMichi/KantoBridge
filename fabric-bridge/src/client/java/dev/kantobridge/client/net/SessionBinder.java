@@ -79,6 +79,9 @@ public final class SessionBinder {
 	private @Nullable String save;
 	private @Nullable String started;
 	private boolean parked;
+	/** WS3: the join decision's fields, and whether one was made (a binder never told binds as before). */
+	private JoinDecision.@Nullable Bind decision = JoinDecision.Bind.TODAY;
+	private boolean decided = true;
 
 	/**
 	 * @param boundUp relay {@code session.bound} to the server (the protocol's catalog decides)
@@ -144,10 +147,20 @@ public final class SessionBinder {
 	/** {@code session.bind.incompatible}'s values. */
 	static final Set<String> INCOMPATIBLE = Set.of("visitor", "leave_out");
 
+	/**
+	 * WORLD_SESSIONS_PLAN WS3: the join decision's fields for the next bind ({@code slot}, {@code save}, {@code continue}),
+	 * or null while it waits (the presence, the game's status, the first-join screen): nothing is sent until it says. A
+	 * binder that is never told binds as before WS3.
+	 */
+	public void decision(JoinDecision.@Nullable Bind bind) {
+		this.decision = bind;
+		this.decided = bind != null;
+	}
+
 	/** Each client tick: binds when this link hasn't heard about this world (or its region's choice) yet. */
 	public void tick() {
 		String current = this.world;
-		if (!this.connected || current == null) {
+		if (!this.connected || current == null || !this.decided) {
 			return;
 		}
 		if (this.sentLink == this.link && current.equals(this.sentWorld) && this.multiplayer == this.sentMultiplayer
@@ -159,6 +172,19 @@ public final class SessionBinder {
 		data.addProperty("multiplayer", this.multiplayer);
 		if (this.incompatible != null) {
 			data.addProperty("incompatible", this.incompatible);
+		}
+		JoinDecision.Bind fields = this.decision;
+		if (fields != null) {
+			// WS3: the recorded slot, the first-join choice, what to do once the slot is settled
+			if (fields.slot() != null) {
+				data.addProperty("slot", fields.slot());
+			}
+			if (fields.save() != null) {
+				data.addProperty("save", fields.save());
+			}
+			if (fields.cont() != null) {
+				data.addProperty("continue", fields.cont());
+			}
 		}
 		long seq = this.port.toBridge(MsgTypes.SESSION_BIND, data);
 		if (seq >= 0) {
@@ -267,6 +293,11 @@ public final class SessionBinder {
 	/** WS3: the last accepted answer said the game is parked. */
 	public boolean parked() {
 		return this.parked;
+	}
+
+	/** WS3: the {@code slot} the latest bind carried (a recorded one), or null. */
+	public @Nullable Integer sentSlot() {
+		return this.sentLink == this.link && this.decision != null ? this.decision.slot() : null;
 	}
 
 	/** The {@code seq} of this link's latest bind, or -1. */

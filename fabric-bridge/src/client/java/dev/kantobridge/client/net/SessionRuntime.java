@@ -20,7 +20,9 @@ import dev.kantobridge.proto.Envelope;
 import dev.kantobridge.proto.Ids;
 import dev.kantobridge.proto.MsgTypes;
 import dev.kantobridge.server.SessionService;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -28,6 +30,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.client.server.IntegratedServer;
+import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,6 +69,9 @@ public final class SessionRuntime {
 	private @Nullable String serverWorld;
 	/** WS2: the recorded choices the server's session.bind named. */
 	private RecordedChoices recorded = RecordedChoices.NONE;
+	/** WS3: when the player entered the world (-1: not in one), and whether it is a server's (a copy is offered). */
+	private long inWorldSince = -1;
+	private boolean multiplayerView;
 
 	/** One link's save pairing (MG4): its gate, its save and PC relays and its binder. */
 	public final class LinkSession {
@@ -74,6 +80,10 @@ public final class SessionRuntime {
 		final SaveRelay saves;
 		final PcRelay pc;
 		final SessionBinder binder;
+		/** WORLD_SESSIONS_PLAN WS3: the first-join screen's answer, a recorded slot the engine lost, the last decision. */
+		@Nullable String answer;
+		boolean slotLost;
+		JoinDecision.@Nullable Result decision;
 
 		LinkSession(BridgeLink link) {
 			this.link = link;
@@ -269,8 +279,18 @@ public final class SessionRuntime {
 			});
 			dispatcher.on(MsgTypes.SESSION_WAITING, message -> this.gate.waiting(JsonFields.str(message.data(), "reason"), message.re(),
 					SessionRuntime.this.now()));
-			dispatcher.on(MsgTypes.ERROR, message -> this.gate.error(JsonFields.str(message.data(), "code"), message.re(),
-					SessionRuntime.this.now()));
+			dispatcher.on(MsgTypes.ERROR, message -> {
+				String code = JsonFields.str(message.data(), "code");
+				if ("session.no_slot".equals(code) && message.re() != null && message.re() == this.binder.sentSeq()
+						&& this.binder.sentSlot() != null) {
+					// WS3: the recorded slot is gone (deleted in the launcher): forget it, ask again (D13), bind afresh
+					this.slotLost = true;
+					this.binder.rebind();
+					LOGGER.warn("session: the recorded save slot is gone; asking again");
+					return;
+				}
+				this.gate.error(code, message.re(), SessionRuntime.this.now());
+			});
 			dispatcher.onState((state, detail) -> {
 				if (state == ConnectionState.CONNECTED) {
 					this.saves.linkChanged();
@@ -294,6 +314,13 @@ public final class SessionRuntime {
 			// FP1: the link's region's choice for members its game lacks (none in a legacy world: visitor)
 			dev.kantobridge.world.RegionRecord region = ClientRegions.byId(this.link.region());
 			this.binder.incompatible(region == null ? null : region.rules().compat().onIncompatible());
+			// WS3: what this link's bind says (the recorded slot, the first-join choice, play/park/title)
+			if (kanto) {
+				this.decision = SessionRuntime.this.decide(this, now);
+				this.binder.decision(this.decision instanceof JoinDecision.Ready ready ? ready.bind() : null);
+			} else {
+				this.decision = null;
+			}
 			this.binder.tick();
 			this.gate.tick(now);
 			this.saves.tick(now);
@@ -346,6 +373,9 @@ public final class SessionRuntime {
 				session.pc.serverLeft(now);
 				// WS1: a world entered again (the same one too) is bound again on every link
 				session.binder.leftWorld();
+				// WS3: a declined game is asked again next join; a lost slot is forgotten with the world
+				session.answer = null;
+				session.slotLost = false;
 			}
 			runtime.serverWorld = null;
 			runtime.recorded = RecordedChoices.NONE;
@@ -429,10 +459,64 @@ public final class SessionRuntime {
 		long now = this.now();
 		boolean inWorld = minecraft.level != null && minecraft.player != null;
 		String worldId = inWorld ? this.worldId(minecraft) : null;
+		if (!inWorld) {
+			this.inWorldSince = -1;
+		} else if (this.inWorldSince < 0) {
+			this.inWorldSince = now;
+		}
+		this.multiplayerView = inWorld && !minecraft.isLocalServer();
 		BridgeLink followed = this.links.followed();
 		for (LinkSession session : this.sessions.values()) {
 			session.tick(minecraft, now, inWorld, worldId, session.link == followed);
 		}
+		if (inWorld) {
+			this.askFirstJoin(minecraft);
+		}
+	}
+
+	/** WS3: the server's presence is waited for at most this long after entering a world (an older server sends none). */
+	static final long PRESENCE_WAIT_MS = 3000;
+
+	/** WS3: one link's join decision. */
+	JoinDecision.Result decide(LinkSession session, long now) {
+		BridgeLink link = session.link;
+		String region = link.region();
+		BridgeLink.Status status = link.lastStatus();
+		boolean presenceKnown = this.links.presenceHeard() || (this.inWorldSince >= 0 && now - this.inWorldSince > PRESENCE_WAIT_MS);
+		return JoinDecision.decide(new JoinDecision.Input(ClientRegions.record(), region, link.game(), this.links.serverFollowed(),
+				presenceKnown, this.recorded.forRegion(region), session.slotLost, status != null, status != null && status.save() != null,
+				session.answer));
+	}
+
+	/** WS3 (D13): the first-join screen for every link whose decision asks, once, over the world. */
+	private void askFirstJoin(Minecraft minecraft) {
+		if (minecraft.screen != null) {
+			return;
+		}
+		List<FirstJoinScreen.Entry> entries = new ArrayList<>();
+		Map<String, LinkSession> byKey = new LinkedHashMap<>();
+		for (LinkSession session : this.sessions.values()) {
+			if (session.decision instanceof JoinDecision.Ask && session.answer == null) {
+				BridgeLink.Status status = session.link.lastStatus();
+				BridgeLink.Status.SaveSummary save = status == null ? null : status.save();
+				String game = session.link.game();
+				String key = session.link.port() + ":" + game;
+				byKey.put(key, session);
+				entries.add(new FirstJoinScreen.Entry(key, Component.translatable("kantobridge.game." + game), save == null ? null : save.name(),
+						save == null ? 0 : save.badges()));
+			}
+		}
+		if (entries.isEmpty()) {
+			return;
+		}
+		LOGGER.info("session: first join here, asking for {} game(s)", entries.size());
+		minecraft.setScreen(new FirstJoinScreen(entries, this.multiplayerView, answers -> answers.forEach((key, answer) -> {
+			LinkSession session = byKey.get(key);
+			if (session != null) {
+				session.answer = answer;
+				session.slotLost = false;
+			}
+		})));
 	}
 
 	/** The server's world id: from its {@code session.bind}, or read in-process on our own integrated server. */

@@ -30,7 +30,14 @@ class PassChoreographyTest {
 		boolean connected = true;
 		@Nullable String playthrough;
 		@Nullable String name;
+		/** WS3 (B1): game.status.save at the title. */
+		boolean titleSave;
 		long nextSeq = 100;
+
+		@Override
+		public boolean titleSave() {
+			return this.titleSave;
+		}
 
 		FakeLink(String region, @Nullable String playthrough, @Nullable String name) {
 			this.region = region;
@@ -226,6 +233,21 @@ class PassChoreographyTest {
 		assertEquals(1, this.pass.stats().starts);
 		assertEquals(1, this.pass.stats().stashes);
 		assertEquals(List.of(), this.host.takeServer());
+	}
+
+	@Test
+	void b1ASavedFarGameAtItsTitleIsContinuedWithoutAStash() {
+		// WORLD_SESSIONS_PLAN WS3: the far game waits at its title but its slot holds a save (game.status.save):
+		// the party stays, region.start CONTINUEs it
+		this.host.johto.playthrough = "title";
+		this.host.johto.titleSave = true;
+		long park = this.cross(0);
+		this.pass.linkResult(this.host.kanto, park, true, null, 10);
+		assertEquals(List.of(), this.host.takeServer(), "no party.stash");
+		assertEquals(List.of("region.start {\"region\":\"johto\"}"), this.host.johto.take());
+		assertEquals(PassChoreography.State.STARTING, this.pass.state());
+		assertEquals(0, this.pass.stats().stashes);
+		assertEquals(1, this.pass.stats().continuedAtTitle);
 	}
 
 	@Test

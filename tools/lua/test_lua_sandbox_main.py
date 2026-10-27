@@ -45,6 +45,7 @@ LIB_FILES = [
     "act/kb_route.lua",
     "act/kb_climb.lua",
     "act/kb_region.lua",
+    "act/kb_continue.lua",
     "act/kb_ledger.lua",
     "export/kb_cells.lua",
     "export/kb_images.lua",

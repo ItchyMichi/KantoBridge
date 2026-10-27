@@ -69,6 +69,14 @@ public final class PassChoreography {
 
 		/** Sends to the hidden game; its {@code seq}, or -1 when not sent (not connected). */
 		long sendTracked(String type, JsonObject data);
+
+		/**
+		 * WORLD_SESSIONS_PLAN WS3 (B1): the last {@code game.status} at the title said the active slot holds a save
+		 * ({@code game.status.save}): a CONTINUE, not a new story.
+		 */
+		default boolean titleSave() {
+			return false;
+		}
 	}
 
 	/** The client around the choreography: the links, the server relay, the UI and the fade. */
@@ -114,6 +122,8 @@ public final class PassChoreography {
 		public long resumes;
 		public long starts;
 		public long stashes;
+		/** WS3 (B1): saved far games at their title CONTINUEd without a stash. */
+		public long continuedAtTitle;
 		public long aborts;
 		public long timeouts;
 		public long serverErrors;
@@ -249,6 +259,13 @@ public final class PassChoreography {
 			return;
 		}
 		this.target = far;
+		if ("title".equals(far.playthrough()) && far.titleSave()) {
+			// WS3 (B1): a saved game waiting at its title is CONTINUEd as it is: its party is its own, nothing is stashed
+			this.stats.continuedAtTitle++;
+			this.host.notice("kantobridge.pass.starting", List.of(this.host.label(here.toRegion())), false);
+			this.startFar(now);
+			return;
+		}
 		if ("title".equals(far.playthrough())) {
 			// D5: every party member into the PC first, so the new story's starter has room and nothing is lost.
 			JsonObject data = new JsonObject();
@@ -292,6 +309,11 @@ public final class PassChoreography {
 			return;
 		}
 		this.stats.stashes++;
+		this.startFar(now);
+	}
+
+	/** {@code region.start} to the far game (after the stash, or at once for a saved game at its title: B1). */
+	private void startFar(long now) {
 		if (this.pass == null || this.target == null) {
 			this.abort("internal", now);
 			return;

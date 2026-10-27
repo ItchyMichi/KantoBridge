@@ -41,6 +41,7 @@
 local UiAct = {}
 
 UiAct.ANSWER_TIMEOUT = 180  -- steps a pick/back/qty/name waits for its UI to be on top
+UiAct.CONTINUE_CONFIRM = 120 -- WS3 (B2): steps after a pick in which a save summary box gets its A
 UiAct.MAX_ADVANCES = 16     -- ui.advance queued per text box
 UiAct.MAX_BUTTONS = 8       -- act.button requests waiting
 UiAct.BUTTON_WAIT = 30      -- steps a START waits for the player to stand
@@ -81,9 +82,10 @@ function UiAct.new(opts)
   local heldFor            -- the mirror UI the holds belong to
   local generation
   local steps = 0
+  local lastPickAt, confirmedInfo -- WS3 (B2): the last pick's step, and the summary box already answered
   local counts = {
     answers = 0, advanced = 0, picked = 0, backs = 0, quantities = 0, names = 0, presets = 0,
-    stale = 0, timeouts = 0, rejected = 0, buttons = 0, buttonTaps = 0, holds = 0, repressed = 0,
+    stale = 0, timeouts = 0, rejected = 0, buttons = 0, buttonTaps = 0, holds = 0, repressed = 0, continueConfirms = 0,
     refused = 0,
   }
 
@@ -294,6 +296,7 @@ function UiAct.new(opts)
         budget.tap("a")
       end
       counts.picked = counts.picked + 1
+      lastPickAt = steps -- WS3 (B2): a CONTINUE pick may open the title's save summary box
       return true
     elseif a.type == "ui.qty" then
       if not engine.uiSetQty(top.key, a.qty) then
@@ -403,6 +406,20 @@ function UiAct.new(opts)
     end
 
     handleButton(f, mode, top, out, ctx)
+    -- WORLD_SESSIONS_PLAN WS3 (B2): Gen 1's CONTINUE shows the save summary box over the title menu and waits for A
+    -- (src/ui/TitleState.lua ContinueInfo:update); the player's pick of CONTINUE is the answer, so A is pressed for it
+    local infoOpen = rawget(engine, "continueInfoOpen")
+    if type(infoOpen) == "function" and lastPickAt and steps - lastPickAt <= UiAct.CONTINUE_CONFIRM then
+      local okI, open = pcall(infoOpen)
+      if okI and open and not confirmedInfo and ctx.budget and ctx.budget.can() then
+        ctx.budget.tap("a")
+        confirmedInfo, lastPickAt = true, nil
+        counts.continueConfirms = counts.continueConfirms + 1
+        if log then log.info("uiact.continue_confirmed", {}) end
+      elseif okI and not open then
+        confirmedInfo = false
+      end
+    end
     if top and top.kind ~= "mirror" then applyTop(top, presetKey, out, ctx.budget) end
 
     -- answers waiting on a UI that isn't on top give up after a while

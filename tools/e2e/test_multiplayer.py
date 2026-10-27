@@ -36,7 +36,7 @@ import time
 import pytest
 
 from fake_minecraft import FakeMinecraft
-from run_gen1recomp import INSTALL, launch, preflight
+from run_gen1recomp import INSTALL, VERSIONS, launch, preflight
 
 TEST_PORT = 27169
 FALLBACK_PORT = 27160  # it and the next one are kept busy; 27160-27168 is the fallback span
@@ -211,7 +211,10 @@ def test_each_world_gets_its_own_save_slot_and_the_offline_save_is_untouched():
         # pairings.json beside it, read once and never rewritten or deleted
         names = set(pairing_file_names())
         assert {f"pairings.{game}.json", f"pairings.{game}.json.bak"} <= names, "the pairing file, by name"
-        assert names <= {f"pairings.{game}.json", f"pairings.{game}.json.bak", "pairings.json", "pairings.json.bak"}, names
+        # (other games' own files may sit beside them: each game writes only its own, MG1; WS3's tests pair Crystal and
+        # Emerald in the same install)
+        ours = {n for n in names if not (n.startswith("pairings.") and n.split(".")[1] in VERSIONS and n.split(".")[1] != game)}
+        assert ours <= {f"pairings.{game}.json", f"pairings.{game}.json.bak", "pairings.json", "pairings.json.bak"}, names
         mid = save_files(game)
         assert slot_files(mid, home) == slot_files(before, home), "the offline save untouched"
         assert not slot_files(mid, a) and not slot_files(mid, b), "no saves in the new slots yet"

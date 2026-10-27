@@ -78,4 +78,24 @@ public class SessionGameTests implements FabricGameTest {
 		});
 		helper.succeed();
 	}
+
+	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH)
+	public void aSaveChoiceIsRecordedAndSentBackOnTheNextJoin(GameTestHelper helper) {
+		// WORLD_SESSIONS_PLAN WS2/WS3: session.bound{slot, save} relayed up is recorded; the next session.bind names it
+		MinecraftServer server = helper.getLevel().getServer();
+		MockPlayers.with(helper, player -> {
+			RelayService.get().receive(player, BattleGameTests.envelope(1, MsgTypes.SESSION_BOUND, "{\"slot\":5,\"save\":\"copy\"}"));
+			helper.assertTrue(Integer.valueOf(5).equals(SessionService.slotOf(server, player.getUUID())), "the slot wasn't recorded");
+			helper.assertTrue("copy".equals(SessionService.saveOf(server, player.getUUID(), null)), "the choice wasn't recorded");
+			SessionService.load(server);
+			JsonObject bind = SessionService.bindData(player);
+			JsonObject regions = bind == null ? null : bind.getAsJsonObject("regions");
+			String legacy = dev.kantobridge.server.Regions.legacyId(server);
+			helper.assertTrue(regions != null && regions.has(legacy) && regions.getAsJsonObject(legacy).get("slot").getAsInt() == 5
+					&& "copy".equals(regions.getAsJsonObject(legacy).get("save").getAsString()), "session.bind.regions " + regions);
+			RelayService.get().receive(player, BattleGameTests.envelope(2, MsgTypes.SESSION_BOUND, "{\"slot\":5,\"save\":\"keep\"}"));
+			helper.assertTrue("copy".equals(SessionService.saveOf(server, player.getUUID(), null)), "a bad choice changed the record");
+		});
+		helper.succeed();
+	}
 }

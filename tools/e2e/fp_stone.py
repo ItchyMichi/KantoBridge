@@ -248,6 +248,8 @@ def main(argv=None) -> int:
     parser.add_argument("--world", default="FPKanto", help="the built Kanto region world in local/minecraft/saves (copied)")
     parser.add_argument("--shots", action="store_true", help="screenshots at each check (the user's, never opened here)")
     parser.add_argument("--timeout", type=int, default=3600)
+    parser.add_argument("--client-continue", action="store_true",
+                        help="WORLD_SESSIONS_PLAN WS3 (B2): run 2's CONTINUE is the client's pick on the mirrored title menu")
     args = parser.parse_args(argv)
 
     source = sv.SAVES / args.world
@@ -351,12 +353,21 @@ def main(argv=None) -> int:
         say("== run 2")
         pilot = Pilot(PILOT_DIR)
         player = Player(pilot)
-        blue = Blue(home, "again", env)
+        blue = Blue(home, "again", dict(env, KB_FP_CLIENT_CONTINUE="1") if args.client_continue else env)
         say("blue:", blue.run.wait_marker("KB_BOOTED", timeout=600))
         client = start_client(world, pilot)
         # the save loaded by the engine's own CONTINUE (the driver, once the world is bound: the title menu's pick
         # times out in gen1-bridge, an open issue), then the overworld
-        say("blue:", blue.run.wait_marker("KB_CONTINUED", timeout=300))
+        if args.client_continue:
+            # WS3 (B2): the title menu comes to the client; its first row (CONTINUE) is picked, the save summary box
+            # that follows is answered by gen1-bridge, and the overworld arrives
+            player.settle(quiet=3.0, timeout=300, menu_index=0,
+                          until=lambda st: st.get("ingame") and not st.get("ui") and not st.get("locked"))
+            continued = blue.run.wait_marker("KB_CONTINUED", timeout=120)
+            say("blue:", continued)
+            check("b2_client_continue", continued is not None and "via=client" in continued, continued)
+        else:
+            say("blue:", blue.run.wait_marker("KB_CONTINUED", timeout=300))
         player.settle(quiet=3.0, timeout=300, menu_index=None,
                       until=lambda st: st.get("ingame") and not st.get("ui") and not st.get("locked"))
         loaded = blue.wait_party(lambda p: len(p["members"]) == 2, what="the loaded party")

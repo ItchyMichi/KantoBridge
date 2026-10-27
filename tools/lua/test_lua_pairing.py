@@ -768,3 +768,19 @@ def test_bad_choices_are_refused():
     for extra in ({"save": "keep"}, {"continue": "go"}, {"slot": 0}, {"slot": 300}, {"slot": "2"}):
         seq = bind_with(g, A, **extra)
         assert ("bad_message", seq) in errors(g), extra
+
+
+def test_copy_takes_the_active_offline_slot_over_a_remembered_home():
+    # WS3's pod run: the pairing file remembered slot1 as home, but the player plays slot3 offline now
+    g = game()
+    bind(g, A)  # home slot1 remembered, A's slot2
+    bind(g, SOLO, multiplayer=False)  # back home
+    g.E.SaveData.createSlot()  # slot3
+    g.E.slotFiles[b"slot3"] = True
+    g.E.SaveData.setActiveSlot(b"blue", b"slot3")
+    g.E.slotSaves = g.b.to_lua({})
+    bind_with(g, B, save="copy")
+    data, _ = last_bound(g)
+    assert data["save"] == "copy" and data["slot"] == 4
+    assert calls(g, "duplicateSlot") == 1
+    assert store(g)["games"]["blue"]["home"] == "slot3", "the offline slot played now is home"

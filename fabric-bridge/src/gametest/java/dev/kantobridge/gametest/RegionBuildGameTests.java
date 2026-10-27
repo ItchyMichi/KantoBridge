@@ -339,6 +339,12 @@ public class RegionBuildGameTests implements FabricGameTest {
 			MapPlacement town1 = kantoIndex.map("TEST_TOWN");
 			helper.assertTrue(regions.at(town1.x() + 5, town1.z() + 5) == regions.byId(KANTO), "kanto's town isn't in kanto");
 			MockPlayers.with(helper, player -> {
+				// WORLD_SESSIONS_PLAN WS3: a fresh player's presence is seeded with the world record's start (here the table's:
+				// slot 0's region), once
+				helper.assertTrue(RegionPresenceService.seed(player), "a fresh player wasn't seeded");
+				RegionPresence seeded = RegionPresence.stored(player);
+				helper.assertTrue(seeded != null && KANTO.equals(seeded.followed()) && seeded.parked().isEmpty(), "seeded " + seeded);
+				helper.assertTrue(!RegionPresenceService.seed(player), "seeded twice");
 				verifyJoinSequence(helper, server, player);
 				verifyWarpsPerRegion(helper, player, kantoIndex, test2Index);
 				verifyPresenceAndProgress(helper, player);
@@ -408,6 +414,10 @@ public class RegionBuildGameTests implements FabricGameTest {
 					&& tableEntries.get(1).getAsJsonObject().get("id").getAsString().equals(TEST2), "the table isn't in slot order");
 			helper.assertTrue(records.get(1).getAsJsonObject().get("id").getAsString().equals(TEST2)
 					&& records.get(1).getAsJsonObject().getAsJsonArray("families").get(0).getAsInt() == 16, "test2's record isn't relayed whole");
+			// WORLD_SESSIONS_PLAN WS2: the world record rides in the document (no world.json here: the table's)
+			helper.assertTrue(KANTO.equals(document.get("start").getAsString()) && document.getAsJsonArray("games").size() == 2
+					&& TEST2.equals(document.getAsJsonArray("games").get(1).getAsJsonObject().get("region").getAsString()),
+					"the document's world record: start " + document.get("start") + ", games " + document.get("games"));
 		});
 	}
 

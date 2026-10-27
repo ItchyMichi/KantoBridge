@@ -86,7 +86,7 @@
 --   * current   the engine's current (offline) slot, as a singleplayer bind
 --               always did;
 --   * copy      the world's own slot written from a copy of the offline slot
---               (the home slot, else the current one) with the engine's own
+--               (the active slot when it isn't a world's, else home) with the engine's own
 --               duplicateSlot (DESIGN §8: online and offline stay separate);
 --               an offline slot without a save gives an empty slot ("new"); a
 --               copy the engine refuses falls back to pairing the offline slot
@@ -187,12 +187,16 @@ end
 --                    keeps it; M10: save.loaded follows it in game)
 --   onPending()      a bind needs a switch: what came before it goes
 --   onSwitch(kind)   a switch happened: "title", "fresh" or "saved"
+--   onContinue(r, bound, done)  WS3: a settled bind whose continue is play or
+--                    park; session.bound waits for done(bound) (kb_continue)"
 function Pairing.new(opts)
   local engine, json, log, store, hash = opts.engine, opts.json, opts.log, opts.store, opts.hash
   local clock = opts.clock or function() return 0 end
   local onBound = opts.onBound or function() end
   local onPending = opts.onPending or function() end
   local onSwitch = opts.onSwitch or function() end
+  local onContinue = opts.onContinue -- WS3
+  local deferred = {} -- WS3: session.bound messages kb_continue finished, sent at the next step
 
   local pairing = {}
   local data      -- the pairing file, decoded on first use
@@ -338,8 +342,9 @@ function Pairing.new(opts)
       if not usable then return nil, "session.no_slots" end
       local g = gameRec(s.version)
       local active = s.active or engine.resolveActiveSlot()
-      local offline = (g.home and not worldSlot(g, g.home)) and g.home
-        or (active and not worldSlot(g, active) and active) or nil
+      -- the offline save: the active slot when it isn't a world's (what the player plays offline now), else home
+      local offline = (active and not worldSlot(g, active) and active)
+        or (g.home and not worldSlot(g, g.home) and g.home) or nil
       if r.slot ~= nil then
         local id = "slot" .. r.slot
         if not engine.slotRegistered(id) then
@@ -525,10 +530,21 @@ function Pairing.new(opts)
       local switched = SWITCHED[r.how] or "none"
       local bound = { slot = slot, switched = switched }
       if r.applied then bound.save = r.applied end -- WS2: the choice applied
-      out[#out + 1] = { "session.bound", bound, re = r.seq, gen = r.gen }
-      counts.answered = counts.answered + 1
       req = nil
-      onBound(r.world, r.multiplayer, slot, switched, r)
+      local function send(data)
+        deferred[#deferred + 1] = { "session.bound", data, re = r.seq, gen = r.gen }
+        counts.answered = counts.answered + 1
+        onBound(r.world, r.multiplayer, slot, switched, r)
+      end
+      if onContinue and (r.continue == "play" or r.continue == "park") then
+        -- WS3: the game is continued (or held) first; session.bound says what happened
+        onContinue(r, bound, send)
+      else
+        if r.continue == "title" then bound.started = "none" end
+        out[#out + 1] = { "session.bound", bound, re = r.seq, gen = r.gen }
+        counts.answered = counts.answered + 1
+        onBound(r.world, r.multiplayer, slot, switched, r)
+      end
       if log then
         log.info("session.bound", { slot = slot, multiplayer = r.multiplayer, worldLen = #r.world,
                                     switched = r.how or "no", created = r.created == true, count = counts.answered })
@@ -595,6 +611,13 @@ function Pairing.new(opts)
   -- ({ type, data, re = seq, gen = generation }); link = { live,
   -- generation }: the client that asked must still be there.
   function pairing.step(out, link)
+    -- WS3: answers kb_continue finished since the last step (still for this connection)
+    if #deferred > 0 then
+      for _, m in ipairs(deferred) do
+        if link and link.live and m.gen == link.generation then out[#out + 1] = m end
+      end
+      deferred = {}
+    end
     local r = req
     if not r then return end
     if not (link and link.live) or r.gen ~= link.generation then

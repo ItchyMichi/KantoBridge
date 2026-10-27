@@ -21,7 +21,12 @@ public final class BridgeLink {
 	private static final Logger LOGGER = LoggerFactory.getLogger("kantobridge");
 
 	/** What the hidden game last said about its story (MULTI_GAME_PLAN §4.7). */
-	public record Status(String playthrough, boolean ingame, boolean started, int badges, @Nullable String name, @Nullable Integer slot) {
+	public record Status(String playthrough, boolean ingame, boolean started, int badges, @Nullable String name, @Nullable Integer slot,
+			@Nullable SaveSummary save) {
+		/** WORLD_SESSIONS_PLAN WS2: {@code game.status.save}, the title's summary of the active slot's save. */
+		public record SaveSummary(int slot, @Nullable String name, int badges) {
+		}
+
 		/** True when the game is past its title screen. */
 		public boolean titled() {
 			return "title".equals(this.playthrough);
@@ -194,9 +199,18 @@ public final class BridgeLink {
 				this.refusedAt = System.currentTimeMillis();
 			}
 		}
+		com.google.gson.JsonObject save = JsonFields.obj(data, "save");
+		Status.SaveSummary summary = null;
+		if (save != null) {
+			long saveSlot = JsonFields.integer(save, "slot", -1);
+			if (saveSlot >= 0 && saveSlot <= 255) {
+				summary = new Status.SaveSummary((int) saveSlot, JsonFields.str(save, "name"),
+						(int) Math.max(0, Math.min(16, JsonFields.integer(save, "badges", 0))));
+			}
+		}
 		this.lastStatus = new Status(playthrough, JsonFields.bool(data, "ingame", false), JsonFields.bool(data, "started", false),
 				(int) Math.max(0, Math.min(16, JsonFields.integer(data, "badges", 0))), JsonFields.str(data, "name"),
-				slot < 0 ? null : (int) slot);
+				slot < 0 ? null : (int) slot, summary);
 	}
 
 	/** How many times a {@code hello.ok} named another game than configured. */

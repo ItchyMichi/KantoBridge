@@ -86,6 +86,13 @@ public final class PassRuntime {
 		public long sendTracked(String type, JsonObject data) {
 			return this.link.client().sendTracked(type, data);
 		}
+
+		@Override
+		public boolean titleSave() {
+			// WORLD_SESSIONS_PLAN WS3 (B1): game.status.save at the title
+			BridgeLink.Status status = this.link.lastStatus();
+			return status != null && status.save() != null;
+		}
 	}
 
 	private PassRuntime(BridgeRuntime bridge) {

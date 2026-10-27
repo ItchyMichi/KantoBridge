@@ -67,6 +67,7 @@ return function(mod)
     Route = import("act/kb_route.lua"),
     Climb = import("act/kb_climb.lua"),
     Region = import("act/kb_region.lua"),
+    Continue = import("act/kb_continue.lua"), -- WORLD_SESSIONS_PLAN WS3
     Ledger = import("act/kb_ledger.lua"),
     Cells = import("export/kb_cells.lua"),
     Images = import("export/kb_images.lua"),
@@ -377,8 +378,12 @@ return function(mod)
   -- mod.cache (installation-wide, src/mods/Loader.lua:1641-1643), never in
   -- a slot's own save, as session/pairings.json.
   local cache = mod.cache
+  -- WORLD_SESSIONS_PLAN WS3: every saved game in a world continues at join
+  -- (session.bind.continue play|park), through the region acts' queue
+  local continueAct = kb.Continue.new({ engine = engine, region = regionActs, log = log })
   pairing = kb.Pairing.new({
     engine = engine, json = kb.json, log = log, clock = clock, hash = kb.sha256.short,
+    onContinue = function(r, bound, done) continueAct.begin(r, bound, done) end,
     store = type(cache) == "table" and {
       read = function(rel) return cache:read(rel) end,
       write = function(rel, bytes) return cache:write(rel, bytes) end,
@@ -550,6 +555,7 @@ return function(mod)
     -- Wild Routes (WR2): the acts (routeRequests, routeGiven, routeWins, ...)
     -- and the boot's zones (routesListed, routesInstalled, routesSkipped, ...)
     merge("route", routeActs.stats())
+    merge("continue", continueAct.stats())
     merge("routes", routes and routes.stats or {})
     -- MG2: the region acts (regionParks, regionResumes, regionStarts,
     -- regionHeld, ...) and game.status (progressSent, progressChanges)
@@ -981,6 +987,8 @@ return function(mod)
     end
     -- MG2: the region acts (park, resume, start), guarded the same way
     local okRegion, regionErr = pcall(regionActs.step, facts, mode, out, { live = live, generation = generation })
+    -- WS3: the continue after a bind (its session.bound goes out with the pairing's at the next step)
+    pcall(continueAct.step, { live = live, generation = generation })
     if not okRegion then
       log.once("region.step_failed", "error", "region.step_failed",
         { at = type(regionErr) == "string" and regionErr:match("[%w_/%.%-]+%.lua:%d+") or "unknown" })
