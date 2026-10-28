@@ -3492,6 +3492,7 @@ the volume), stopped after each job. Choices where the plan was silent keep toda
 | # | Phase | Status | Date | Commits |
 |---|---|---|---|---|
 | WS0 | Facts on a pod | **done**: the bug reproduced (scene A), the cause is none of H1–H3 (below) | 2026-10-27 | `a91f735`, `f5b2ba2` |
+| WS8 | The record | **done**; the full suite below | 2026-10-28 | (this commit) |
 | WS7 | Minecraft owns the engines | **done** (opt-in: `-Engines minecraft`); C6 passed on the pod (cold start, and an engine already running); the Windows check is the user's (PLAYTEST) | 2026-10-28 | (this commit) |
 | WS6 | The creation screen | **done**; C5 passed on the pod (Kanto + Johto from one request, start Johto; a legacy world unchanged) | 2026-10-28 | `3bc7649` |
 | WS5 | Close with the world | **done**; C4 passed on the pod (engine level, all three games; the real client with Blue) | 2026-10-28 | `358e0d1` |
@@ -3499,6 +3500,41 @@ the volume), stopped after each job. Choices where the plan was silent keep toda
 | WS3 | Continue at join | **done**; C2's checks passed on the pod (engine level), B1 and B2 fixed and checked | 2026-10-27 | `828d151`, `0e11171` |
 | WS2 | The protocol and the world record | **done** (server-side tests; no pod step in the plan) | 2026-10-27 | `46abf70` |
 | WS1 | The wild route rule (and the bind fix) | **done**; C1 passed on the pod (engine and client) | 2026-10-27 | `a95d2ec` |
+
+### Worlds and sessions: the summary (WS8)
+
+1. **The user's bug** (a world saved in a Wild Routes zone, reopened: the player couldn't move). WS0 reproduced it on the
+   pod and found the cause in none of the plan's guesses: leaving a world forgot the world but kept the bind already
+   sent, so the same world opened again on the same live link sent no `session.bind`, and the gate held the player for a
+   `session.bound` that never came. It hit any reopen of the same world with the engine left running; in a zone it looked
+   exactly like the report. WS1 fixed it (`SessionBinder.leftWorld()` forgets the sent bind) and added the route rule
+   (D9: `route{zone,map}` in the state, `route.leave` when the body is out of the zone). C1 passed on the pod: reconnect,
+   relaunch and the clearing, the player walks each time.
+2. **What a world is now:** a record (`world.json`: games and start, WS2) made by **Create world** (WS6: one screen,
+   several regions, a chosen start, "Starting in Hoenn" done); every listed game continues at join, the followed one
+   played and the others held where they saved (WS3, question 8's option a; B1 and B2 fixed there); the world's own
+   save asks every game for a save (WS4); Save and Quit saves them first, then returns each to its title and home slot
+   (WS5; questions 2 and 3 closed); and, opt-in, Minecraft starts and stops the engines from `launch.json` (WS7).
+3. **The pod checks:** C1 (WS1) reconnect/relaunch/clearing passed; C2 (WS3) the continue-at-join cases at engine level for
+   all three games (the two-game join ran as two single-engine joins), B1 (Blue on the Hoenn pass, Emerald saved but not
+   continued: continued, no stash) and B2 (CONTINUE from the real client) passed; C3 (WS4) checked in two halves, the
+   server's in GameTests and the engines' on the pod (each family saves on request, a busy one refuses), not as one real
+   `/save-all` with a real client; C4 (WS5) all three engines closed to their title and home slot (Blue 4 → 5, Crystal 16 → 17, Emerald
+   21 → 22) and the real client's quit on LandSky6 (381 s); C5 (WS6) Blue + Crystal from one request, start Johto,
+   joined in Johto with Crystal followed and Blue parked (1,808 s), a legacy Kanto world unchanged (306 s); C6 (WS7)
+   the cold start (146 s) and an engine already running (204 s).
+4. **Left for the user:** PLAYTEST.md "Worlds and sessions" (the checks in Minecraft, among them the Windows check of
+   `launch.ps1 -Engines minecraft`, which decides whether `minecraft` becomes the default, D8). Not built: anything the
+   plan put after WS8. Pushing waits for the user's go.
+5. **The checkpoint (the full suite), 2026-10-28:** GameTests 148/148; JUnit per package 1,540 tests, 1
+   failed; pytest 2,542 passed (e2e skipped); the whole e2e suite on `kb-dev54` (`pytest e2e --e2e`): 79 passed, 1
+   failed, 1 skipped in 74 min. Neither failure is this plan's: `KbPackReloadTest.modelsReadFitAndStayWithinTheBudget`
+   fails the same way at the plan's base commit `ef79fb9` (run here: the `pack.model_budget` warning is never raised; WS4
+   note 5 called it a time budget, which it isn't), and `test_build_world.py::test_full_build_from_the_real_export` fails
+   five of the voxel plan's gates (`rebuild_changes_nothing`, `filtered_shares_the_index`, `quads_per_block`,
+   `selfcheck_structure`, `build_time`), the same five as in the WS4 rerun before WS6 touched the builder; until WS4
+   its earlier `zone_town_unbuilt` assertion hid them. Both are left open for their own plans (Known gaps). Pods
+   stopped after the run.
 
 ### Worlds and sessions: WS7 notes
 
@@ -5204,7 +5240,11 @@ say how each was resolved:
 
 ### Known bugs (2026-10-24)
 
-**B1. Crossing into a saved game that sits at its title empties the party** (reported by the user from play: "continuing
+**Both closed 2026-10-27 by WORLD_SESSIONS_PLAN WS3** (D11; "Worlds and sessions: WS3 notes" 4 and its pod checks):
+B1 by `game.status.save` (the pass stashes only before a truly new game), B2 by gen1-bridge answering Gen 1's save
+summary after a title pick, and a world no longer needs the pick (each game continues at join, D4). Kept below as found.
+
+**B1 (fixed, WS3). Crossing into a saved game that sits at its title empties the party** (reported by the user from play: "continuing
 one of the games before the other can cause a blank/empty"; the user confirmed it was the party, 2026-10-24; the cause
 below is read in the code, not reproduced yet). Discussion: question 8 below.
 
@@ -5226,7 +5266,7 @@ below is read in the code, not reproduced yet). Discussion: question 8 below.
   a GameTest/client test for a saved far game at its title, and the crossing e2e (`test_crossing_real.py`) with the far
   game launched but not continued.
 
-**B2. CONTINUE picked on Blue's title from Minecraft never completes** (found by `tools/e2e/fp_stone.py`, run 2).
+**B2 (fixed, WS3). CONTINUE picked on Blue's title from Minecraft never completes** (found by `tools/e2e/fp_stone.py`, run 2).
 
 - In a single-region world, Blue at its title with a saved slot: the client's pick of the title menu's first row goes
   to gen1-bridge as `ui.pick`, and each one ends in `uiact.timeout type=ui.pick` (164 in one run); the game stays on the
@@ -5249,10 +5289,14 @@ discussion of another way to continue and load the games (question 8) before eit
    - you'll see them there if you also play Gen1Recomp without the bridge.
 
    Should the bridge restore your own options when it exits?
-2. **Switching a multiplayer world while a saved game runs (from M9).** Today gen1-bridge saves that
+2. *(Closed 2026-10-28 by WORLD_SESSIONS_PLAN D6/WS5: leaving a world saves every bound game first, then returns
+   each engine to its title and its home slot, so the next world finds it at its title; kept as asked.)*
+   **Switching a multiplayer world while a saved game runs (from M9).** Today gen1-bridge saves that
    game into its own slot first, then returns to the title. Progress is never lost. Keep that, or
    refuse and wait for you to quit to the title?
-3. **Standalone Gen1Recomp after a multiplayer session (from M9).** Gen1Recomp remembers the last
+3. *(Closed 2026-10-28 by WORLD_SESSIONS_PLAN WS5: `session.close` switches the engine back to the home slot when the
+   world's slot was active, the first of the two ways below; C4 checked it on the pod for all three games. `launch.ps1
+   -Slot` stays.)* **Standalone Gen1Recomp after a multiplayer session (from M9).** Gen1Recomp remembers the last
    active slot, so it continues that world's slot until a singleplayer world binds again. There are
    two ways out:
    - the bridge restores your offline slot when Minecraft disconnects at the title;
@@ -5277,7 +5321,9 @@ discussion of another way to continue and load the games (question 8) before eit
    every ladder fades. Since H7 caves stand in an area of their own, rooms of one cave may share a rock wall, and 15
    ladders are climbed. Your file: update it when you like.
 
-8. **Another way to continue and load the games (the user's discussion point, 2026-10-24; bugs B1 and B2).** Today
+8. *(Closed 2026-10-28: option a as decided by the client, WORLD_SESSIONS_PLAN D4, done in WS3; B1 and B2 fixed there.
+   See "Worlds and sessions".)* **Another way to continue and load the games (the user's discussion point, 2026-10-24;
+   bugs B1 and B2).** Today
    each hidden game boots to its title and waits: the followed one is continued from its title menu through Minecraft
    (B2: that pick hangs on Blue), and a far one is entered at the pass by `region.start` after a `party.stash` that
    assumes a title means "never started" (B1: a saved game loses its party to the PC). Options to talk over:
@@ -5296,6 +5342,10 @@ discussion of another way to continue and load the games (question 8) before eit
 
 ### Known gaps
 
+- **Two failures that predate WORLD_SESSIONS_PLAN** (its WS8 checkpoint, 2026-10-28): `KbPackReloadTest.
+  modelsReadFitAndStayWithinTheBudget` (the `pack.model_budget` warning never comes; also at `ef79fb9`), and the real
+  export's full build in `test_build_world.py`, which misses five voxel gates (`rebuild_changes_nothing`,
+  `filtered_shares_the_index`, `quads_per_block`, `selfcheck_structure`, `build_time`).
 - **Pokémon Tower:**
   - It has no wild Pokémon once you hold the SILPH_SCOPE. With the scope, the hidden game
     suppresses Tower rolls like any indoor roll, and the builder gives the Tower no habitat pools.
@@ -5319,7 +5369,7 @@ discussion of another way to continue and load the games (question 8) before eit
   time could connect to it, so close Minecraft before an automated run (PLAYTEST says so).
 - **Slot capacity:** 3,926 of 4,096 full-shape slots are used by the whole export. Rebalance the 32
   families before adding new art kinds (`slot_map.full`).
-- **The "Create Kanto world" flow:**
+- **The "Create world" flow** (named "Create Kanto world" until WORLD_SESSIONS_PLAN WS6):
   - Closing the game during a build leaves the half-built world. Only the flow's own Cancel and
     failure paths delete it.
   - A failed resource reload is detected heuristically.

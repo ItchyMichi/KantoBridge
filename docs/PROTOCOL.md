@@ -1409,6 +1409,12 @@ before V1) counts as no pack.
   never returned to its title, never stopped (D7). In a legacy world (no region table) nothing continues a game at join,
   so no `session.close` is sent there: the game is saved and keeps running as before. A crash of Minecraft changes
   nothing: the engines run on and the next join continues or binds them.
+- **Creating a world and starting its engines (WORLD_SESSIONS_PLAN §2.2, §2.6; WS6, WS7)** add no message types. "Create
+  world" exports each ticked game over its own link (the export messages as before), and its build writes the world
+  record above before the regions; the screen's continue/new picks answer each game's first join as `session.bind.save`.
+  When Minecraft starts the engines (opt-in, D8), it does so from `launch.json` (installs, ports, an optional `engine`
+  command template: a local file, not part of the protocol) and the links connect to them as to any engine; after a
+  `session.closed` it stops only the engines it started.
 - **Every game continues at join (WORLD_SESSIONS_PLAN §2.3, D4, D13; WS3).** In a world with a record (a region world)
   the client's bind for each listed game carries `continue`: `play` for the region the player follows (the server's
   `region.state`, whose `followed` the server seeds with the record's `start` for a player who never said; else the

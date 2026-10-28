@@ -62,8 +62,11 @@ The multi-game plan ([specs/MULTI_GAME_PLAN.md](specs/MULTI_GAME_PLAN.md)) is do
       linked game it has no export of). Checked in the real client with all three games linked
       (`tools/e2e/region_shots.py`: Pallet Town, New Bark Town, Littleroot Town; 0 keys without art, every region's
       shape table built with its art). A client's first such rebuild takes about 10 minutes (Hoenn's art).
-- [ ] **Starting in Hoenn:** a fresh player always follows Kanto's game first (the legacy region); there is no way to
-      choose where to start (the video's autopilot forced Hoenn).
+- [x] **Starting in Hoenn** (2026-10-28, WORLD_SESSIONS_PLAN WS2/WS6): a fresh player always followed Kanto's game first
+      (the legacy region), with no way to choose where to start (the video's autopilot forced Hoenn). A world now has a
+      record (`world.json`: its games and its start region); "Create world" picks the start, the spawn is built there and
+      a fresh player is seeded in it. Checked on the pod (C5): Blue + Crystal from one request, start Johto, joined in
+      New Bark Town's house with Crystal followed.
 - [x] **Emerald's script warps** (2026-10-14): not the script warps themselves but every warp's tail. Emerald keeps
       fading in after the map.entered that ends a warp, and gen1-bridge's warp observer took that fade for a new "script"
       warp that never arrived: the client went dark and held the player for ten seconds after almost every door and

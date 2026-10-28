@@ -68,6 +68,13 @@ Pokémon Red/Blue's story runs in a **hidden Gen1Recomp**. It is displayed and p
   in all three games (`act/kb_speed.lua`, `driver.ownsStep`, the adapters' `stepContext`, Gen 3's `stepShaper` in its
   `tryMove` tap); and the ride's catch-up in `ForcedMover` (Part B). It supersedes `docs/specs/HIDDEN_STEP_SPEEDUP.md`.
   The staircase tool is `tools/e2e/step_speed.py`; `bike_ride.py --walk-diagonal` reads F7's counters on foot.
+- [`docs/specs/WORLD_SESSIONS_PLAN.md`](docs/specs/WORLD_SESSIONS_PLAN.md) is the worlds and sessions plan (WS0–WS8,
+  decisions D1–D14; written 2026-10-27, executed 2026-10-27/28, recorded in PROGRESS.md's "Worlds and sessions"): a world
+  record (`kantobridge/world.json`: its games and start region) made by the title screen's **Create world**; every game
+  continues at join, saves with the world (`save.request`) and returns to its title and home slot after Save and Quit
+  (`session.close`); the wild-route save/reload fix (`route.leave`, §2.7); and, opt-in (`launch.ps1 -Engines minecraft`),
+  the mod starting and stopping the engines from `launch.json` (`client/engine`). Pod checks: `showcase.py --rejoin`,
+  `--scene create`, `--scene coldstart`; `e2e/test_ws4_save.py`, `test_ws5_close.py`.
 - `refs/_research/` (git-ignored) holds the research notes, with verified `file:line` references,
   that the plan cites.
 
