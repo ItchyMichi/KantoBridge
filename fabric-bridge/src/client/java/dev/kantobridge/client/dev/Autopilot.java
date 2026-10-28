@@ -97,6 +97,8 @@ public final class Autopilot {
 	static final String SCENE_WILD_ZONE = "wild_zone";
 	static final String SCENE_TOUR = "tour";
 	static final String SCENE_PILOT = "pilot";
+	/** WORLD_SESSIONS_PLAN WS6's check C5: "Create world" from every connected game (start: kantobridge.autopilot.start), then the join. */
+	static final String SCENE_CREATE = "create";
 	/** The pilot's pitches: looking where it walks, down over the edge, down the shaft and up it. */
 	static final float PILOT_WALK_PITCH = 14f;
 	static final float PILOT_EDGE_PITCH = 55f;
@@ -164,6 +166,8 @@ public final class Autopilot {
 	private final boolean pilot;
 	private final @Nullable Path pilotDir;
 	private final @Nullable String shotList;
+	/** WS6: the create scene (C5). */
+	private boolean create;
 	/** WS0: null, "reconnect" or "relaunch". */
 	private final @Nullable String rejoin;
 	private @Nullable String levelId;
@@ -234,7 +238,7 @@ public final class Autopilot {
 					log == null || log.isBlank() ? null : Path.of(log), Boolean.getBoolean(PROPERTY + ".quit"), System.getProperty(PROPERTY + ".follow"));
 			return;
 		}
-		if (!SCENE_WILD_ZONE.equals(scene) && !SCENE_TOUR.equals(scene) && !SCENE_PILOT.equals(scene)) {
+		if (!SCENE_WILD_ZONE.equals(scene) && !SCENE_TOUR.equals(scene) && !SCENE_PILOT.equals(scene) && !SCENE_CREATE.equals(scene)) {
 			KantoBridge.LOGGER.warn("autopilot: unknown scene");
 			return;
 		}
@@ -249,6 +253,7 @@ public final class Autopilot {
 				Boolean.getBoolean(PROPERTY + ".quit"), SCENE_TOUR.equals(scene), Math.max(1, Integer.getInteger(PROPERTY + ".stops", 2)),
 				SCENE_PILOT.equals(scene), pilotDir == null || pilotDir.isBlank() ? null : Path.of(pilotDir),
 				shots == null || shots.isBlank() ? null : shots.trim(), rejoin == null || rejoin.isBlank() ? null : rejoin.trim());
+		pilot.create = SCENE_CREATE.equals(scene);
 		ClientTickEvents.END_CLIENT_TICK.register(minecraft -> pilot.tick());
 		pilot.mark("armed scene=" + scene + " record=" + (pilot.record != null));
 	}
@@ -309,6 +314,10 @@ public final class Autopilot {
 		}
 		BridgeRuntime bridge = BridgeRuntime.get();
 		boolean connected = bridge != null && bridge.client().state() == ConnectionState.CONNECTED;
+		if (connected && this.create) {
+			// WS6: "Create world" waits for every link (each a ticked game)
+			connected = bridge.links().all().stream().allMatch(link -> link.client().state() == ConnectionState.CONNECTED);
+		}
 		this.stableTicks = connected ? this.stableTicks + 1 : 0;
 		if (this.stableTicks < 2 * TICKS) {
 			this.limit(10 * 60, "bridge");
@@ -319,13 +328,17 @@ public final class Autopilot {
 			this.minecraft.createWorldOpenFlows().openWorld(this.world, () -> this.minecraft.setScreen(new TitleScreen()));
 		} else {
 			this.mark("create_world");
-			CreateKantoWorldFlow.start(this.minecraft);
+			// WS6: "Create world" with every connected game ticked, the start region from the property (else the first)
+			if (!CreateKantoWorldFlow.startDefault(this.minecraft, System.getProperty(PROPERTY + ".start"), this.world)) {
+				this.fail("no_game");
+				return;
+			}
 		}
 		this.next(Phase.WORLD);
 	}
 
 	private void world() {
-		if (this.rejoin != null && this.minecraft.level != null && this.dismissNotice()) {
+		if ((this.rejoin != null || this.create) && this.minecraft.level != null && this.dismissNotice()) {
 			return;
 		}
 		CreateKantoWorldFlow flow = CreateKantoWorldFlow.active();
@@ -339,12 +352,21 @@ public final class Autopilot {
 			this.mark("in_world ticks=" + this.phaseTicks);
 			this.next(Phase.LINK);
 		} else {
+			if (this.phaseTicks % (60 * TICKS) == 0) {
+				// what the wait is on: the screen, the level, the index
+				this.mark("world_wait screen=" + (this.minecraft.screen == null ? "-" : this.minecraft.screen.getClass().getSimpleName())
+						+ " level=" + (this.minecraft.level != null) + " index=" + (ClientWorldIndex.current() != null)
+						+ " flow=" + (flow == null ? "-" : flow.step()));
+			}
 			this.limit(60 * 60, "world");
 		}
 	}
 
 	/** The player stands on the hidden player's cell, linked and free to move, for two seconds. */
 	private void link() {
+		if ((this.rejoin != null || this.create) && this.dismissNotice()) {
+			return;
+		}
 		LocalPlayer player = this.minecraft.player;
 		WorldIndex index = ClientWorldIndex.current();
 		ClientBridgeState state = this.state();
@@ -358,8 +380,15 @@ public final class Autopilot {
 			this.startY = state.y();
 			this.walkYaw = yawOf(state.facing());
 			this.mark("linked map=" + state.map() + " x=" + state.x() + " y=" + state.y() + " facing=" + state.facing());
+			if (this.create) {
+				this.joined();
+				return;
+			}
 			this.next(this.pilot ? Phase.PILOT_PLAN : this.tour ? Phase.TOUR_SETTLE : "quit".equals(this.rejoin) ? Phase.REJOIN_SAVE : Phase.SETTLE);
 		} else {
+			if (this.phaseTicks % (60 * TICKS) == 0) {
+				this.mark("link_wait " + this.where());
+			}
 			this.limit(5 * 60, "link");
 		}
 	}
@@ -617,6 +646,37 @@ public final class Autopilot {
 		}
 	}
 
+
+	// ---- WS6: C5's join ----
+
+	/** Where everyone stands after "Create world": the record, the player's region and block, every link's game. */
+	private void joined() {
+		LocalPlayer player = this.minecraft.player;
+		dev.kantobridge.world.WorldRecord record = dev.kantobridge.client.world.ClientRegions.record();
+		StringBuilder line = new StringBuilder("joined record=").append(record == null ? "-" : record.toJson().replace(' ', '_'));
+		if (player != null) {
+			var region = dev.kantobridge.client.world.ClientRegions.at(player.getBlockX(), player.getBlockY(), player.getBlockZ());
+			line.append(" region=").append(region == null ? "-" : region.id());
+			line.append(String.format(Locale.ROOT, " body=%d,%d,%d", player.getBlockX(), player.getBlockY(), player.getBlockZ()));
+			var server = this.minecraft.getSingleplayerServer();
+			if (server != null) {
+				var spawn = server.overworld().getSharedSpawnPos();
+				line.append(" spawn=").append(spawn.getX()).append(',').append(spawn.getY()).append(',').append(spawn.getZ());
+			}
+		}
+		BridgeRuntime bridge = BridgeRuntime.get();
+		if (bridge != null) {
+			for (var link : bridge.links().all()) {
+				var status = link.lastStatus();
+				line.append(" link=").append(link.game()).append(':').append(link.region()).append(':')
+						.append(link == bridge.links().followed() ? "followed" : "parked").append(':')
+						.append(status == null ? "-" : status.playthrough() + "/" + status.ingame())
+						.append(':').append(link.state().map()).append(',').append(link.state().x()).append(',').append(link.state().y());
+			}
+		}
+		this.mark(line.toString());
+		this.next(Phase.OUTRO);
+	}
 
 	// ---- WS0: save in the zone, leave, rejoin ----
 

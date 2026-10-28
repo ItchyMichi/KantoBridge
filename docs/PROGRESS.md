@@ -3492,10 +3492,77 @@ the volume), stopped after each job. Choices where the plan was silent keep toda
 | # | Phase | Status | Date | Commits |
 |---|---|---|---|---|
 | WS0 | Facts on a pod | **done**: the bug reproduced (scene A), the cause is none of H1–H3 (below) | 2026-10-27 | `a91f735`, `f5b2ba2` |
+| WS6 | The creation screen | **done**; C5 passed on the pod (Kanto + Johto from one request, start Johto; a legacy world unchanged) | 2026-10-28 | (this commit) |
+| WS5 | Close with the world | **done**; C4 passed on the pod (engine level, all three games; the real client with Blue) | 2026-10-28 | `358e0d1` |
 | WS4 | Save with the world | **done**; C3's parts checked (server GameTest, real engines on the pod); checkpoint below | 2026-10-27 | `a66e432` |
 | WS3 | Continue at join | **done**; C2's checks passed on the pod (engine level), B1 and B2 fixed and checked | 2026-10-27 | `828d151`, `0e11171` |
 | WS2 | The protocol and the world record | **done** (server-side tests; no pod step in the plan) | 2026-10-27 | `46abf70` |
 | WS1 | The wild route rule (and the bind fix) | **done**; C1 passed on the pod (engine and client) | 2026-10-27 | `a95d2ec` |
+
+### Worlds and sessions: WS6 notes
+
+1. **The screen** (`CreateWorldScreen`, rules in `CreateWorldRules`, plain Java): the title button is now **Create world**:
+   the world's name, one row per game the client runs (its links; a game without an adapter or on a wrong link is left
+   out), a tick, "Start" and "Continue this save / New game". Rules: at least one ticked game, one game per world space
+   (a second game of a ticked game's space reads "same world as Blue"), the start among the ticked (default the first),
+   a ticked game whose link is down refused ("Crystal isn't running"). Create starts the flow.
+2. **The flow** (`CreateKantoWorldFlow.startWith`): each ticked game exported through its own link in turn (that link's
+   reconnects paused), the pack written once (every art set of the export folder), the level created under the typed
+   name (`KantoWorldNames.clean`), and one `BuildRequest` holding every region (slots in the ticked order) and the world
+   record. The "continue / new" picks wait as the creating player's first-join choices (`pendingChoice`, read by
+   `SessionRuntime.decide`), so nothing is asked after the build.
+3. **The build** (`HeadlessBuild.runChain`): `world.json` written first, then the regions one after another behind the one
+   progress screen (`BuildStatus.region(i, n)`); the spawn is set by the record's start region whatever its slot
+   (`BuildTask.spawnHere`; without a record slot 0 as MG3 did, a legacy build always). "Add a region" appends its game to
+   the record (`BuildTask.appendToRecord`; a region world without one gets the table's). Headless:
+   `build_world.py --games blue,crystal --start johto` (`-Pkb.buildGames`, `-Pkb.buildStart`).
+4. **Found on the pod and fixed:** a player who joins while "Create world" builds is never seeded at join (no region
+   yet), and the client's first `region.state` (its first link, Blue) was stored as the followed region, so the player
+   stood in New Bark Town while Blue was followed. While the record's start region isn't built yet, the server now
+   seeds the start and tells the client instead of storing its guess (`RegionPresenceService`). The first-join question
+   now replaces the hidden game's mirrored title menu (see WS5 note 5). `session: <game> join decision …` is logged on
+   each change.
+5. **Choices where the plan was silent:** the world name is cleaned to a folder name (letters, digits, spaces, `_-()`,
+   32 characters; blank: "Kanto"); the screen opens with the first connected game ticked; the dev autopilot ticks every
+   connected game (`startDefault`) and keeps every save.
+6. **Checks:** JUnit `CreateWorldRulesTest` (one per space, the start among the ticked, a down link refused),
+   `BuildTaskSpawnTest` (the spawn at a slot-1 start; the append; a table's record), `BuildRequestTest`; GameTest
+   `oneRequestBuildsTwoRegionsAndTheRecordNamesTheStart` (148/148). **C5 on the pod** (`showcase.py --scene create
+   --games blue,crystal --start johto`, both games with a saved scratch game, the real dev client): one request, Kanto
+   then Johto built (388 maps, 3 known Gen 2 layout warnings; about 25 min in all with both exports); `world.json`
+   `{games: blue/kanto, crystal/johto; start: johto}`; the spawn in the Johto region; joined: the player in Johto,
+   Crystal followed and in play where its save stands (its house in New Bark Town), Blue continued and held where its save
+   stands (Red's house, Pallet Town); both links listed. **A legacy world** (`Kanto (5)`, `showcase.py --rejoin
+   reconnect --fresh-session`): opens, links, rejoins in the zone and walks 4.9 blocks, unchanged.
+
+### Worlds and sessions: WS5 notes
+
+1. **The client** (`SessionClose`, `SessionRuntime.quit`): the pause menu's "Save and Quit to Title" (`PauseScreenMixin`)
+   and the window's close (`MinecraftStopMixin`, `quitBlocking`) first ask every bound link for a `quit` save and wait
+   for each answer, at most 10 s (`QUIT_WAIT_MS`; the window's close 5 s, the links' messages drained on the client
+   thread), with "Saving Blue, Crystal…" on screen; then Minecraft's own leave (`Leave.vanilla`); then `session.close` to
+   each link that saved or was at its title. A game whose save failed is named on the HUD and left as it is (D7).
+2. **gen1-bridge** (`kb_pairing.close`): the hold released, a game in play returned to its title, the home slot made
+   active again when the active slot is a world's (PROGRESS question 3's first way), `session.closed{title, home?}`.
+3. **Choice where the plan was silent:** a legacy world (no region table, so no record) gets the quit save but no
+   `session.close`: nothing continues a game at its next join there, so it keeps running as saved (today's behaviour).
+4. **C4 on the pod** (`test_ws5_close.py`, fake_minecraft in the client's role; the bind `save:"copy"`, then the quit):
+
+   | | quit save | `session.closed` | active slot after | rejoin | at the title, a save |
+   |---|---|---|---|---|---|
+   | Blue | ok, reason quit | title, home 4 | 4 (home) | slot 5 continued | `not_ingame` |
+   | Crystal (parked) | ok, reason quit | title, home 16 | 16 (home) | slot 17 continued | `not_ingame` |
+   | Emerald (parked) | ok, reason quit | title, home 21 | 21 (home) | slot 22 continued | `not_ingame` |
+
+   3 passed in 100 s; each install's scratch slots removed afterwards. Lua `test_lua_continue.py` +close cases,
+   `SessionCloseTest`.
+5. **The real client** (`showcase.py --rejoin quit --fresh-session --world LandSky6`, Blue, the dev client under Xvfb):
+   the first join asked once (the autopilot answered "continue"; bind `save:current, continue:play`); "Save and Quit"
+   saved Blue (`quit` save, 341 ms) and it went back to its title; the world reopened bound the recorded slot with
+   `continue:play`, asked nothing, and the player walked; the window's close saved it again and closed it. Done in
+   381 s. Two faults found on the way and fixed in WS6's commit: the hidden game's mirrored title menu (`MirrorScreen`)
+   kept the first-join question from opening (the question now replaces it), and the autopilot answered that question
+   only in its rejoin scenes.
 
 ### Worlds and sessions: WS4 notes
 

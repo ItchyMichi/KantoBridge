@@ -676,8 +676,8 @@ public final class BuildTask {
 		this.placer = new BlockPlacer(this.level, plan, this.prepared.previousVolumes(), this.prepared.previousHabitats(), pools);
 		this.placer.placeSpawnPlatform();
 		WorldPlan.Spawn spawn = plan.spawn();
-		// MG3: a region at another slot never moves the world's spawn
-		if (spawn != null && this.options.setWorldSpawn() && (!this.options.regionBuild() || this.options.slot() == 0)) {
+		// MG3: a region at another slot never moves the world's spawn; WORLD_SESSIONS_PLAN WS6: the world record's start does
+		if (spawn != null && this.options.setWorldSpawn() && spawnHere(this.options, this.worldRecordOrNull())) {
 			this.level.setDefaultSpawnPos(new BlockPos(spawn.blockX(), spawn.feetY(), spawn.blockZ()), 0.0F);
 		}
 		KantoBridge.LOGGER.info("builder: planned {} maps ({} warnings), {} story cells, {} habitat blocks on {} pools, {} slots, {} chunks to place in {} ms",
@@ -757,6 +757,9 @@ public final class BuildTask {
 					table = table.with(new RegionTable.Entry(legacy.id(), legacy.game(), legacy.slot()));
 				}
 				Files.writeString(RegionTable.file(data), table.toJson(), StandardCharsets.UTF_8);
+				// WORLD_SESSIONS_PLAN WS6: the world record lists the region's game ("Add a region" appends; a legacy world's
+				// record starts from its table as it was, the start its slot 0's region)
+				appendToRecord(data, table, id, this.bundle.game());
 				if (setup.rootDocuments()) {
 					// this region's documents were the root's: they live under regions/<id>/ from now on
 					Files.deleteIfExists(data.resolve(INDEX_FILE));
@@ -1071,6 +1074,45 @@ public final class BuildTask {
 			r.selfCheck = new BuildReport.SelfCheckSummary(report.scores().size(), report.holes(), report.groundMatchMin(), report.structureMatchMin(),
 					report.structureMatchP05(), report.occludedGroundMax(), report.backFaces(), report.unitsFailed(), report.templatesFailed(),
 					report.checkMs());
+		}
+	}
+
+	/**
+	 * WORLD_SESSIONS_PLAN WS6: whether this build sets the world spawn: a legacy build always; a region build when the world
+	 * record names its region as the start, else (no record) at slot 0 as MG3 did.
+	 */
+	static boolean spawnHere(BuildOptions options, dev.kantobridge.world.@Nullable WorldRecord record) {
+		if (!options.regionBuild()) {
+			return true;
+		}
+		return record != null ? record.start().equals(options.region()) : options.slot() == 0;
+	}
+
+	private dev.kantobridge.world.@Nullable WorldRecord worldRecordOrNull() {
+		if (this.worldDir == null) {
+			return null;
+		}
+		try {
+			return dev.kantobridge.world.WorldRecord.read(this.worldDir.resolve(DATA_FOLDER));
+		} catch (IOException | DataException | RuntimeException e) {
+			return null;
+		}
+	}
+
+	/** WS6: the region's game joins the world record (written when missing: the table's record, this region included). */
+	static void appendToRecord(Path data, RegionTable table, String region, String game) {
+		try {
+			dev.kantobridge.world.WorldRecord record = dev.kantobridge.world.WorldRecord.read(data);
+			if (record == null) {
+				record = dev.kantobridge.world.WorldRecord.legacy(table);
+			} else if (record.gameOf(region) == null) {
+				record = record.with(new dev.kantobridge.world.WorldRecord.Game(game, region));
+			}
+			if (record != null) {
+				record.write(data);
+			}
+		} catch (IOException | DataException | RuntimeException e) {
+			KantoBridge.LOGGER.warn("builder: the world record wasn't updated ({})", e.getClass().getSimpleName());
 		}
 	}
 

@@ -30,6 +30,25 @@ public final class BuildRequest {
 	private final BuildOptions options;
 	private final long filedMs;
 	private final BuildStatus status = new BuildStatus();
+	/** WORLD_SESSIONS_PLAN WS6: the regions built after the first one, in order (empty: one build). */
+	private List<Job> more = List.of();
+	/** WS6: the world record the chain writes before its first build (null: none). */
+	private dev.kantobridge.world.@Nullable WorldRecord record;
+
+	/**
+	 * WS6: one region build of a chained request: its bundle (a folder, or one already open: GameTests' classpath bundle),
+	 * maps (null: all) and options (a region and its slot).
+	 */
+	public record Job(@Nullable Path bundleDir, dev.kantobridge.builder.export.@Nullable ExportBundle bundle, @Nullable List<String> maps,
+			BuildOptions options) {
+		public Job(Path bundleDir, @Nullable List<String> maps, BuildOptions options) {
+			this(bundleDir, null, maps, options);
+		}
+
+		public Job(dev.kantobridge.builder.export.ExportBundle bundle, @Nullable List<String> maps, BuildOptions options) {
+			this(null, bundle, maps, options);
+		}
+	}
 
 	private BuildRequest(String levelId, Path bundleDir, @Nullable List<String> maps, BuildOptions options, long filedMs) {
 		this.levelId = levelId;
@@ -53,6 +72,33 @@ public final class BuildRequest {
 				clock.getAsLong());
 		PENDING.set(request);
 		return request;
+	}
+
+	/**
+	 * WORLD_SESSIONS_PLAN WS6 ("Create world"): one request for several regions, built one after another into the new
+	 * level, the world record written first (its start region sets the world spawn).
+	 */
+	public static BuildRequest submitAll(String levelId, List<Job> jobs, dev.kantobridge.world.WorldRecord record) {
+		if (jobs.isEmpty()) {
+			throw new IllegalArgumentException("no region to build");
+		}
+		Job first = jobs.get(0);
+		BuildRequest request = new BuildRequest(Objects.requireNonNull(levelId), first.bundleDir(), first.maps(), first.options(),
+				clock.getAsLong());
+		request.more = List.copyOf(jobs.subList(1, jobs.size()));
+		request.record = Objects.requireNonNull(record);
+		PENDING.set(request);
+		return request;
+	}
+
+	/** WS6: the regions to build after the first one. */
+	public List<Job> more() {
+		return this.more;
+	}
+
+	/** WS6: the world record to write before the first build, or null. */
+	public dev.kantobridge.world.@Nullable WorldRecord record() {
+		return this.record;
 	}
 
 	/**

@@ -239,11 +239,11 @@ def region_args(region, slot):
 
 
 def build(bundle, maps, world, timeout=3600, region=None, slot=None, heap=None, landscape_models=None, outdoor_levels=None,
-          chain_levels=False):
+          chain_levels=False, extra=None):
     """Steps 4-5. With region and slot (MG3) the build is a region build; heap (MG7 G3G: "8g") sizes the server's;
     landscape_models (a table, docs/specs/LANDSCAPE_MODELS.md) builds the landscape sections' models; outdoor_levels (map ids,
     comma-separated) stands those outdoor maps on raised ground (HEIGHTS_ALL_GAMES_PLAN.md D4, the levels pilot)."""
-    extra = region_args(region, slot)
+    extra = region_args(region, slot) + list(extra or [])
     if landscape_models is not None:
         extra.append(f"-Pkb.landscapeModels={Path(landscape_models).resolve()}")
     if outdoor_levels:
@@ -259,7 +259,8 @@ def build(bundle, maps, world, timeout=3600, region=None, slot=None, heap=None, 
     for stale in (REPORT, DIAGNOSTICS):
         if stale.exists():
             stale.unlink()
-    args = ["runServer", f"-Pkb.build={bundle}", f"-Pkb.buildReport={REPORT}", "-Pkb.buildExit=true",
+    # WS6: a several-games build (-Pkb.buildGames) names its bundles itself
+    args = ["runServer", *([f"-Pkb.build={bundle}"] if bundle is not None else []), f"-Pkb.buildReport={REPORT}", "-Pkb.buildExit=true",
             *extra, "--args=nogui", "--console=plain"]
     if maps:
         args.insert(2, "-Pkb.buildMaps=" + ",".join(maps))
@@ -439,6 +440,30 @@ def write_viewpoints(report, world, path=VIEWPOINTS):
     return path
 
 
+def build_games(args, maps):
+    """WS6: --games: each game's bundle (exported unless --skip-export), then one server run building them all, the world
+    record written first (start: --start)."""
+    games = [g.strip() for g in args.games.split(",") if g.strip()]
+    pairs = []
+    for game in games:
+        if args.skip_export:
+            bundle = EXPORT_DIR / game
+        else:
+            print(f"== export {game}")
+            bundle = export_bundle(game=game)
+        pairs.append(f"{game}={Path(bundle).resolve()}")
+    extra = [f"-Pkb.buildGames={','.join(pairs)}"] + ([f"-Pkb.buildStart={args.start}"] if args.start else [])
+    print(f"== build {len(games)} regions into saves/{args.world} (start {args.start or 'the first'})")
+    code = build(None, maps, args.world, heap=args.heap, extra=extra)
+    if not REPORT.exists():
+        print(f"no build report (server exit {code})")
+        return 1
+    record = MC_DIR / "saves" / args.world / "kantobridge" / "world.json"
+    print("world.json:", record.read_text(encoding="utf-8").strip() if record.is_file() else None)
+    print("build OK" if code == 0 else f"FAILED: server exit {code}")
+    return 0 if code == 0 else 1
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--maps", default="pallet", help="a map set (" + ", ".join(MAP_SETS) +
@@ -450,6 +475,9 @@ def main(argv=None):
                         "(default: the pre-flight's; MG8: emerald beside blue)")
     parser.add_argument("--region", default=None, help="MG3: build as this region of the world (with --slot)")
     parser.add_argument("--slot", type=int, default=None, help=f"MG3: the region table slot, 0..{MAX_SLOT} (with --region)")
+    parser.add_argument("--games", default=None, help="WORLD_SESSIONS_PLAN WS6: several games built into one region world in one "
+                        "request, comma-separated (slot order; each game's catalogue region), e.g. blue,crystal")
+    parser.add_argument("--start", default=None, help="WS6: with --games, the start region (the world spawn); default the first game's")
     parser.add_argument("--heap", default=None, help="MG7: the server's heap, e.g. 8g (a full Hoenn needs more than the default)")
     parser.add_argument("--landscape-models", default=None, help="the landscape sections' models: a table (models_table.py)")
     parser.add_argument("--outdoor-levels", default=None, help="outdoor maps on raised ground (the levels pilot): map ids, or all")
@@ -468,6 +496,8 @@ def main(argv=None):
         return 2
     if args.fresh:
         _delete_world(args.world)
+    if args.games:
+        return build_games(args, maps)
     if args.skip_export:
         bundle = EXPORT_DIR / (args.game or preflight().game)
     else:

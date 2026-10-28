@@ -117,7 +117,7 @@ function Step-RomImport {
 }
 
 function Step-FirstRun {
-	Plan "8. first launch: launch.ps1 -Mode player; on Minecraft's title screen, Create Kanto world builds the world from the player's own game"
+	Plan "8. first launch: launch.ps1 -Mode player; on Minecraft's title screen, Create world builds the world from the player's own games"
 }
 
 function Step-Stamp {

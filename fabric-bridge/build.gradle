@@ -48,6 +48,12 @@ loom {
 			if (kbClientUser != null && !kbClientUser.isBlank()) {
 				programArgs "--username", kbClientUser.trim()
 			}
+			// WORLD_SESSIONS_PLAN WS6: -Pkb.clientHeap=6g for a world of several regions built in the integrated server
+			def kbClientHeap = providers.gradleProperty("kb.clientHeap").getOrNull()
+			if (kbClientHeap != null && !kbClientHeap.isBlank()) {
+				if (!(kbClientHeap ==~ /[0-9]+[mMgG]/)) throw new GradleException("kb.clientHeap must look like 6g or 6144m")
+				vmArg "-Xmx${kbClientHeap}"
+			}
 		}
 		server {
 			runDir "../local/minecraft"
@@ -101,6 +107,11 @@ if (kbAutopilot != null && !kbAutopilot.isBlank()) {
 					vmArg "-Dkantobridge.autopilot.pilotDir=${file(kbAutopilotPilotDir.trim()).absolutePath}"
 				}
 				// and the shots it films (H7's video): stairs:<map> or ladder:<map>, comma-separated
+				// WORLD_SESSIONS_PLAN WS6: the create scene's start region
+				def kbAutopilotStart = providers.gradleProperty("kb.autopilotStart").getOrNull()
+				if (kbAutopilotStart != null && !kbAutopilotStart.isBlank()) {
+					vmArg "-Dkantobridge.autopilot.start=${kbAutopilotStart.trim()}"
+				}
 				// WORLD_SESSIONS_PLAN WS0: the wild_zone scene's "save in the zone, leave the world, rejoin" (reconnect|relaunch)
 				def kbAutopilotRejoin = providers.gradleProperty("kb.autopilotRejoin").getOrNull()
 				if (kbAutopilotRejoin != null && !kbAutopilotRejoin.isBlank()) {
@@ -186,6 +197,9 @@ def kbBuildProperties = [
 	"kb.buildExit"  : ["kantobridge.build.exit", false],
 	"kb.buildRegion": ["kantobridge.build.region", false],
 	"kb.buildSlot"  : ["kantobridge.build.slot", false],
+	// WORLD_SESSIONS_PLAN WS6: one build of several regions: game=bundle pairs (comma-separated, slot order) and the start region
+	"kb.buildGames" : ["kantobridge.build.games", false],
+	"kb.buildStart" : ["kantobridge.build.start", false],
 	"kb.landscapeModels": ["kantobridge.landscape.models", true],
 	"kb.outdoorLevels"  : ["kantobridge.outdoorLevels", false],
 	"kb.chainLevels"    : ["kantobridge.chainLevels", false],

@@ -10,6 +10,7 @@ import java.util.List;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.Difficulty;
+import net.minecraft.world.level.storage.LevelResource;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -44,6 +45,9 @@ public final class HeadlessBuild {
 	/** MG3: a region build's region id and slot. */
 	public static final String PROPERTY_REGION = "kantobridge.build.region";
 	public static final String PROPERTY_SLOT = "kantobridge.build.slot";
+	/** WORLD_SESSIONS_PLAN WS6: {@code game=bundleDir,...} (slot order) and the start region: one build of several regions. */
+	public static final String PROPERTY_GAMES = "kantobridge.build.games";
+	public static final String PROPERTY_START = "kantobridge.build.start";
 	public static final int EXIT_OK = 0;
 	public static final int EXIT_FAILED = 1;
 
@@ -71,6 +75,11 @@ public final class HeadlessBuild {
 				}
 				return;
 			}
+		}
+		String games = System.getProperty(PROPERTY_GAMES);
+		if (games != null && !games.isBlank() && System.getProperty("fabric-api.gametest") == null) {
+			startGames(server, games, System.getProperty(PROPERTY_START));
+			return;
 		}
 		String bundleDir = System.getProperty(PROPERTY);
 		if (bundleDir == null || bundleDir.isBlank()) {
@@ -112,6 +121,50 @@ public final class HeadlessBuild {
 		start(server, Path.of(bundleDir), maps, options, listener);
 	}
 
+	/**
+	 * WS6's headless trigger ({@code tools/e2e/build_world.py --games blue,crystal --start johto}): every game a region at
+	 * its slot (the catalogue's region), the world record written first, the builds one after another; the server exits
+	 * when the last is done if asked.
+	 */
+	private static void startGames(MinecraftServer server, String games, @Nullable String start) {
+		boolean exit = Boolean.parseBoolean(System.getProperty(PROPERTY_EXIT, "false"));
+		String reportPath = System.getProperty(PROPERTY_REPORT);
+		List<BuildRequest.Job> jobs = new java.util.ArrayList<>();
+		List<dev.kantobridge.world.WorldRecord.Game> listed = new java.util.ArrayList<>();
+		dev.kantobridge.world.WorldRecord record;
+		try {
+			int slot = 0;
+			for (String pair : games.split(",")) {
+				String[] parts = pair.trim().split("=", 2);
+				String region = dev.kantobridge.world.Games.region(parts[0]);
+				if (parts.length != 2 || region == null) {
+					throw new IllegalArgumentException("not game=bundle: " + parts[0]);
+				}
+				BuildOptions options = BuildOptions.defaults().withRegion(region, slot++)
+						.withReportCopy(reportPath == null || reportPath.isBlank() ? null : Path.of(reportPath));
+				jobs.add(new BuildRequest.Job(Path.of(parts[1]), null, options));
+				listed.add(new dev.kantobridge.world.WorldRecord.Game(parts[0], region));
+			}
+			record = new dev.kantobridge.world.WorldRecord(start == null || start.isBlank() ? listed.get(0).region() : start, listed);
+		} catch (IllegalArgumentException e) {
+			KantoBridge.LOGGER.error("builder: bad games options ({})", e.getMessage());
+			finish(server, exit, false);
+			return;
+		}
+		KantoBridge.LOGGER.info("builder: headless build of {} regions requested (start {})", jobs.size(), record.start());
+		BuildStatus status = new BuildStatus();
+		server.setDifficulty(Difficulty.PEACEFUL, true);
+		server.setDifficultyLocked(true);
+		runChain(server, status, jobs, record, server.getWorldPath(LevelResource.ROOT).resolve(BuildTask.DATA_FOLDER));
+		boolean[] ended = {false};
+		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(ticking -> {
+			if (ticking == server && !ended[0] && (status.state() == BuildStatus.State.DONE || status.state() == BuildStatus.State.FAILED)) {
+				ended[0] = true;
+				finish(server, exit, status.state() == BuildStatus.State.DONE);
+			}
+		});
+	}
+
 	/** A failed report before any build ran (copied if asked) and {@code onFailed}, the way an unopenable bundle ends. */
 	private static void failEarly(String code, @Nullable List<String> maps, BuildOptions options, BuildListener listener) {
 		BuildReport report = new BuildReport();
@@ -135,11 +188,40 @@ public final class HeadlessBuild {
 	 */
 	private static void startRequested(MinecraftServer server, BuildRequest request) {
 		BuildStatus status = request.status();
-		KantoBridge.LOGGER.info("builder: in-process build requested ({} maps)", request.maps() == null ? "all" : request.maps().size());
+		KantoBridge.LOGGER.info("builder: in-process build requested ({} maps{})", request.maps() == null ? "all" : request.maps().size(),
+				request.more().isEmpty() ? "" : ", " + (1 + request.more().size()) + " regions");
 		server.setDifficulty(Difficulty.PEACEFUL, true);
 		server.setDifficultyLocked(true);
 		BuildHold.begin(server);
-		BuildTask task = start(server, request.bundleDir(), request.maps(), request.options(), new BuildListener() {
+		List<BuildRequest.Job> jobs = new java.util.ArrayList<>();
+		jobs.add(new BuildRequest.Job(request.bundleDir(), request.maps(), request.options()));
+		jobs.addAll(request.more());
+		runChain(server, status, jobs, request.record(), server.getWorldPath(LevelResource.ROOT).resolve(BuildTask.DATA_FOLDER));
+	}
+
+	/**
+	 * WORLD_SESSIONS_PLAN WS6: a chained request's builds, one after another, the world record written into
+	 * {@code dataFolder} first (so each region build knows the start region: the spawn). GameTests run it with a world
+	 * folder of their own.
+	 */
+	public static void runChain(MinecraftServer server, BuildStatus status, List<BuildRequest.Job> jobs,
+			dev.kantobridge.world.@Nullable WorldRecord record, Path dataFolder) {
+		if (record != null) {
+			try {
+				record.write(dataFolder);
+				KantoBridge.LOGGER.info("builder: world record written ({} games, start {})", record.games().size(), record.start());
+			} catch (IOException e) {
+				KantoBridge.LOGGER.warn("builder: the world record couldn't be written ({})", e.getClass().getSimpleName());
+			}
+		}
+		runJob(server, status, jobs, 0);
+	}
+
+	/** WS6: one region build of the chain; the next starts when it finishes, the hold lifts after the last. */
+	private static void runJob(MinecraftServer server, BuildStatus status, List<BuildRequest.Job> jobs, int index) {
+		BuildRequest.Job job = jobs.get(index);
+		status.region(index, jobs.size());
+		BuildListener listener = new BuildListener() {
 			@Override
 			public void onPhase(BuildPhase phase) {
 				status.onPhase(phase);
@@ -152,6 +234,11 @@ public final class HeadlessBuild {
 
 			@Override
 			public void onFinished(BuildReport report) {
+				if (index + 1 < jobs.size() && !status.cancelRequested()) {
+					KantoBridge.LOGGER.info("builder: region {} of {} built; the next one", index + 1, jobs.size());
+					runJob(server, status, jobs, index + 1);
+					return;
+				}
 				status.onFinished(report);
 				BuildHold.release(server);
 				status.done();
@@ -162,7 +249,9 @@ public final class HeadlessBuild {
 				// Players stay held: the client leaves and removes the unfinished world.
 				status.onFailed(report);
 			}
-		});
+		};
+		BuildTask task = job.bundle() != null ? KantoWorldBuilder.start(server.overworld(), job.bundle(), job.maps(), job.options(), listener)
+				: start(server, job.bundleDir(), job.maps(), job.options(), listener);
 		if (task != null) {
 			status.started(task);
 		}

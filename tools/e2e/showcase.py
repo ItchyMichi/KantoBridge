@@ -41,6 +41,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -164,9 +165,65 @@ def join_parts(record: Path, stops: int) -> bool:
     return code == 0
 
 
+def create_scene(args):
+    """WORLD_SESSIONS_PLAN WS6, check C5: every game of --games running with a saved scratch game (kb_ws3.lua offline, its
+    own port), the dev client's "Create world" over all their links with the start --start (Autopilot scene create: the
+    exports, one build of every region, the join). Prints the autopilot's lines (the record, the region and block the
+    player stands on, every link's game, region, follow state and map), the world.json and each engine's markers; then
+    each install's scratch slots are removed (kb_ws3.lua cleanup)."""
+    import contextlib
+    games = [g.strip() for g in args.games.split(",") if g.strip()]
+    world = args.world or "WS6Create"
+    if (SAVES / world).exists() and not args.keep_world:
+        shutil.rmtree(SAVES / world)
+    AUTOPILOT_LOG.unlink(missing_ok=True)
+    started = time.monotonic()
+    homes, runs, code = {}, {}, 1
+    with contextlib.ExitStack() as stack:
+        for i, game in enumerate(games):
+            env = {"KB_TEST_PORT": str(args.port + i), "KB_DATASET_MEMO": "30", "KB_SCENE": "offline", "KB_WORLD": "kb-e2e-ws6",
+                   "KB_DRIVER_SECONDS": str(args.timeout + args.export_timeout)}
+            running = stack.enter_context(launch("kb_ws3.lua", game=game, extra_env=env, echo=False))
+            offline = running.wait_marker("KB_OFFLINE", timeout=600)
+            booted = running.result.marker("KB_BOOTED") or ""
+            homes[game] = dict(part.split("=", 1) for part in booted.split()[1:] if "=" in part).get("home")
+            print(game, "offline:", offline, flush=True)
+            if offline is None:
+                return 1
+            runs[game] = running
+        links = ",".join(f"{game}:{args.port + i}" for i, game in enumerate(games))
+        client = ["runClient", "-Pkb.autopilot=create", "-Pkb.autopilotQuit=true", f"-Pkb.autopilotPort={args.port}",
+                  f"-Pkb.links={links}", f"-Pkb.autopilotStart={args.start}", f"-Pkb.autopilotWorld={world}"]
+        if args.client_heap:
+            client.append(f"-Pkb.clientHeap={args.client_heap}")
+        code = gradle(client, args.timeout + args.export_timeout, show_client)
+        for game, running in runs.items():
+            running.kill()
+            result = running.wait(timeout=30)
+            print(game, "actives:", [line for line in result.lines if line.startswith("KB_ACTIVE")][-3:], flush=True)
+    for game in games:
+        env = {"KB_TEST_PORT": str(args.port), "KB_SCENE": "cleanup", "KB_WORLD": "kb-e2e-ws6",
+               **({"KB_HOME_SLOT": f"slot{homes[game]}"} if homes.get(game) else {})}
+        with launch("kb_ws3.lua", game=game, extra_env=env, echo=False) as clean:
+            print(game, "cleanup:", clean.wait(timeout=300).marker("KB_CLEANED"), flush=True)
+    record = SAVES / world / "kantobridge" / "world.json"
+    print("world.json:", record.read_text(encoding="utf-8").strip() if record.is_file() else None, flush=True)
+    steps = AUTOPILOT_LOG.read_text(encoding="utf-8").splitlines() if AUTOPILOT_LOG.is_file() else []
+    done = any(line.endswith("autopilot: done") for line in steps)
+    print(f"showcase: {'done' if done else 'not done'} in {time.monotonic() - started:.0f} s, {len(steps)} autopilot steps")
+    return 0 if done and code == 0 else 1
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--scene", choices=("wild_zone", "tour", "pilot"), default="wild_zone", help="the autopilot's scene")
+    parser.add_argument("--scene", choices=("wild_zone", "tour", "pilot", "create"), default="wild_zone",
+                        help="the autopilot's scene (create: WORLD_SESSIONS_PLAN WS6's check C5, with --games/--start)")
+    parser.add_argument("--games", default="blue,crystal", help="with --scene create: the games run beside the client, "
+                        "each on its own port from --port up, each with a saved scratch game (kb_ws3.lua offline)")
+    parser.add_argument("--keep-world", action="store_true", help="with --scene create: open --world when it exists "
+                        "(the join of a world made before) instead of making it again")
+    parser.add_argument("--start", default="johto", help="with --scene create: the start region")
+    parser.add_argument("--client-heap", default=None, help="the dev client's heap, e.g. 6g")
     parser.add_argument("--maps", default="MT_MOON_1F,MT_MOON_B1F,MT_MOON_B2F",
                         help="with --scene pilot: the cave's maps (their trainers are marked beaten; the first is the first stop)")
     parser.add_argument("--shots", default="",
@@ -188,6 +245,8 @@ def main(argv=None) -> int:
                         help="WS5: the world's kantobridge/session.json is moved aside for the run (a first join) and put back")
     args = parser.parse_args(argv)
 
+    if args.scene == "create":
+        return create_scene(args)
     pf = preflight()
     if not pf.ok and not args.game:
         print("pre-flight not done: " + "; ".join(pf.reasons), file=sys.stderr)

@@ -5,7 +5,10 @@ import com.google.gson.JsonObject;
 import dev.kantobridge.builder.BuildListener;
 import dev.kantobridge.builder.BuildOptions;
 import dev.kantobridge.builder.BuildReport;
+import dev.kantobridge.builder.BuildRequest;
+import dev.kantobridge.builder.BuildStatus;
 import dev.kantobridge.builder.BuildTask;
+import dev.kantobridge.builder.HeadlessBuild;
 import dev.kantobridge.builder.KantoWorldBuilder;
 import dev.kantobridge.builder.export.BundleException;
 import dev.kantobridge.builder.export.ExportBundle;
@@ -29,6 +32,7 @@ import dev.kantobridge.world.RegionRecord;
 import dev.kantobridge.world.RegionTable;
 import dev.kantobridge.world.SlotMap;
 import dev.kantobridge.world.WorldIndex;
+import dev.kantobridge.world.WorldRecord;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -194,6 +198,37 @@ public class RegionBuildGameTests implements FabricGameTest {
 				.thenExecute(() -> {
 					delete(dir);
 					delete(legacyDir);
+				})
+				.thenSucceed();
+	}
+
+	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH, timeoutTicks = 9000)
+	public void oneRequestBuildsTwoRegionsAndTheRecordNamesTheStart(GameTestHelper helper) {
+		// WORLD_SESSIONS_PLAN WS6 ("Create world"): one chained request, the world record written first (start: test2)
+		Path dir = temp("kantobridge-chain");
+		BuildOptions base = BuildOptions.defaults().withOrigin(ORIGIN_X, ORIGIN_Z).withWorldSpawn(false).withWorldDir(dir).withWritePack(false)
+				.withPublishIndex(false);
+		WorldRecord record = new WorldRecord(TEST2, List.of(new WorldRecord.Game("red", KANTO), new WorldRecord.Game("red", TEST2)));
+		BuildStatus status = new BuildStatus();
+		HeadlessBuild.runChain(helper.getLevel().getServer(), status,
+				List.of(new BuildRequest.Job(bundle(), null, base.withRegion(KANTO, 0)), new BuildRequest.Job(bundle(), null, base.withRegion(TEST2, 1))),
+				record, dir.resolve(DATA));
+		helper.startSequence()
+				.thenWaitUntil(() -> helper.assertTrue(status.state() == BuildStatus.State.DONE || status.state() == BuildStatus.State.FAILED,
+						"chain still building (region " + (status.regionIndex() + 1) + " of " + status.regionCount() + ")"))
+				.thenExecute(() -> {
+					helper.assertTrue(status.state() == BuildStatus.State.DONE, "the chain failed: " + status.error());
+					helper.assertTrue(status.regionCount() == 2 && status.regionIndex() == 1, "the chain ran " + status.regionIndex() + "/" + status.regionCount());
+					RegionTable table = table(dir);
+					helper.assertTrue(table.size() == 2 && table.byId(KANTO).slot() == 0 && table.byId(TEST2).slot() == 1, "regions.json " + table.toJson());
+					WorldRecord written;
+					try {
+						written = WorldRecord.read(dir.resolve(DATA));
+					} catch (IOException | DataException e) {
+						throw new GameTestAssertException("world.json unreadable");
+					}
+					helper.assertTrue(record.equals(written), "world.json " + (written == null ? null : written.toJson()));
+					delete(dir);
 				})
 				.thenSucceed();
 	}

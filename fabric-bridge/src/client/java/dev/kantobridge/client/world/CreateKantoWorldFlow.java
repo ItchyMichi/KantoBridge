@@ -11,6 +11,7 @@ import dev.kantobridge.builder.plan.PlanException;
 import dev.kantobridge.client.bridge.BridgeClient;
 import dev.kantobridge.client.bridge.BridgeClock;
 import dev.kantobridge.client.bridge.BridgeConfig;
+import dev.kantobridge.client.bridge.BridgeLink;
 import dev.kantobridge.client.bridge.BridgeRuntime;
 import dev.kantobridge.client.bridge.ConnectionState;
 import dev.kantobridge.client.bridge.ExportClient;
@@ -28,6 +29,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -57,6 +60,14 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * "Create Kanto world" (docs/PLAN.md §4.3 {@code world/}): the title-screen button and the flow behind it.
+ *
+ * <p><b>WORLD_SESSIONS_PLAN WS6 ("Create world", §2.2; D1–D3):</b> the button first shows {@link CreateWorldScreen}: the
+ * world's name and one row per game the client runs (a tick, "start here", "continue this save / new game"). On Create the
+ * flow exports each ticked game through its own link, writes the pack once, creates the level and files one
+ * {@link BuildRequest} with every region (slots in the ticked order) and the world record ({@code kantobridge/world.json}:
+ * the games and the start region, whose town becomes the spawn); the builds run one after another behind the one progress
+ * screen. The "continue / new" picks are the creating player's first-join choices ({@link #pendingChoices}). With no
+ * choice made (the dev autopilot, {@link #startDefault}) every connected game is ticked and the first is the start.
  *
  * <ol>
  * <li>Check that gen1-bridge is reachable: the main link is connected, or connects within a few seconds.</li>
@@ -127,6 +138,15 @@ public final class CreateKantoWorldFlow {
 	private volatile boolean workerDone;
 	private volatile @Nullable Component workerError;
 	private volatile @Nullable Path bundleDir;
+	/** WS6: the ticked games' links (in slot order), their bundles, the world record, the name typed, the picks. */
+	private List<BridgeLink> chosenLinks = List.of();
+	private final List<Path> bundles = new java.util.concurrent.CopyOnWriteArrayList<>();
+	private dev.kantobridge.world.@Nullable WorldRecord record;
+	private @Nullable String worldName;
+	private Map<String, String> picks = Map.of();
+	/** WS6: the first-join choices of worlds this client created, by level folder, then region. */
+	private static final Map<String, Map<String, String>> PENDING_CHOICES = new java.util.concurrent.ConcurrentHashMap<>();
+	private volatile int exportIndex;
 
 	private @Nullable CompletableFuture<Void> reload;
 	private long doneSeenNanos = -1;
@@ -173,16 +193,72 @@ public final class CreateKantoWorldFlow {
 		return builder.bounds(width - 154, 4, 150, 20).build();
 	}
 
-	/** Starts the flow (one at a time) and shows its screen. Client thread. */
+	/** The title button: the choice screen ("Create world", WS6), or the running flow's screen. Client thread. */
 	public static void start(Minecraft minecraft) {
 		if (active != null) {
 			minecraft.setScreen(active.screen);
 			return;
 		}
+		minecraft.setScreen(new CreateWorldScreen(minecraft.screen));
+	}
+
+	/**
+	 * WS6: starts the flow for these ticked links (slot order), the world record and the creating player's picks (region →
+	 * {@code current} or {@code new}); {@code name} is the world's name (null: "Kanto" or the next free).
+	 */
+	public static void startWith(Minecraft minecraft, List<BridgeLink> links, dev.kantobridge.world.WorldRecord record,
+			Map<String, String> picks, @Nullable String name) {
+		if (active != null) {
+			minecraft.setScreen(active.screen);
+			return;
+		}
 		CreateKantoWorldFlow flow = new CreateKantoWorldFlow(minecraft);
+		flow.chosenLinks = List.copyOf(links);
+		flow.record = record;
+		flow.picks = Map.copyOf(picks);
+		flow.worldName = name;
 		active = flow;
-		KantoBridge.LOGGER.info("create: Create Kanto world started");
+		KantoBridge.LOGGER.info("create: Create world started ({} games, start {})", links.size(), record.start());
 		minecraft.setScreen(flow.screen);
+	}
+
+	/**
+	 * WS6 (the dev autopilot): every connected game ticked, one per world space, the start {@code startRegion} when ticked
+	 * (else the first), every save kept. False when no game is connected.
+	 */
+	public static boolean startDefault(Minecraft minecraft, @Nullable String startRegion, @Nullable String name) {
+		BridgeRuntime runtime = BridgeRuntime.get();
+		if (runtime == null) {
+			return false;
+		}
+		CreateWorldRules rules = CreateWorldScreen.rulesFor(runtime.links().all());
+		for (CreateWorldRules.Row row : rules.rows()) {
+			if (row.connected()) {
+				rules.toggle(row.game());
+			}
+		}
+		for (CreateWorldRules.Row row : rules.chosen()) {
+			if (row.region().equals(startRegion)) {
+				rules.startAt(row.game());
+			}
+		}
+		dev.kantobridge.world.WorldRecord record = rules.record();
+		if (record == null) {
+			return false;
+		}
+		startWith(minecraft, CreateWorldScreen.linksFor(runtime.links().all(), rules.chosen()), record, rules.choices(), name);
+		return true;
+	}
+
+	/** WS6: the first-join choices for a world this client created (region → current|new), taken once; null when none. */
+	public static @Nullable Map<String, String> takeChoices(String levelFolder) {
+		return PENDING_CHOICES.remove(levelFolder);
+	}
+
+	/** WS6: the first-join choice for one region of a world this client created, or null (kept until the world's first join). */
+	public static @Nullable String pendingChoice(@Nullable String levelFolder, @Nullable String region) {
+		Map<String, String> picks = levelFolder == null ? null : PENDING_CHOICES.get(levelFolder);
+		return picks == null || region == null ? null : picks.get(region);
 	}
 
 	/** The running flow, if any. */
@@ -301,6 +377,21 @@ public final class CreateKantoWorldFlow {
 			this.fail(Component.translatable("kantobridge.create.error.not_connected"));
 			return;
 		}
+		if (!this.chosenLinks.isEmpty()) {
+			// WS6: every ticked game's link must be up
+			for (BridgeLink chosen : this.chosenLinks) {
+				if (chosen.client().state() != ConnectionState.CONNECTED) {
+					if (this.stepMillis() > CHECK_WAIT_MS) {
+						this.fail(Component.translatable("kantobridge.create.error.link_down",
+								Component.translatable("kantobridge.game." + chosen.game())));
+					}
+					return;
+				}
+			}
+			KantoBridge.LOGGER.info("create: {} games reachable", this.chosenLinks.size());
+			this.startWorker(this.chosenLinks.get(0).client());
+			return;
+		}
 		BridgeClient link = runtime.client();
 		ConnectionState state = link.state();
 		if (state == ConnectionState.CONNECTED) {
@@ -328,6 +419,10 @@ public final class CreateKantoWorldFlow {
 	}
 
 	private void work(BridgeClient link, ExportClient client) {
+		if (!this.chosenLinks.isEmpty()) {
+			this.workAll();
+			return;
+		}
 		try {
 			ExportClient.Result result;
 			try (BridgeClient.Pause pause = link.pauseReconnects("export", PAUSE_WAIT_MS)) {
@@ -374,6 +469,82 @@ public final class CreateKantoWorldFlow {
 			this.exporter = null;
 			this.workerDone = true;
 		}
+	}
+
+	/** WS6: each ticked game's export through its own link (one at a time, that link paused), then the pack once. */
+	private void workAll() {
+		Catalog catalog = Catalog.bundled();
+		try {
+			Path last = null;
+			for (int i = 0; i < this.chosenLinks.size(); i++) {
+				BridgeLink chosen = this.chosenLinks.get(i);
+				this.exportIndex = i;
+				this.indexed = false;
+				BridgeClient linkClient = chosen.client();
+				ExportClient client = new ExportClient(BridgeConfig.fromCatalog(catalog, linkClient.config().port()), catalog, builderHello(),
+						Transport.socket(), BridgeClock.system(), ExportClient.Options.DEFAULTS);
+				this.exporter = client;
+				ExportClient.Result result;
+				try (BridgeClient.Pause pause = linkClient.pauseReconnects("export", PAUSE_WAIT_MS)) {
+					result = client.run(this.exportDir, new ExportClient.Listener() {
+						@Override
+						public void indexed(String game, int resources, long bytes) {
+							CreateKantoWorldFlow.this.exportTotal = resources;
+							CreateKantoWorldFlow.this.indexed = true;
+						}
+
+						@Override
+						public void progress(int done, int total, long bytesDone, long bytesTotal) {
+							CreateKantoWorldFlow.this.exportDone = done;
+							CreateKantoWorldFlow.this.exportBytes = bytesDone;
+						}
+					});
+				}
+				this.exporter = null;
+				this.bundles.add(result.bundleDir());
+				last = result.bundleDir();
+				KantoBridge.LOGGER.info("create: exported game {} of {} ({})", i + 1, this.chosenLinks.size(), chosen.game());
+				if (this.cancelled) {
+					return;
+				}
+			}
+			this.bundleDir = last;
+			this.moveTo(Step.PACK);
+			// the pack holds every art set the export folder has (since 2026-10-16), this world's games included
+			PackGenerator.generateWithOthers(last, this.packDir);
+			for (Path bundle : this.bundles) {
+				writeKeys(bundle);
+			}
+		} catch (ExportClient.ExportException e) {
+			this.workerError = switch (e.code()) {
+				case "rejected" -> Component.translatable("kantobridge.create.error.rejected", String.valueOf(e.detail()));
+				case "union_room_on" -> Component.translatable("kantobridge.create.error.union_room");
+				default -> Component.translatable("kantobridge.create.error.export", e.getMessage());
+			};
+		} catch (BundleException e) {
+			this.workerError = Component.translatable("kantobridge.create.error.pack", e.code());
+		} catch (PlanException e) {
+			this.workerError = Component.translatable("kantobridge.create.error.pack", e.code());
+		} catch (IOException e) {
+			this.workerError = Component.translatable("kantobridge.create.error.pack", "io." + e.getClass().getSimpleName());
+		} catch (InterruptedException e) {
+			this.workerError = Component.translatable("kantobridge.create.error.internal", "interrupted");
+		} catch (RuntimeException e) {
+			KantoBridge.LOGGER.error("create: unexpected {} while exporting", e.getClass().getName(), e);
+			this.workerError = Component.translatable("kantobridge.create.error.internal", e.getClass().getSimpleName());
+		} finally {
+			this.exporter = null;
+			this.workerDone = true;
+		}
+	}
+
+	/** WS6: which export of several is running (0-based) and how many there are, for the screen. */
+	int exportIndex() {
+		return this.exportIndex;
+	}
+
+	int exportCount() {
+		return Math.max(1, this.chosenLinks.size());
 	}
 
 	/** The key index for pack makers (the voxel plan's V6); a failure only costs the pack check its unknown keys. */
@@ -433,14 +604,27 @@ public final class CreateKantoWorldFlow {
 			return;
 		}
 		LevelStorageSource saves = this.minecraft.getLevelSource();
-		String folder = KantoWorldNames.free(saves.getBaseDir());
+		String name = KantoWorldNames.clean(this.worldName);
+		String folder = KantoWorldNames.free(name, taken -> Files.exists(saves.getBaseDir().resolve(taken), LinkOption.NOFOLLOW_LINKS));
 		this.levelId = folder;
 		// Commands stay available so the build can be inspected (e.g. /gamemode spectator) during play-testing.
 		LevelSettings settings = new LevelSettings(folder, GameType.ADVENTURE, false, Difficulty.PEACEFUL, true, KantoGameRules.create(),
 				WorldDataConfiguration.DEFAULT);
 		WorldOptions options = new WorldOptions(WorldOptions.randomSeed(), false, false);
-		// The client already wrote the pack (step 3); the build must not replace it while it is in use.
-		this.request = BuildRequest.submit(folder, bundle, null, BuildOptions.defaults().withWritePack(false));
+		dev.kantobridge.world.WorldRecord chosenRecord = this.record;
+		if (chosenRecord != null && this.bundles.size() == chosenRecord.games().size()) {
+			// WS6: every ticked game a region at its slot, built one after another; the record names the start (the spawn)
+			List<BuildRequest.Job> jobs = new java.util.ArrayList<>();
+			for (int i = 0; i < chosenRecord.games().size(); i++) {
+				jobs.add(new BuildRequest.Job(this.bundles.get(i), null,
+						BuildOptions.defaults().withWritePack(false).withRegion(chosenRecord.games().get(i).region(), i)));
+			}
+			this.request = BuildRequest.submitAll(folder, jobs, chosenRecord);
+			PENDING_CHOICES.put(folder, this.picks);
+		} else {
+			// The client already wrote the pack (step 3); the build must not replace it while it is in use.
+			this.request = BuildRequest.submit(folder, bundle, null, BuildOptions.defaults().withWritePack(false));
+		}
 		KantoBridge.LOGGER.info("create: creating level folder \"{}\" with preset {}", folder, KANTO_PRESET.location());
 		this.moveTo(Step.LOADING);
 		this.minecraft.createWorldOpenFlows().createFreshLevel(folder, settings, options, CreateKantoWorldFlow::kantoDimensions, this.screen);

@@ -364,7 +364,11 @@ public final class SessionRuntime {
 			this.binder.incompatible(region == null ? null : region.rules().compat().onIncompatible());
 			// WS3: what this link's bind says (the recorded slot, the first-join choice, play/park/title)
 			if (kanto) {
+				JoinDecision.Result before = this.decision;
 				this.decision = SessionRuntime.this.decide(this, now);
+				if (!java.util.Objects.equals(before, this.decision)) {
+					LOGGER.info("session: {} join decision {}", this.link.game(), this.decision);
+				}
 				this.binder.decision(this.decision instanceof JoinDecision.Ready ready ? ready.bind() : null);
 			} else {
 				this.decision = null;
@@ -708,14 +712,34 @@ public final class SessionRuntime {
 		String region = link.region();
 		BridgeLink.Status status = link.lastStatus();
 		boolean presenceKnown = this.links.presenceHeard() || (this.inWorldSince >= 0 && now - this.inWorldSince > PRESENCE_WAIT_MS);
+		String answer = session.answer;
+		if (answer == null && !session.slotLost) {
+			// WS6: the creation screen's pick for this world (made in advance of its first join)
+			String pick = dev.kantobridge.client.world.CreateKantoWorldFlow.pendingChoice(this.levelFolder(), region);
+			if (pick != null) {
+				answer = "new".equals(pick) ? "new" : JoinDecision.continueChoice(this.multiplayerView);
+			}
+		}
 		return JoinDecision.decide(new JoinDecision.Input(ClientRegions.record(), region, link.game(), this.links.serverFollowed(),
 				presenceKnown, this.recorded.forRegion(region), session.slotLost, status != null, status != null && status.save() != null,
-				session.answer));
+				answer));
+	}
+
+	/** WS6: the integrated server's level folder (our own world), or null on another server. */
+	private @Nullable String levelFolder() {
+		IntegratedServer server = Minecraft.getInstance().getSingleplayerServer();
+		if (server == null) {
+			return null;
+		}
+		java.nio.file.Path root = server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT).toAbsolutePath().normalize();
+		return root.getFileName() == null ? null : root.getFileName().toString();
 	}
 
 	/** WS3 (D13): the first-join screen for every link whose decision asks, once, over the world. */
 	private void askFirstJoin(Minecraft minecraft) {
-		if (minecraft.screen != null) {
+		// the hidden game's mirrored title menu gives way: the question decides how that game starts (WS6's pod run: the
+		// mirror stayed open and the question never came)
+		if (minecraft.screen != null && !(minecraft.screen instanceof dev.kantobridge.client.ui.MirrorScreen)) {
 			return;
 		}
 		List<FirstJoinScreen.Entry> entries = new ArrayList<>();

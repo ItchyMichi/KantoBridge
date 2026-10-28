@@ -83,8 +83,10 @@ It contains no ROM data, no Gen1Recomp files and no Minecraft files. Whether it 
    imports their own ROM in **Gen1Recomp's own importer**. The installer never reads, copies or
    checks the ROM. It then asks which game was imported (Red or Blue) for `launch.json`.
 8. **World build:** the first `launch.ps1` run starts Gen1Recomp and Minecraft. On Minecraft's title
-   screen, **Create Kanto world** exports the player's own art and builds the world locally (the
-   M2/M8 flow, about a minute). Nothing ROM-derived ever leaves the machine.
+   screen, **Create world** lists the games the player runs; they tick the ones the world holds, pick
+   where it starts and whether each game continues its save, and the world is exported from their own
+   games and built locally (the M2/M8 flow, WORLD_SESSIONS_PLAN §2.2). Nothing ROM-derived ever leaves
+   the machine.
 
 ## Updates and repair
 

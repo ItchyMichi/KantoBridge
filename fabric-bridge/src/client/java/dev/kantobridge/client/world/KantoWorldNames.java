@@ -19,6 +19,19 @@ public final class KantoWorldNames {
 	private KantoWorldNames() {
 	}
 
+	/**
+	 * WORLD_SESSIONS_PLAN WS6: a typed world name as a folder base: letters, digits, spaces and {@code _ - ( )} kept, others
+	 * as {@code _}, at most 32 characters; blank: {@value #BASE}.
+	 */
+	public static String clean(@org.jetbrains.annotations.Nullable String typed) {
+		if (typed == null || typed.isBlank()) {
+			return BASE;
+		}
+		String cleaned = typed.trim().replaceAll("[^A-Za-z0-9 _()\\-]", "_");
+		cleaned = cleaned.length() > 32 ? cleaned.substring(0, 32).trim() : cleaned;
+		return cleaned.isBlank() || cleaned.startsWith(".") ? BASE : cleaned;
+	}
+
 	/** The first free name, given which names are taken. */
 	public static String free(String base, Predicate<String> taken) {
 		if (!taken.test(base)) {

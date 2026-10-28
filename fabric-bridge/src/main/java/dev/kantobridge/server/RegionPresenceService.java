@@ -62,6 +62,16 @@ public final class RegionPresenceService {
 				return;
 			}
 		}
+		// WS6: a player who joined before any region existed ("Create world" builds them in turn) was never seeded at join;
+		// while the record's start region isn't built yet, the start wins over the client's first guess, and the client is
+		// told (it follows the server's word)
+		dev.kantobridge.world.WorldRecord record = WorldIndexSync.worldRecord(player.server);
+		if (RegionPresence.stored(player) == null && record != null && regions.byId(record.start()) == null && seed(player)) {
+			if (ServerPlayNetworking.canSend(player, KbJsonPayload.TYPE)) {
+				RelayService.get().send(player, MsgTypes.REGION_STATE, of(player).toJson(), null);
+			}
+			return;
+		}
 		apply(player, presence);
 	}
 
@@ -92,8 +102,9 @@ public final class RegionPresenceService {
 			return false;
 		}
 		dev.kantobridge.world.WorldRecord record = WorldIndexSync.worldRecord(player.server);
-		Regions regions = Regions.of(player.server);
-		if (record == null || regions == null || regions.byId(record.start()) == null) {
+		// WS6: the start region may not be built yet ("Create world" builds the regions in turn while the player waits): the
+		// record alone decides, so the first region published never becomes the player's start by default
+		if (record == null || record.gameOf(record.start()) == null) {
 			return false;
 		}
 		RegionPresence.set(player, RegionPresence.following(record.start()));

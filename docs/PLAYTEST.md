@@ -91,13 +91,13 @@ textures are in `local\minecraft\kantobridge\resourcepack\`.
 `KantoFullE2E` (Singleplayer list). It has two known issues that M8 fixes: one interior is missing,
 and a few Cut-tree/door spots may show the wrong block.
 
-**Optional: the "Create Kanto world" button.** This builds **all of Kanto**, not just Pallet Town,
-from your running Gen1Recomp. Full-size builds aren't checked until M8, so treat this as an
-experiment.
+**Optional: the "Create world" button** (it was "Create Kanto world" until WORLD_SESSIONS_PLAN WS6).
+With only Blue running it builds **all of Kanto**, not just Pallet Town, from your running Gen1Recomp.
 
 1. Start Gen1Recomp (as in M1) and stay at its title screen, or in game.
-2. In Minecraft's title screen, click **Create Kanto world**. Watch the export progress (the status
-   line says "exporting…"), the texture reload, the world creation and the build progress.
+2. In Minecraft's title screen, click **Create world**. The screen lists Blue, ticked; click
+   **Create**. Watch the export progress (the status line says "exporting…"), the texture reload, the
+   world creation and the build progress.
 3. - [ ] You arrive at the Pallet Town spawn in Adventure mode; the status line reconnects.
 4. - [ ] Pressing **Cancel** during the export, or during the build, removes the half-made world
      folder.
@@ -504,7 +504,7 @@ Your own texture packs can now change a tile's texture, a character's sheet, how
 and swap a unit for a `.vox` model ([PACKS.md](PACKS.md)). No rebuild needed. The dev client's folder is
 `local\minecraft\`; its template lands in `local\minecraft\kantobridge\pack-template\blue\`.
 
-- [ ] **Pack template** on the title screen (beside "Create Kanto world"): a toast counts the textures and models it
+- [ ] **Pack template** on the title screen (beside "Create world"): a toast counts the textures and models it
       wrote and the folder opens. In a world, `/kbpack template` does the same.
 - [ ] **Make a test pack:** copy the template folder to `local\minecraft\resourcepacks\`, rename it, and edit
       `assets\kantobridge\kb_pack\template.json` (PACKS.md has an example). Put in:
@@ -736,7 +736,7 @@ Kanto world, or the headless build); a world made before then keeps its flat cav
 
 [specs/WILD_ROUTES_PLAN.md](specs/WILD_ROUTES_PLAN.md). WR1-WR7 are built and tested without a person watching
 (JUnit, GameTests, the Lua and Python suites). Since 2026-10-11 the clearing's spot is set (WR2 below), so a new world
-(Create Kanto world, or the headless build) has the zone; a world made before then doesn't.
+(Create world, or the headless build) has the zone; a world made before then doesn't.
 
 ### WR2: the exit's spot
 
@@ -1147,3 +1147,21 @@ so walking diagonally in Minecraft no longer outruns it.
 - [ ] (The ride's catch-up) The Mach Bike on Route 110: the bike under you stays within a cell of where the game is; no
       put-backs on the lane.
 
+
+## Worlds and sessions (specs/WORLD_SESSIONS_PLAN.md)
+A world now remembers which games it holds and where it starts; joining it continues each game for you, and "Save and
+Quit" saves them first. Start every game the world needs.
+- [ ] **Create a world with two games, starting in Johto:** start Blue and Crystal (`.\tools\launch.ps1 -Games blue,crystal`),
+      then on Minecraft's title screen click **Create world**. Both games are listed; Red (if imported) shows "same world
+      as Blue". Tick Blue and Crystal, click **Start** on Crystal's row, leave both on "Continue this save", Create. After
+      the build you stand in New Bark Town; F7 lists both games, Crystal followed and Blue held where its save stands.
+- [ ] Untick every game: Create greys out. Close Crystal and tick it: "Crystal isn't running", Create stays grey.
+- [ ] **Quit and rejoin:** in that world, Esc → Save and Quit to Title. The screen says it is saving Blue and Crystal; both
+      Gen1Recomp windows go back to their title. Open the world again: nothing asks you anything, both games continue
+      (Crystal where you were, Blue held), and the player walks.
+- [ ] **A first join of an older world:** open a world made before this change (one with Blue): the first join asks once
+      whether to continue your save, copy it or start a new game for this world; pick Continue; a rejoin asks nothing.
+- [ ] **Save in the zone and rejoin** (the bug of 2026-10-27, fixed by WS1): walk into a Wild Routes zone, save there in the
+      hidden game's menu, Save and Quit, open the world again: you are in the zone and walk.
+- [ ] **`/save-all`** (or Minecraft's autosave) while both games are in play: each game saves once (the HUD stays quiet); in a
+      battle a game says it didn't save, and the world still saves.

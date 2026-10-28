@@ -29,6 +29,23 @@ public final class BuildStatus implements BuildListener {
 	private volatile int warnings;
 	private volatile @Nullable BuildTask task;
 	private volatile boolean cancelRequested;
+	/** WS6: which region of a chained request is building (0-based) and how many there are. */
+	private volatile int regionIndex;
+	private volatile int regionCount = 1;
+
+	/** WS6: the chain's position: region {@code index} (0-based) of {@code count}. */
+	public void region(int index, int count) {
+		this.regionIndex = index;
+		this.regionCount = Math.max(1, count);
+	}
+
+	public int regionIndex() {
+		return this.regionIndex;
+	}
+
+	public int regionCount() {
+		return this.regionCount;
+	}
 
 	public State state() {
 		return this.state;
