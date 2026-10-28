@@ -52,7 +52,7 @@ REPO = HERE.parents[1]
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent))
 
-from run_gen1recomp import launch, preflight  # noqa: E402
+from run_gen1recomp import INSTALL, LINUX_APP, launch, launch_plain, preflight  # noqa: E402
 
 GRADLE_DIR = REPO / "fabric-bridge"
 SAVES = REPO / "local" / "minecraft" / "saves"
@@ -165,6 +165,69 @@ def join_parts(record: Path, stops: int) -> bool:
     return code == 0
 
 
+COLD_DIR = REPO / "local" / "reports" / "ws7"
+
+
+def engine_pids(game):
+    """PIDs of running engines of ``game`` (their command lines name --game=<id>)."""
+    out = subprocess.run(["pgrep", "-f", "--", f"--game={game}"], capture_output=True, text=True).stdout.split()
+    return sorted(int(p) for p in out if int(p) != os.getpid())
+
+
+BRIDGE_PORT = 27151
+
+
+def cold_scene(args):
+    """WORLD_SESSIONS_PLAN WS7, check C6: a launch.json of this run's own (the test install as Blue's install, the Linux
+    AppImage as the command template), no engine running (or, with --external, a plain Blue started here), then the dev
+    client with -Pkb.engines=minecraft opens --world: the mod starts Blue, it binds and continues, the autopilot quits
+    through the choreography and waits for the engine's stop. Prints the autopilot's lines (each link's engine state, PID,
+    reason), the engine processes and PID file before and after."""
+    world = args.world
+    if not world or not (SAVES / world).is_dir():
+        print("--world must name a world (with a world record listing blue)", file=sys.stderr)
+        return 2
+    # A plain engine (no test driver) listens on gen1-bridge's own BRIDGE PORT setting (main.lua: default 27151, the
+    # test install never changes it), as on a player's PC; --port is the drivers' port and doesn't apply here.
+    port = BRIDGE_PORT
+    COLD_DIR.mkdir(parents=True, exist_ok=True)
+    launch_json = COLD_DIR / "launch.json"
+    launch_json.write_text(json.dumps({
+        "installs": {"kanto": {"dir": str(INSTALL), "games": ["blue"], "play": "blue"}},
+        "ports": {"first": port},
+        "engine": {"command": [str(LINUX_APP / "AppRun"), "--game={game}"], "cwd": str(LINUX_APP),
+                   "env": {"XDG_DATA_HOME": "{installParent}", "ALSOFT_DRIVERS": "null", "POKEPORT_BACKGROUND": "1",
+                           "KB_DATASET_MEMO": "30"}},
+    }, indent=2) + "\n", encoding="utf-8")
+    pid_file = INSTALL / "kb_engine.pid"
+    print("before: engines", engine_pids("blue"), "pid file", pid_file.exists(), flush=True)
+    AUTOPILOT_LOG.unlink(missing_ok=True)
+    started = time.monotonic()
+    external = None
+    if args.external:
+        external = launch_plain(game="blue", extra_env={"KB_DATASET_MEMO": "30"}, echo=False)
+        time.sleep(45)  # the plain engine boots to its title and listens
+        print("external engine:", external.proc.pid, flush=True)
+    client = ["runClient", "-Pkb.autopilot=coldstart", "-Pkb.autopilotQuit=true", f"-Pkb.autopilotPort={port}",
+              f"-Pkb.links=blue:{port}", f"-Pkb.autopilotWorld={world}", "-Pkb.engines=minecraft",
+              f"-Pkb.enginesLaunch={launch_json}"]
+    code = 1
+    try:
+        code = gradle(client, args.timeout, show_client)
+        time.sleep(3)
+        print("after: engines", engine_pids("blue"), "pid file", pid_file.exists(), flush=True)
+        if external is not None:
+            print("external alive:", external.proc.poll() is None, flush=True)
+    finally:
+        if external is not None:
+            external.kill()
+            external.wait(timeout=30)
+    steps = AUTOPILOT_LOG.read_text(encoding="utf-8").splitlines() if AUTOPILOT_LOG.is_file() else []
+    done = any(line.endswith("autopilot: done") for line in steps)
+    print(f"showcase: {'done' if done else 'not done'} in {time.monotonic() - started:.0f} s, {len(steps)} autopilot steps")
+    return 0 if done and code == 0 else 1
+
+
 def create_scene(args):
     """WORLD_SESSIONS_PLAN WS6, check C5: every game of --games running with a saved scratch game (kb_ws3.lua offline, its
     own port), the dev client's "Create world" over all their links with the start --start (Autopilot scene create: the
@@ -216,8 +279,11 @@ def create_scene(args):
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--scene", choices=("wild_zone", "tour", "pilot", "create"), default="wild_zone",
-                        help="the autopilot's scene (create: WORLD_SESSIONS_PLAN WS6's check C5, with --games/--start)")
+    parser.add_argument("--scene", choices=("wild_zone", "tour", "pilot", "create", "coldstart"), default="wild_zone",
+                        help="the autopilot's scene (create: WORLD_SESSIONS_PLAN WS6's check C5, with --games/--start; "
+                        "coldstart: WS7's check C6 on --world, the engines started by the mod from a launch.json of its own)")
+    parser.add_argument("--external", action="store_true", help="with --scene coldstart: Blue started by this script first "
+                        "(the mod must use it and leave it running)")
     parser.add_argument("--games", default="blue,crystal", help="with --scene create: the games run beside the client, "
                         "each on its own port from --port up, each with a saved scratch game (kb_ws3.lua offline)")
     parser.add_argument("--keep-world", action="store_true", help="with --scene create: open --world when it exists "
@@ -247,6 +313,8 @@ def main(argv=None) -> int:
 
     if args.scene == "create":
         return create_scene(args)
+    if args.scene == "coldstart":
+        return cold_scene(args)
     pf = preflight()
     if not pf.ok and not args.game:
         print("pre-flight not done: " + "; ".join(pf.reasons), file=sys.stderr)

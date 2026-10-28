@@ -158,6 +158,20 @@ def test_several_installs(shell, setup):
 
 
 @pytest.mark.parametrize("shell", SHELLS)
+def test_engines_minecraft_hands_the_games_to_the_mod(shell, setup):
+    # WORLD_SESSIONS_PLAN WS7 (D8): no Gen1Recomp started, the client told to start them
+    _v2(setup)
+    code, out = _run(shell, *_dev(setup, "-Engines", "minecraft", "-Watch", gen1=False))
+    assert code == 0, out
+    assert "start Gen1Recomp" not in out
+    assert "engines: Minecraft starts blue when a world lists them" in out
+    assert "runClient -Pkb.links=blue:27151 -Pkb.engines=minecraft -Pkb.enginesLaunch=" + setup["config"] in out
+    assert "watch: restart Gen1Recomp" not in out, "-Watch is a launcher-mode feature"
+    code, out = _run(shell, *_dev(setup, "-Engines", "minecraft", "-Players", "2", "-P2Gen1Recomp", setup["gen1p2"], gen1=False))
+    assert code == 1 and "takes one player" in out
+
+
+@pytest.mark.parametrize("shell", SHELLS)
 def test_refusals(shell, setup):
     code, out = _run(shell, *_dev(setup, "-Players", "2", "-P2Gen1Recomp", setup["gen1"]))
     assert code == 1 and "second Gen1Recomp install" in out

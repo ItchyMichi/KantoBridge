@@ -107,6 +107,15 @@ if (kbAutopilot != null && !kbAutopilot.isBlank()) {
 					vmArg "-Dkantobridge.autopilot.pilotDir=${file(kbAutopilotPilotDir.trim()).absolutePath}"
 				}
 				// and the shots it films (H7's video): stairs:<map> or ladder:<map>, comma-separated
+				// WORLD_SESSIONS_PLAN WS7: -Pkb.engines=minecraft (the mod starts the engines; -Pkb.enginesLaunch=<launch.json>)
+				def kbEngines = providers.gradleProperty("kb.engines").getOrNull()
+				if (kbEngines != null && !kbEngines.isBlank()) {
+					vmArg "-Dkantobridge.engines=${kbEngines.trim()}"
+				}
+				def kbEnginesLaunch = providers.gradleProperty("kb.enginesLaunch").getOrNull()
+				if (kbEnginesLaunch != null && !kbEnginesLaunch.isBlank()) {
+					vmArg "-Dkantobridge.engines.launch=${file(kbEnginesLaunch.trim()).absolutePath}"
+				}
 				// WORLD_SESSIONS_PLAN WS6: the create scene's start region
 				def kbAutopilotStart = providers.gradleProperty("kb.autopilotStart").getOrNull()
 				if (kbAutopilotStart != null && !kbAutopilotStart.isBlank()) {

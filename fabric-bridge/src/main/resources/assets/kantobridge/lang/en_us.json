@@ -309,5 +309,6 @@
   "kantobridge.create_world.no_games": "No hidden game is running: start Gen1Recomp first.",
   "kantobridge.create_world.link_down": "%s isn't running",
   "kantobridge.create_world.none": "Tick at least one game.",
-  "kantobridge.create.error.link_down": "%s isn't running."
+  "kantobridge.create.error.link_down": "%s isn't running.",
+  "kantobridge.hud.engine.starting": "Starting %s…"
 }

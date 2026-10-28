@@ -86,7 +86,9 @@ It contains no ROM data, no Gen1Recomp files and no Minecraft files. Whether it 
    screen, **Create world** lists the games the player runs; they tick the ones the world holds, pick
    where it starts and whether each game continues its save, and the world is exported from their own
    games and built locally (the M2/M8 flow, WORLD_SESSIONS_PLAN §2.2). Nothing ROM-derived ever leaves
-   the machine.
+   the machine. With `launch.ps1 -Engines minecraft` (WORLD_SESSIONS_PLAN §2.6, opt-in this release)
+   only Minecraft starts: the mod starts each game a world lists when it opens and stops the ones it
+   started after "Save and Quit"; it becomes the default once the Windows check in PLAYTEST.md passes.
 
 ## Updates and repair
 

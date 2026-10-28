@@ -99,6 +99,8 @@ public final class Autopilot {
 	static final String SCENE_PILOT = "pilot";
 	/** WORLD_SESSIONS_PLAN WS6's check C5: "Create world" from every connected game (start: kantobridge.autopilot.start), then the join. */
 	static final String SCENE_CREATE = "create";
+	/** WORLD_SESSIONS_PLAN WS7's check C6: no engine running; the world opens, the mod starts the engines, binds, quits, stops them. */
+	static final String SCENE_COLD = "coldstart";
 	/** The pilot's pitches: looking where it walks, down over the edge, down the shaft and up it. */
 	static final float PILOT_WALK_PITCH = 14f;
 	static final float PILOT_EDGE_PITCH = 55f;
@@ -152,7 +154,8 @@ public final class Autopilot {
 		REJOIN_TITLE,
 		REJOIN_WORLD,
 		REJOIN_WATCH,
-		REJOIN_WALK
+		REJOIN_WALK,
+		COLD_STOP
 	}
 
 	private final Minecraft minecraft;
@@ -168,6 +171,8 @@ public final class Autopilot {
 	private final @Nullable String shotList;
 	/** WS6: the create scene (C5). */
 	private boolean create;
+	/** WS7: the cold-start scene (C6). */
+	private boolean cold;
 	/** WS0: null, "reconnect" or "relaunch". */
 	private final @Nullable String rejoin;
 	private @Nullable String levelId;
@@ -238,7 +243,8 @@ public final class Autopilot {
 					log == null || log.isBlank() ? null : Path.of(log), Boolean.getBoolean(PROPERTY + ".quit"), System.getProperty(PROPERTY + ".follow"));
 			return;
 		}
-		if (!SCENE_WILD_ZONE.equals(scene) && !SCENE_TOUR.equals(scene) && !SCENE_PILOT.equals(scene) && !SCENE_CREATE.equals(scene)) {
+		if (!SCENE_WILD_ZONE.equals(scene) && !SCENE_TOUR.equals(scene) && !SCENE_PILOT.equals(scene) && !SCENE_CREATE.equals(scene)
+				&& !SCENE_COLD.equals(scene)) {
 			KantoBridge.LOGGER.warn("autopilot: unknown scene");
 			return;
 		}
@@ -254,6 +260,7 @@ public final class Autopilot {
 				SCENE_PILOT.equals(scene), pilotDir == null || pilotDir.isBlank() ? null : Path.of(pilotDir),
 				shots == null || shots.isBlank() ? null : shots.trim(), rejoin == null || rejoin.isBlank() ? null : rejoin.trim());
 		pilot.create = SCENE_CREATE.equals(scene);
+		pilot.cold = SCENE_COLD.equals(scene);
 		ClientTickEvents.END_CLIENT_TICK.register(minecraft -> pilot.tick());
 		pilot.mark("armed scene=" + scene + " record=" + (pilot.record != null));
 	}
@@ -294,6 +301,7 @@ public final class Autopilot {
 				case REJOIN_WORLD -> this.rejoinWorld();
 				case REJOIN_WATCH -> this.rejoinWatch();
 				case REJOIN_WALK -> this.rejoinWalk();
+				case COLD_STOP -> this.coldStop();
 				case DONE, FAILED -> {
 				}
 			}
@@ -318,6 +326,10 @@ public final class Autopilot {
 			// WS6: "Create world" waits for every link (each a ticked game)
 			connected = bridge.links().all().stream().allMatch(link -> link.client().state() == ConnectionState.CONNECTED);
 		}
+		if (this.cold) {
+			// WS7: nothing listens yet; the world's opening starts the engines
+			connected = true;
+		}
 		this.stableTicks = connected ? this.stableTicks + 1 : 0;
 		if (this.stableTicks < 2 * TICKS) {
 			this.limit(10 * 60, "bridge");
@@ -338,7 +350,7 @@ public final class Autopilot {
 	}
 
 	private void world() {
-		if ((this.rejoin != null || this.create) && this.minecraft.level != null && this.dismissNotice()) {
+		if ((this.rejoin != null || this.create || this.cold) && this.minecraft.level != null && this.dismissNotice()) {
 			return;
 		}
 		CreateKantoWorldFlow flow = CreateKantoWorldFlow.active();
@@ -364,7 +376,7 @@ public final class Autopilot {
 
 	/** The player stands on the hidden player's cell, linked and free to move, for two seconds. */
 	private void link() {
-		if ((this.rejoin != null || this.create) && this.dismissNotice()) {
+		if ((this.rejoin != null || this.create || this.cold) && this.dismissNotice()) {
 			return;
 		}
 		LocalPlayer player = this.minecraft.player;
@@ -382,6 +394,17 @@ public final class Autopilot {
 			this.mark("linked map=" + state.map() + " x=" + state.x() + " y=" + state.y() + " facing=" + state.facing());
 			if (this.create) {
 				this.joined();
+				return;
+			}
+			if (this.cold) {
+				this.mark("cold_bound " + this.engines() + " " + this.where());
+				dev.kantobridge.client.net.SessionRuntime session = dev.kantobridge.client.net.SessionRuntime.get();
+				boolean took = session != null && session.quit(() -> dev.kantobridge.client.net.Leave.vanilla(this.minecraft));
+				this.mark("quit_choreography took=" + took);
+				if (!took) {
+					dev.kantobridge.client.net.Leave.vanilla(this.minecraft);
+				}
+				this.next(Phase.COLD_STOP);
 				return;
 			}
 			this.next(this.pilot ? Phase.PILOT_PLAN : this.tour ? Phase.TOUR_SETTLE : "quit".equals(this.rejoin) ? Phase.REJOIN_SAVE : Phase.SETTLE);
@@ -646,6 +669,36 @@ public final class Autopilot {
 		}
 	}
 
+
+	// ---- WS7: C6's cold start ----
+
+	/** Every link's game, whether this client started its engine, its state, PID and reason. */
+	private String engines() {
+		var runtime = dev.kantobridge.client.engine.EngineRuntime.get();
+		BridgeRuntime bridge = BridgeRuntime.get();
+		if (runtime == null || bridge == null) {
+			return "engines=off";
+		}
+		StringBuilder out = new StringBuilder("engines=");
+		for (var link : bridge.links().all()) {
+			var engine = link.game() == null ? null : runtime.engine(link.game());
+			out.append(link.game()).append(':').append(engine == null ? "-" : engine.state() + "/" + engine.pid() + "/" + engine.reason())
+					.append(':').append(link.connected() ? "up" : "down").append(',');
+		}
+		return out.toString();
+	}
+
+	/** At the title after the quit: every engine this client started gone (or a minute passed). */
+	private void coldStop() {
+		var runtime = dev.kantobridge.client.engine.EngineRuntime.get();
+		boolean atTitle = this.minecraft.level == null && this.minecraft.screen instanceof TitleScreen;
+		boolean stopped = runtime != null && BridgeRuntime.get() != null && BridgeRuntime.get().links().all().stream()
+				.allMatch(link -> link.game() == null || !runtime.owns(link.game()));
+		if (atTitle && stopped || this.phaseTicks > 60 * TICKS) {
+			this.mark("cold_stopped title=" + atTitle + " " + this.engines());
+			this.next(Phase.OUTRO);
+		}
+	}
 
 	// ---- WS6: C5's join ----
 

@@ -81,6 +81,8 @@ public class KantoBridgeClient implements ClientModInitializer {
 		BagSetRuntime.init(bridge);
 		// Saving in both games, Bill's PC as Cobblemon's PC, and the world's id for the save pairing (session.bind).
 		SessionRuntime.init(bridge);
+		// WORLD_SESSIONS_PLAN WS7 (D8, opt-in): Minecraft starts the games a world lists and stops those it started after their quit
+		dev.kantobridge.client.engine.EngineRuntime.init(bridge);
 		// Wild Routes (WR5): a zone's trainers and balls as puppets, route.* between the server and gen1-bridge, balls taken.
 		ZoneRuntime.init(bridge);
 		// Crossings (MG5): standing on a connecting route's pass parks the followed game and resumes or starts the far one.

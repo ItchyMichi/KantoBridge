@@ -1150,7 +1150,7 @@ so walking diagonally in Minecraft no longer outruns it.
 
 ## Worlds and sessions (specs/WORLD_SESSIONS_PLAN.md)
 A world now remembers which games it holds and where it starts; joining it continues each game for you, and "Save and
-Quit" saves them first. Start every game the world needs.
+Quit" saves them first. Start every game the world needs (or use `-Engines minecraft`, the last item).
 - [ ] **Create a world with two games, starting in Johto:** start Blue and Crystal (`.\tools\launch.ps1 -Games blue,crystal`),
       then on Minecraft's title screen click **Create world**. Both games are listed; Red (if imported) shows "same world
       as Blue". Tick Blue and Crystal, click **Start** on Crystal's row, leave both on "Continue this save", Create. After
@@ -1165,3 +1165,7 @@ Quit" saves them first. Start every game the world needs.
       hidden game's menu, Save and Quit, open the world again: you are in the zone and walk.
 - [ ] **`/save-all`** (or Minecraft's autosave) while both games are in play: each game saves once (the HUD stays quiet); in a
       battle a game says it didn't save, and the world still saves.
+- [ ] *(PC, yours)* **Minecraft starts the games:** close every Gen1Recomp, then `.\tools\launch.ps1 -Engines minecraft`. Open the
+      Blue + Crystal world: the HUD says "Starting Blue…" / "Starting Crystal…", both Gen1Recomp windows appear and the
+      games continue. Save and Quit: both save, go to their title and their windows close. Start Blue yourself first and
+      repeat: Blue is used and stays open after the quit; only Crystal's window closes.

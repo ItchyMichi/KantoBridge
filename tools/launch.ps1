@@ -25,6 +25,11 @@ The script never touches Gen1Recomp's data (saves, ROM import, options): it only
 It sets JAVA_HOME for its own Gradle runs only, never system-wide. It never stops Gen1Recomp, so
 unsaved progress is never lost; with -Watch it restarts a Gen1Recomp that exits while Minecraft runs.
 
+-Engines (WORLD_SESSIONS_PLAN WS7, D8): "launcher" (default this release) starts the games as above; "minecraft"
+starts Minecraft only and hands the games to the mod, which starts each game a world lists when the world opens and
+stops the ones it started after their save at "Save and Quit" (KANTOBRIDGE_ENGINES=minecraft and the config's path reach
+the client; -Pkb.engines in dev). -Watch is a launcher-mode feature; -Engines minecraft takes one player.
+
 .EXAMPLE
 .\tools\launch.ps1
 .\tools\launch.ps1 -Game red -Watch
@@ -33,11 +38,13 @@ unsaved progress is never lost; with -Watch it restarts a Gen1Recomp that exits 
 .\tools\launch.ps1 -Players 2
 .\tools\launch.ps1 -Mode player
 .\tools\launch.ps1 -DryRun
+.\tools\launch.ps1 -Engines minecraft
 #>
 [CmdletBinding()]
 param(
 	[ValidateSet("dev", "player")] [string] $Mode = "dev",
 	[ValidateSet(1, 2)] [int] $Players = 1,
+	[ValidateSet("launcher", "minecraft")] [string] $Engines = "launcher",
 	[string] $Game = "",
 	[string[]] $Games = @(),
 	[string[]] $Regions = @(),
@@ -249,7 +256,10 @@ if ($Mode -eq "player") {
 	}
 }
 $UseConsole = ($Mode -eq "dev" -and -not $NoConsole) -or $Console
-$UseWatch = ($Mode -eq "player" -and -not $NoWatch) -or $Watch
+$UseWatch = (($Mode -eq "player" -and -not $NoWatch) -or $Watch) -and $Engines -eq "launcher"
+if ($Engines -eq "minecraft" -and $Players -ne 1) {
+	Fail "-Engines minecraft takes one player (player 2's games stay the launcher's: drop -Engines or -Players)"
+}
 
 function Find-Jdk21 {
 	$given = Pick $JavaHome "javaHome" ""
@@ -478,6 +488,10 @@ function Start-Gradle([string] $task, [bool] $ownWindow, [string] $links) {
 	# -Pkb.links reaches the dev client as -Dkantobridge.links (fabric-bridge/build.gradle maps it).
 	$arguments = @($task)
 	if ($links) { $arguments += "-Pkb.links=$links" }
+	if ($Engines -eq "minecraft" -and $task -eq "runClient") {
+		$arguments += "-Pkb.engines=minecraft"
+		if ($Config) { $arguments += "-Pkb.enginesLaunch=$Config" }
+	}
 	if ($DryRun) {
 		Plan "run fabric-bridge\gradlew.bat $($arguments -join ' ') with JAVA_HOME=$Jdk (this run only)$(if ($ownWindow) { ' in its own window' })"
 		return $null
@@ -519,6 +533,17 @@ if ($P2) {
 	$gen1 += [pscustomobject]@{ Exe = $P2.Exe; Who = $P2.Who; Play = $P2.Play; Port = $P2.Port; Process = $null; Restarts = @() }
 }
 
+if ($Engines -eq "minecraft") {
+	# D8: the mod starts the games a world lists (and stops those it started at Save and Quit)
+	if ($DryRun) {
+		Plan "engines: Minecraft starts $(($gen1 | ForEach-Object { $_.Play }) -join ', ') when a world lists them (launch.json $Config)"
+	} else {
+		Say "engines: Minecraft starts the games when a world opens"
+		$env:KANTOBRIDGE_ENGINES = "minecraft"   # this process and its children only (Prism, its Minecraft)
+		if ($Config) { $env:KANTOBRIDGE_ENGINES_LAUNCH = $Config }
+	}
+	$gen1 = @()
+}
 foreach ($g in $gen1) {
 	$g.Process = Start-Gen1 $g
 	[void] (Wait-Gen1 $g.Process $g)
@@ -586,5 +611,9 @@ while (@($minecraft | Where-Object { $_ -and -not $_.HasExited }).Count -gt 0) {
 	}
 	Start-Sleep -Seconds 2
 }
-Say "Minecraft has closed. Gen1Recomp keeps running: save there if you like, then close it."
+if ($Engines -eq "minecraft") {
+	Say "Minecraft has closed. The games it started were saved and stopped; any you started yourself keep running."
+} else {
+	Say "Minecraft has closed. Gen1Recomp keeps running: save there if you like, then close it."
+}
 exit 0

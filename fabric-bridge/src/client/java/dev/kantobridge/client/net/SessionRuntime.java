@@ -605,6 +605,24 @@ public final class SessionRuntime {
 			}
 		}
 		this.finishQuit();
+		// WS7: engines this client started stop only after their session.closed: wait for the answers a little
+		long until = this.now() + SessionClose.WINDOW_WAIT_MS;
+		while (this.waitForClosed.getAsBoolean() && !this.closingLinks.isEmpty() && this.now() < until) {
+			this.links.drain(64);
+			try {
+				Thread.sleep(20);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+				break;
+			}
+		}
+	}
+
+	private java.util.function.BooleanSupplier waitForClosed = () -> false;
+
+	/** WS7: while this holds (engines this client started run), the window's close waits for the session.closed answers. */
+	public void waitForClosedWhile(java.util.function.BooleanSupplier condition) {
+		this.waitForClosed = condition;
 	}
 
 	private void tickQuit() {

@@ -3492,12 +3492,48 @@ the volume), stopped after each job. Choices where the plan was silent keep toda
 | # | Phase | Status | Date | Commits |
 |---|---|---|---|---|
 | WS0 | Facts on a pod | **done**: the bug reproduced (scene A), the cause is none of H1–H3 (below) | 2026-10-27 | `a91f735`, `f5b2ba2` |
-| WS6 | The creation screen | **done**; C5 passed on the pod (Kanto + Johto from one request, start Johto; a legacy world unchanged) | 2026-10-28 | (this commit) |
+| WS7 | Minecraft owns the engines | **done** (opt-in: `-Engines minecraft`); C6 passed on the pod (cold start, and an engine already running); the Windows check is the user's (PLAYTEST) | 2026-10-28 | (this commit) |
+| WS6 | The creation screen | **done**; C5 passed on the pod (Kanto + Johto from one request, start Johto; a legacy world unchanged) | 2026-10-28 | `3bc7649` |
 | WS5 | Close with the world | **done**; C4 passed on the pod (engine level, all three games; the real client with Blue) | 2026-10-28 | `358e0d1` |
 | WS4 | Save with the world | **done**; C3's parts checked (server GameTest, real engines on the pod); checkpoint below | 2026-10-27 | `a66e432` |
 | WS3 | Continue at join | **done**; C2's checks passed on the pod (engine level), B1 and B2 fixed and checked | 2026-10-27 | `828d151`, `0e11171` |
 | WS2 | The protocol and the world record | **done** (server-side tests; no pod step in the plan) | 2026-10-27 | `46abf70` |
 | WS1 | The wild route rule (and the bind fix) | **done**; C1 passed on the pod (engine and client) | 2026-10-27 | `a95d2ec` |
+
+### Worlds and sessions: WS7 notes
+
+1. **What runs** (§2.6, D8; opt-in this release): with `-Dkantobridge.engines=minecraft` (dev `-Pkb.engines`), env
+   `KANTOBRIDGE_ENGINES` (set by `launch.ps1 -Engines minecraft`) or the client config's `engines.start`, the mod reads
+   `launch.json` (`LaunchConfig`: `installs`, `ports`, and an optional `engine` block, `command`/`cwd`/`env` with
+   `{game}`, `{install}`, `{installParent}`; the Windows default is the install's `gen1recomp.exe --game=<id>`). Three
+   seconds after a world with a record is joined, `EngineRuntime` asks `EngineLauncher` for every listed game whose link
+   is down: a port already answering is the user's engine (EXTERNAL: used, never stopped); else the game's install is
+   started, `<install>/kb_engine.pid` written and the port awaited (30 s). The HUD says "Starting Blue…". After the
+   world's quit, each engine this client started stops once its `session.closed` came (WS5's choreography waits for the
+   answers while such an engine runs); a client that exits any other way stops them from a shutdown hook.
+2. **Fixed after C6's first run:** (a) the engine came up on 27151, its gen1-bridge's own BRIDGE PORT setting, while the
+   test's link dialled the drivers' 27208, so it never bound: a showcase setting, not the mod's (the cold scene now uses
+   the bridge's port, as a player's `launch.json` does). The same lesson for the mod: gen1-bridge takes the first free
+   port from its setting, so two engines started together could swap ports; the launcher now starts **one at a time,
+   lowest port first**, the next once the last answers or fails. (b) the state changes after STARTING (RUNNING, FAILED
+   port_timeout/exited) weren't logged; now they are. (c) the started engine outlived a client that died on the test's
+   timeout: the shutdown hook above. (d) the pod's PID 1 (`sleep infinity`) never reaps, and Java counts a zombie as
+   alive, so the stale PID file read `pid_alive`; Linux handles now read `/proc/<pid>/stat` (Windows has no zombies).
+3. **C6 on the pod** (`showcase.py --scene coldstart --world WS7Cold`, a Blue world made by WS6's create scene; Linux
+   AppImage as the command template): no engine running and a stale PID file of a dead (zombie) engine; the world
+   opened, the engine started 4 s after the server came up (pid 23460), its port answered 7 s later, the player was
+   bound 15 s after the join (the first join asked once, since the earlier scenes' cleanup had removed the world's
+   scratch slot: "a missing slot asks again"), quit through the choreography, `engines: blue stopped after its
+   session.closed` 1 s later, the PID file gone, no engine left: done in 146 s. **With an engine already running**
+   (`--external`: a plain Blue started by the script): EXTERNAL, bound and quit, the engine still alive afterwards:
+   done in 204 s.
+4. **Not checked here:** `launch.ps1 -Engines minecraft` on Windows (Prism, `gen1recomp.exe`, visible windows) is the
+   user's check in PLAYTEST.md "Worlds and sessions"; `test_launch.py`'s new dry-run test skips off Windows. The
+   default stays `launcher` until that check passes (D8).
+5. **Choices where the plan was silent:** one start at a time (above); a game whose engine fails isn't retried within
+   the same join (a rejoin tries again); an engine whose port never answers is reported and left running (it may still
+   come up), still ours to stop; `-Engines minecraft` refuses `-Players 2` (player 2's games stay the launcher's), and
+   `-Watch` stays a launcher-mode feature.
 
 ### Worlds and sessions: WS6 notes
 
