@@ -39,6 +39,9 @@ from fake_minecraft import FakeMinecraft
 from run_gen1recomp import launch, preflight
 from story import StoryWalker
 
+# STEP_SPEED_PLAN D5: a step the bridge drives takes 16 frames at 1X, so 8 at the default STEP SPEED (2X)
+DRIVEN_STEP = 16 * 100 // 200
+
 PORTS = {"cut": 27187, "surf": 27186, "spin": 27185, "elevator": 27184, "strength": 27183}
 DELTA = {"up": (0, -1), "down": (0, 1), "left": (-1, 0), "right": (1, 0)}
 OPPOSITE = {"up": "down", "down": "up", "left": "right", "right": "left"}
@@ -276,10 +279,10 @@ def test_field_scene(scene_name):
         assert report["result"] == {"ok": True, "kind": "surf"}
         assert report["mount"] == [("script", 16)], "the mount's one scripted step onto the water"
         assert report["surf_after_mount"] is True
-        assert report["on_water"] == ("player.pos", "surf", 16)
+        assert report["on_water"] == ("player.pos", "surf", DRIVEN_STEP), "a driven step at the default STEP SPEED"
         assert report["surf_after_landing"] is False
     elif scene_name == "spin":
-        assert report["onto"] == ("player.pos", "walk", 16)
+        assert report["onto"] == ("player.pos", "walk", DRIVEN_STEP)
         assert report["spin_steps"] >= int(scene["steps"]) >= 1
         assert report["spin_frames"] == [48], "16 / 2 * 6 frames a cell (Player.lua:131-133)"
         assert report["forced_seen"]

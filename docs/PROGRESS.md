@@ -3527,7 +3527,14 @@ the volume), stopped after each job. Choices where the plan was silent keep toda
    real `/save-all` with a real client) is not run: the server's half (one request per player, the rate limit, no loop,
    the pairing of a `world` save) and the engines' half (each family saves on a request, a busy one refuses) are checked
    apart. The old GameTest that used `quit` as a bad save reason now uses `shutdown`.
-5. **Checkpoint (the full suite):** see the WS4 checkpoint line below.
+5. **Checkpoint (the full suite), 2026-10-27/28:** GameTests 147/147; JUnit per package 1,525 tests, 1 failed
+   (`KbPackReloadTest.modelsReadFitAndStayWithinTheBudget`, the known time budget on this server's 2-CPU container);
+   pytest 2,534 passed (e2e skipped); the whole e2e suite on `kb-dev54` (`pytest e2e --e2e`): 74 passed, 3 failed, 1
+   skipped in 51 min. The three failures predate this plan and are the tests' expectations, fixed here:
+   `test_field.py` surf and spin expected the 16-frame step from before STEP_SPEED_PLAN (a driven step takes 8 frames at
+   the default 2X: `DRIVEN_STEP`), and `test_build_world.py::test_full_build_from_the_real_export` (a Pallet-only
+   build) failed on 3 `zone_town_unbuilt` warnings, the Wild Routes zones whose towns a filtered build leaves out by
+   design (`check_report` now accepts that code for a filtered build). The three are run again on the pod at WS5.
 
 ### Worlds and sessions: WS3 notes
 

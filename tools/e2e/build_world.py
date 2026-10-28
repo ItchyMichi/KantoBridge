@@ -279,6 +279,9 @@ def check_report(maps, report=REPORT, region=None, slot=None, world=None):
     data = json.loads(report.read_text(encoding="utf-8"))
     expected = len(maps) if maps else data.get("maps_requested")
     known = KNOWN_WARNINGS.get(load_games().family(data.get("game")), frozenset())
+    if maps:
+        # a filtered build leaves out the Wild Routes zones whose town it doesn't build (BuildTask.withZones), by design
+        known = known | {"zone_town_unbuilt"}
     codes = data.get("warning_codes") if isinstance(data.get("warning_codes"), dict) else {}
     only_known = bool(known) and set(codes) <= known
     checks = {
