@@ -68,7 +68,8 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>The end is answered with exactly one {@code battle.result}: {@code caught} (with the Pokémon's uid, dex and level),
  * {@code win} (defeated), {@code lose}, {@code fled} or {@code aborted} (stopped with nobody winning). Because the client
- * holds the player during every battle, Cobblemon's Run (walk away) can't work, so a flee attempt ends the battle as
+ * holds the player during every battle (or, minimised, fences it well inside the flee distance: BATTLE_ROAM_PLAN), Cobblemon's
+ * Run (walk away) can't work, so a flee attempt ends the battle as
  * fled at once when running is allowed; the same goes for natural wild battles in a Kanto world. The Pokémon is
  * discarded afterwards (a caught one is already gone). Logs carry kinds, counts and codes only. Server thread only.
  */
@@ -319,8 +320,8 @@ public final class EncounterService {
 	}
 
 	/**
-	 * Run was pressed. Cobblemon would wait for the player to walk {@value #FLEE_DISTANCE} blocks away, which the held
-	 * client never does, so the battle ends as fled now (next tick): for our encounters when the rules allow running,
+	 * Run was pressed. Cobblemon would wait for the player to walk {@value #FLEE_DISTANCE} blocks away, which the held (or
+	 * fenced) client never does, so the battle ends as fled now (next tick): for our encounters when the rules allow running,
 	 * and for any other wild battle in a Kanto world.
 	 */
 	static void onFleeAttempt(BattleFleeAttemptEvent event) {

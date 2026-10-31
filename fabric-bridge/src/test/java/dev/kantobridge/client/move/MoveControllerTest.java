@@ -80,6 +80,7 @@ class MoveControllerTest {
 		boolean ingame = true;
 		boolean free;
 		boolean battle;
+		boolean roam;
 		String mode = "idle";
 		@Nullable WorldIndex index = world;
 
@@ -93,7 +94,8 @@ class MoveControllerTest {
 		ForcedMover.@Nullable Velocity tick(@Nullable Dir intent, float yaw) {
 			this.now += 50;
 			ForcedMover.Velocity velocity = this.controller.beforeMove(this.now,
-					new MoveController.Frame(this.index, this.free, this.connected, this.ingame, this.mode, false, this.battle, this.x, this.z));
+					new MoveController.Frame(this.index, this.free, this.connected, this.ingame, this.mode, false, this.battle, this.roam, this.x,
+							this.z));
 			if (velocity != null) {
 				this.x += velocity.x();
 				this.z += velocity.z();
@@ -265,6 +267,49 @@ class MoveControllerTest {
 		}
 		assertEquals(List.of(), rig.port.bridge);
 		assertEquals(List.of("warp.request {\"to\":{\"map\":\"TEST_TOWN\",\"x\":5,\"y\":8,\"facing\":\"up\"}}"), rig.port.server);
+	}
+
+	@Test
+	void aMinimisedBattleLetsThePlayerRoamAndSnapsBackAfterwards() throws Exception {
+		Rig rig = linkedAt("TEST_TOWN", 5, 8, "up");
+		double startX = rig.x;
+		double startZ = rig.z;
+		rig.battle = true;
+		rig.tick(null, 180.0F);
+		assertEquals(InputLock.Reason.BATTLE, rig.controller.reason(), "the battle's screen up: held");
+		assertEquals(new BattleRoam.Anchor(startX, startZ), rig.controller.roamAnchor());
+		// R: the screen minimised, the player walks two cells off; the anchor stays where the battle started
+		rig.roam = true;
+		rig.tick(null, 180.0F);
+		assertEquals(InputLock.Reason.ROAM, rig.controller.reason());
+		rig.at("TEST_TOWN", 5, 6);
+		for (int i = 0; i < 2 * MovementSync.PUSH_TICKS; i++) {
+			rig.tick(Dir.UP, 180.0F);
+		}
+		assertEquals(InputLock.Reason.ROAM, rig.controller.reason());
+		assertEquals(new BattleRoam.Anchor(startX, startZ), rig.controller.roamAnchor());
+		assertEquals(List.of(), rig.port.bridge, "the waiting hidden game is told nothing");
+		assertEquals(List.of(), rig.port.server);
+		// R again, then the battle ends: back on the hidden cell
+		rig.roam = false;
+		rig.tick(null, 180.0F);
+		assertEquals(InputLock.Reason.BATTLE, rig.controller.reason());
+		rig.battle = false;
+		for (int i = 0; i < 20 && rig.port.server.isEmpty(); i++) {
+			rig.tick(null, 180.0F);
+		}
+		assertNull(rig.controller.roamAnchor());
+		assertEquals(List.of(), rig.port.bridge);
+		assertEquals(List.of("warp.request {\"to\":{\"map\":\"TEST_TOWN\",\"x\":5,\"y\":8,\"facing\":\"up\"}}"), rig.port.server);
+	}
+
+	@Test
+	void roamingNeedsABattle() throws Exception {
+		Rig rig = linkedAt("TEST_TOWN", 5, 8, "up");
+		rig.roam = true;
+		rig.tick(null, 180.0F);
+		assertEquals(InputLock.Reason.NONE, rig.controller.reason(), "a stale minimised flag without a battle changes nothing");
+		assertNull(rig.controller.roamAnchor());
 	}
 
 	@Test

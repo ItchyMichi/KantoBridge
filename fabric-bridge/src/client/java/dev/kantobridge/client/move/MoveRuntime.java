@@ -88,6 +88,7 @@ public final class MoveRuntime {
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
 			runtime.controller.onLeave();
 			InputLock.set(false);
+			InputLock.setRoam(null);
 			InputLock.setNoSneak(false);
 			InputLock.setHoldOnLadder(false);
 		});
@@ -166,6 +167,7 @@ public final class MoveRuntime {
 		LocalPlayer player = minecraft.player;
 		if (player == null || player.level() != level) {
 			InputLock.set(false);
+			InputLock.setRoam(null);
 			InputLock.setNoSneak(false);
 			InputLock.setHoldOnLadder(false);
 			return;
@@ -175,7 +177,7 @@ public final class MoveRuntime {
 		Entity body = seat != null ? seat : player;
 		MoveController.Frame frame = new MoveController.Frame(ClientWorldIndex.current(), player.isSpectator() || player.isCreative(),
 				this.bridge.client().state() == ConnectionState.CONNECTED, this.bridge.state().ingame() && !pairing(), this.bridge.state().mode(),
-				InputLock.screenHolds(minecraft.screen), ClientBattles.active(), body.getX(), body.getZ());
+				InputLock.screenHolds(minecraft.screen), ClientBattles.active(), ClientBattles.minimised(), body.getX(), body.getZ());
 		ForcedMover.Velocity velocity = this.controller.beforeMove(this.clock.millis(), frame);
 		Options options = minecraft.options;
 		boolean b = options.keyShift.isDown() || options.keyJump.isDown();
@@ -205,7 +207,11 @@ public final class MoveRuntime {
 				body.setDeltaMovement(body.getDeltaMovement().x, RideHop.velocity(hop), body.getDeltaMovement().z);
 			}
 		}
-		InputLock.set(this.controller.reason() != InputLock.Reason.NONE);
+		// BATTLE_ROAM_PLAN: a minimised battle's player walks, fenced (never on our bike: its seat stays held)
+		BattleRoam.Anchor anchor = this.controller.roamAnchor();
+		boolean roaming = this.controller.reason() == InputLock.Reason.ROAM && anchor != null && seat == null;
+		InputLock.setRoam(roaming ? new InputLock.Roam(anchor, body.getX(), body.getZ(), player.getYRot()) : null);
+		InputLock.set(this.controller.reason() != InputLock.Reason.NONE && !roaming);
 		InputLock.setHoldOnLadder(this.controller.sync().takeHolding() && player.onClimbable());
 		this.brake(minecraft);
 	}

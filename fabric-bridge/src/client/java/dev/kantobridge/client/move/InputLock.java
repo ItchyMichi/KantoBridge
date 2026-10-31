@@ -11,7 +11,8 @@ import org.jetbrains.annotations.Nullable;
  * §4.3 {@code InputLock}): {@code KeyboardInputMixin} calls {@link #apply} at the end of every {@code KeyboardInput.tick},
  * which zeroes movement, jump and sneak while locked. The lock is decided once per world tick by {@link #reason}; only
  * Kanto worlds (the server sent a WorldIndex) are ever locked, and never in creative or spectator mode. A Cobblemon
- * battle holds the player before anything else: the hidden game waits for its result (M5).
+ * battle holds the player before anything else: the hidden game waits for its result (M5). With the battle screen
+ * minimised the player roams instead ({@link Reason#ROAM}, {@link BattleRoam}): not locked, but fenced, without jump or sneak.
  */
 public final class InputLock {
 	/** Why the player is held (or {@link #NONE}). */
@@ -19,6 +20,11 @@ public final class InputLock {
 		NONE,
 		/** A Cobblemon battle runs for the hidden game, which waits for its result (M5). */
 		BATTLE,
+		/**
+		 * BATTLE_ROAM_PLAN: the same battle with its screen minimised: the player walks within {@link BattleRoam#RADIUS} of
+		 * where it started, with no jump or sneak ({@link InputLock#setRoam}); not a lock.
+		 */
+		ROAM,
 		/** No link to gen1-bridge (connecting, dropped, paused for an export). */
 		NOT_CONNECTED,
 		/** The hidden game is at its title screen or intro: there is no live player to follow. */
@@ -53,6 +59,8 @@ public final class InputLock {
 	private static volatile boolean noSneak;
 	/** Held on a ladder: the lock keeps sneak down, so the player hangs on instead of sliding down (a cave shaft's take). */
 	private static volatile boolean holdOnLadder;
+	/** BATTLE_ROAM_PLAN: while set (and not locked), the player roams in a battle: fenced, no jump, no sneak. */
+	private static volatile @Nullable Roam roam;
 	/** Other reasons to hold the player as if one of our screens were open (a hidden UI whose screen is covered). */
 	private static final List<BooleanSupplier> HOLDS = new CopyOnWriteArrayList<>();
 
@@ -82,6 +90,22 @@ public final class InputLock {
 	 */
 	public static void setHoldOnLadder(boolean value) {
 		holdOnLadder = value;
+	}
+
+	/**
+	 * BATTLE_ROAM_PLAN: this tick's roam (the anchor and where the player stands and looks), or null when not roaming. Set
+	 * once per world tick, before the player's input is read.
+	 */
+	public static void setRoam(@Nullable Roam value) {
+		roam = value;
+	}
+
+	public static @Nullable Roam roam() {
+		return roam;
+	}
+
+	/** A roam's fence for this tick: the battle's start, and the player's position and yaw (degrees). */
+	public record Roam(BattleRoam.Anchor anchor, double x, double z, float yaw) {
 	}
 
 	/** Adds a condition under which the player is held like with one of our screens open (client thread). */
@@ -121,11 +145,21 @@ public final class InputLock {
 	 */
 	public static Reason reason(boolean kantoWorld, boolean freeCamera, boolean battle, boolean connected, boolean ingame, boolean unbuilt,
 			String mode, boolean warping, boolean forced, boolean screen) {
+		return reason(kantoWorld, freeCamera, battle, false, connected, ingame, unbuilt, mode, warping, forced, screen);
+	}
+
+	/**
+	 * The lock decision, with a battle's minimised screen (BATTLE_ROAM_PLAN): the player roams instead of being held.
+	 *
+	 * @param roam the battle's screen is minimised (only read during a battle)
+	 */
+	public static Reason reason(boolean kantoWorld, boolean freeCamera, boolean battle, boolean roam, boolean connected, boolean ingame,
+			boolean unbuilt, String mode, boolean warping, boolean forced, boolean screen) {
 		if (!kantoWorld || freeCamera) {
 			return Reason.NONE;
 		}
 		if (battle) {
-			return Reason.BATTLE;
+			return roam ? Reason.ROAM : Reason.BATTLE;
 		}
 		if (!connected) {
 			return Reason.NOT_CONNECTED;
@@ -152,6 +186,16 @@ public final class InputLock {
 	public static void apply(Input input) {
 		if (noSneak) {
 			input.shiftKeyDown = false;
+		}
+		Roam fence = roam;
+		if (!locked && fence != null) {
+			input.jumping = false;
+			input.shiftKeyDown = false;
+			BattleRoam.Impulse impulse = BattleRoam.fence(fence.anchor(), fence.x(), fence.z(), fence.yaw(), input.forwardImpulse,
+					input.leftImpulse);
+			input.forwardImpulse = impulse.forward();
+			input.leftImpulse = impulse.left();
+			return;
 		}
 		if (!locked) {
 			return;

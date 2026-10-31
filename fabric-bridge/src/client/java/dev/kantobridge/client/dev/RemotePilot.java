@@ -23,7 +23,9 @@ import dev.kantobridge.client.bridge.BridgeRuntime;
 import dev.kantobridge.client.bridge.ClientBridgeState;
 import dev.kantobridge.client.bridge.Links;
 import dev.kantobridge.client.model.MeshStatsRuntime;
+import dev.kantobridge.client.move.BattleRoam;
 import dev.kantobridge.client.move.InputLock;
+import dev.kantobridge.client.move.MoveController;
 import dev.kantobridge.client.move.MoveRuntime;
 import dev.kantobridge.client.move.MovementSync;
 import dev.kantobridge.client.puppet.PuppetRuntime;
@@ -40,6 +42,7 @@ import dev.kantobridge.client.world.ClientWorldIndex;
 import dev.kantobridge.client.zone.PassRuntime;
 import dev.kantobridge.client.zone.ZoneView;
 import dev.kantobridge.story.StoryStates;
+import dev.kantobridge.world.Dir;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Scale;
 import dev.kantobridge.world.StoryCellTable;
@@ -108,7 +111,10 @@ import org.lwjgl.glfw.GLFW;
  * player stands there, when the hidden map changes, or refused when nothing moves for a while); {@code face} (turns the
  * player to {@code dir}); {@code type} (letters on the naming screen's grid: the cursor moved by the arrows, A, then
  * START); {@code battle} ({@code on}: whenever Cobblemon asks for an action, the battle screen shows the moves and the
- * first one with PP left is chosen); {@code zone_walk} (in a Wild Routes half: the walk to its pass, out of the trainers'
+ * first one with PP left is chosen); (BATTLE_ROAM_PLAN) {@code roam} ({@code dir}, {@code ticks}: in a battle, the battle screen
+ * minimised as Cobblemon's R does, then forward, jump and sneak held for that many ticks facing {@code dir}; the result has
+ * how far the player went from the start and from the battle's anchor, the highest rise and whether it crouched; the
+ * screen comes back when Cobblemon next asks); {@code zone_walk} (in a Wild Routes half: the walk to its pass, out of the trainers'
  * sight, the balls and the way home, until the crossing starts); {@code follow} ({@code game}: that link is followed, as
  * a player choosing where to play first, instead of the legacy region's); {@code camera} ({@code third} or {@code first}, {@code hud});
  * {@code lan} ({@code port}: the open world is published to LAN on that port, without authentication, for a second dev
@@ -173,6 +179,13 @@ final class RemotePilot {
 	private boolean battle;
 	private int movesShownAt = -1;
 	private int battleChoices;
+	/** BATTLE_ROAM_PLAN: a {@code roam} runs: the battle screen stays minimised. */
+	private boolean roaming;
+	private double roamX;
+	private double roamY;
+	private double roamZ;
+	private double roamRise;
+	private boolean roamCrouched;
 
 	private @Nullable String stepMap;
 	private int stepX;
@@ -392,6 +405,7 @@ final class RemotePilot {
 				this.battle = !"off".equals(text(command, "mode"));
 				this.movesShownAt = -1;
 			}
+			case "roam" -> this.startRoam(text(command, "dir"));
 			case "zone_walk" -> {
 				this.walkReplans = 0;
 				this.startZoneWalk();
@@ -519,6 +533,7 @@ final class RemotePilot {
 					this.finish(this.result(false, "timeout"));
 				}
 			}
+			case "roam" -> this.roamTick(number(command, "ticks", TICKS));
 			case "story" -> this.finish(this.storyCell(text(command, "map"), number(command, "x", -1), number(command, "y", -1)));
 			case "wait" -> {
 				if (this.currentTicks >= number(command, "ticks", TICKS)) {
@@ -1077,12 +1092,14 @@ final class RemotePilot {
 	/** Cobblemon asks: the battle screen shows the moves, then the first one with PP left is chosen. */
 	private void battleTick() {
 		ClientBattle battle = CobblemonClient.INSTANCE.getBattle();
-		if (battle == null || !battle.getMustChoose()) {
+		if (this.roaming || battle == null || !battle.getMustChoose()) {
 			this.movesShownAt = -1;
 			return;
 		}
 		if (!(this.minecraft.screen instanceof BattleGUI gui)) {
 			if (this.minecraft.screen == null) {
+				// as Cobblemon's R does: a minimised screen would close itself again
+				battle.setMinimised(false);
 				this.minecraft.setScreen(new BattleGUI());
 			}
 			return;
@@ -1111,6 +1128,56 @@ final class RemotePilot {
 			}
 		}
 		this.movesShownAt = -1;
+	}
+
+	/** BATTLE_ROAM_PLAN: Cobblemon's R in a battle (the screen minimised), then a walk facing {@code dir}. */
+	private void startRoam(@Nullable String dir) {
+		ClientBattle battle = CobblemonClient.INSTANCE.getBattle();
+		LocalPlayer player = this.minecraft.player;
+		Dir facing = Dir.byId(dir);
+		if (battle == null || player == null || facing == null) {
+			this.finish(this.result(false, battle == null ? "no_battle" : "bad_dir"));
+			return;
+		}
+		if (this.minecraft.screen instanceof BattleGUI) {
+			this.minecraft.setScreen(null);
+		}
+		battle.setMinimised(true);
+		this.roaming = true;
+		this.roamX = player.getX();
+		this.roamY = player.getY();
+		this.roamZ = player.getZ();
+		this.roamRise = 0.0;
+		this.roamCrouched = false;
+		look(player, facing.yaw(), player.getXRot());
+	}
+
+	private void roamTick(int ticks) {
+		LocalPlayer player = this.minecraft.player;
+		if (!this.roaming || player == null) {
+			return;
+		}
+		boolean walking = this.currentTicks <= ticks && CobblemonClient.INSTANCE.getBattle() != null;
+		this.forward(walking);
+		this.minecraft.options.keyJump.setDown(walking);
+		this.minecraft.options.keyShift.setDown(walking);
+		this.roamRise = Math.max(this.roamRise, player.getY() - this.roamY);
+		this.roamCrouched |= player.isCrouching();
+		if (walking) {
+			return;
+		}
+		this.roaming = false;
+		JsonObject out = this.result(CobblemonClient.INSTANCE.getBattle() != null, null);
+		out.addProperty("moved", Math.hypot(player.getX() - this.roamX, player.getZ() - this.roamZ));
+		MoveController controller = MoveRuntime.controller();
+		BattleRoam.Anchor anchor = controller == null ? null : controller.roamAnchor();
+		if (anchor != null) {
+			out.addProperty("from_anchor", Math.hypot(player.getX() - anchor.x(), player.getZ() - anchor.z()));
+		}
+		out.addProperty("rise", this.roamRise);
+		out.addProperty("crouched", this.roamCrouched);
+		out.addProperty("lock", controller == null ? null : controller.reason().name().toLowerCase(Locale.ROOT));
+		this.finish(out);
 	}
 
 	// ---- state ----
@@ -1236,6 +1303,8 @@ final class RemotePilot {
 			out.add("links", all);
 		}
 		out.addProperty("locked", InputLock.locked());
+		MoveController lockedBy = MoveRuntime.controller();
+		out.addProperty("lock", lockedBy == null ? null : lockedBy.reason().name().toLowerCase(Locale.ROOT));
 		PassRuntime pass = PassRuntime.get();
 		if (pass != null) {
 			out.addProperty("crossing", pass.crossing());

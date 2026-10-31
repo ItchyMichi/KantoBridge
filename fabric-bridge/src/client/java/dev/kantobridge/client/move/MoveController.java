@@ -54,13 +54,20 @@ public final class MoveController {
 	 * @param mode       the hidden game's mode ({@code player.state})
 	 * @param holds      one of our screens that holds the player is open
 	 * @param battle     the player fights a Cobblemon battle (the hidden game waits for its result)
+	 * @param roam       that battle's screen is minimised: the player may walk about (BATTLE_ROAM_PLAN)
 	 */
 	public record Frame(@Nullable WorldIndex index, boolean freeCamera, boolean connected, boolean ingame, String mode, boolean holds,
-			boolean battle, double x, double z) {
+			boolean battle, boolean roam, double x, double z) {
+		/** A frame with the battle's screen up (or no battle). */
+		public Frame(@Nullable WorldIndex index, boolean freeCamera, boolean connected, boolean ingame, String mode, boolean holds,
+				boolean battle, double x, double z) {
+			this(index, freeCamera, connected, ingame, mode, holds, battle, false, x, z);
+		}
+
 		/** A frame outside any battle. */
 		public Frame(@Nullable WorldIndex index, boolean freeCamera, boolean connected, boolean ingame, String mode, boolean holds, double x,
 				double z) {
-			this(index, freeCamera, connected, ingame, mode, holds, false, x, z);
+			this(index, freeCamera, connected, ingame, mode, holds, false, false, x, z);
 		}
 	}
 
@@ -74,6 +81,8 @@ public final class MoveController {
 	private final WarpFade fade;
 	private final Map<String, Long> warnings = new TreeMap<>();
 	private InputLock.Reason reason = InputLock.Reason.NONE;
+	/** BATTLE_ROAM_PLAN: where the player stood when the battle started (followed), or null outside battles. */
+	private BattleRoam.@Nullable Anchor roamAnchor;
 	private boolean following;
 	/** The {@code seq} of the {@code warp.request} in flight, or -1. */
 	private long requestSeq = -1;
@@ -129,6 +138,12 @@ public final class MoveController {
 		// A battle unlinks the movement sync: nothing may reach the waiting hidden game, and relinking afterwards puts the
 		// player back on the hidden cell if a sent-out Pokémon pushed them off it.
 		this.sync.setLinked(this.following && frame.connected() && frame.ingame() && !frame.battle());
+		// BATTLE_ROAM_PLAN: the fence's centre, taken on the battle's first tick
+		if (!this.following || !frame.battle()) {
+			this.roamAnchor = null;
+		} else if (this.roamAnchor == null) {
+			this.roamAnchor = new BattleRoam.Anchor(frame.x(), frame.z());
+		}
 		if (!this.following) {
 			// A free camera (or no Kanto world): nothing to drive or fade; linking again settles the player.
 			this.mover.clear();
@@ -144,7 +159,7 @@ public final class MoveController {
 		}
 		forcedNow = this.following && this.mover.active();
 		// A cave shaft's warp being taken holds the controls too (CAVES_3D_PLAN §3.6).
-		this.reason = InputLock.reason(kanto, frame.freeCamera(), frame.battle(), frame.connected(), frame.ingame(), this.sync.hiddenUnbuilt(),
+		this.reason = InputLock.reason(kanto, frame.freeCamera(), frame.battle(), frame.roam(), frame.connected(), frame.ingame(), this.sync.hiddenUnbuilt(),
 				frame.mode(), this.fade.holding() || this.sync.takeHolding(), this.mover.active(), frame.holds());
 		if (this.reason == InputLock.Reason.NONE && this.rideOn) {
 			// BIKE_PLAN D1: the hidden game drives; the keys are read physically for move.ride
@@ -423,6 +438,11 @@ public final class MoveController {
 
 	public InputLock.Reason reason() {
 		return this.reason;
+	}
+
+	/** BATTLE_ROAM_PLAN: where the battle under way started, or null outside battles (and when not followed). */
+	public BattleRoam.@Nullable Anchor roamAnchor() {
+		return this.roamAnchor;
 	}
 
 	/** True while the hidden game is followed for this player (a Kanto world, not a free camera). */

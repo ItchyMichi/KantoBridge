@@ -75,6 +75,10 @@ Pokémon Red/Blue's story runs in a **hidden Gen1Recomp**. It is displayed and p
   (`session.close`); the wild-route save/reload fix (`route.leave`, §2.7); and, opt-in (`launch.ps1 -Engines minecraft`),
   the mod starting and stopping the engines from `launch.json` (`client/engine`). Pod checks: `showcase.py --rejoin`,
   `--scene create`, `--scene coldstart`; `e2e/test_ws4_save.py`, `test_ws5_close.py`.
+- [`docs/specs/BATTLE_ROAM_PLAN.md`](docs/specs/BATTLE_ROAM_PLAN.md) is walking about in a battle (written and built
+  2026-10-31, decisions D1–D6): with Cobblemon's battle screen minimised (R) the player walks within 6 blocks of where the
+  battle began (`BattleRoam`, `InputLock.Reason.ROAM`; no jump, no sneak, nothing sent to the hidden game) and is put back
+  on the hidden player's cell when it ends (the relink teleport). Pod check: `tools/e2e/battle_roam.py`.
 - `refs/_research/` (git-ignored) holds the research notes, with verified `file:line` references,
   that the plan cites.
 

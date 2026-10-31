@@ -3483,6 +3483,22 @@ taken from what already arrived. `test_battle` and `test_route1` fail on cpu3g p
 **Deviation.** A real gym leader was not walked to (the drivers start trainer battles by script, as before); the Name
 Rater is its write to the record, not the walk to his house.
 
+## Walking about in a battle (2026-10-31, specs/BATTLE_ROAM_PLAN.md)
+
+The user's request of 2026-10-31 (Cobblemon's R to reposition in a battle, then the snap back to the hidden player), built
+the same day with decisions D1–D6 (the user dropped jump and sneak). Pod: `kb-dev52` (wi2la1q7lg49sj, cpu3g x8 / 32 GB,
+$0.32/h, EU-RO-1 with the volume; kb-dev54 and kb-dev53 had no free vCPU), ~25 min, stopped.
+
+- JUnit `client.move` 131 passed (new: `BattleRoamTest`; roam cases in `InputLockTest` and `MoveControllerTest`),
+  `client.act` 22 passed.
+- `tools/e2e/battle_roam.py --world KantoE2E` (the real client, Blue's rival battle in Oak's lab): **24/24**. The screen up
+  holds the player (lock `battle`); minimised, each direction walks with lock `roam`, rise 0, never crouched, the hidden
+  player unmoved (OAKS_LAB 5,6); the farthest from the anchor 6.24 blocks; after the battle (8 choices) the player stands
+  on the hidden player's cell (two teleports: the battle's relink).
+- Found on the first run and fixed: walking along the fence, momentum carried the player out to 7.6 blocks; past the fence
+  the input now leans back in (`BattleRoam.PULL`).
+- Left for the user: PLAYTEST.md "Walking about in a battle".
+
 ## Worlds and sessions (2026-10-27, specs/WORLD_SESSIONS_PLAN.md)
 
 Execution of [specs/WORLD_SESSIONS_PLAN.md](specs/WORLD_SESSIONS_PLAN.md) (WS0–WS8), run unattended from the user's

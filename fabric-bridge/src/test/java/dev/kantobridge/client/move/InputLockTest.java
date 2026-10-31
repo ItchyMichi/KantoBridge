@@ -16,6 +16,7 @@ class InputLockTest {
 	void unlock() {
 		InputLock.set(false);
 		InputLock.setHoldOnLadder(false);
+		InputLock.setRoam(null);
 	}
 
 	private static InputLock.Reason reason(boolean kanto, boolean free, boolean connected, boolean ingame, boolean unbuilt, String mode,
@@ -54,6 +55,39 @@ class InputLockTest {
 				"creative or spectator");
 		assertEquals(InputLock.Reason.NONE, InputLock.reason(true, false, false, true, true, false, "idle", false, false, false),
 				"no battle: free to walk");
+	}
+
+	@Test
+	void aMinimisedBattleRoamsInsteadOfHolding() {
+		assertEquals(InputLock.Reason.ROAM, InputLock.reason(true, false, true, true, true, true, false, "busy", true, true, true));
+		assertEquals(InputLock.Reason.BATTLE, InputLock.reason(true, false, true, false, true, true, false, "idle", false, false, false));
+		assertEquals(InputLock.Reason.NONE, InputLock.reason(true, false, false, true, true, true, false, "idle", false, false, false),
+				"no battle: the flag means nothing");
+		assertEquals(InputLock.Reason.NONE, InputLock.reason(true, true, true, true, true, true, false, "idle", false, false, false),
+				"creative or spectator");
+	}
+
+	@Test
+	void roamingKeepsWalkingButNotJumpOrSneak() {
+		Input input = new Input();
+		fill(input);
+		InputLock.setRoam(new InputLock.Roam(new BattleRoam.Anchor(0.5, 0.5), 2.5, 0.5, 0.0F));
+		InputLock.apply(input);
+		assertEquals(1.0F, input.forwardImpulse, "inside the fence: untouched");
+		assertEquals(-1.0F, input.leftImpulse);
+		assertFalse(input.jumping);
+		assertFalse(input.shiftKeyDown);
+	}
+
+	@Test
+	void theLockStillWinsOverARoam() {
+		Input input = new Input();
+		fill(input);
+		InputLock.setRoam(new InputLock.Roam(new BattleRoam.Anchor(0.5, 0.5), 2.5, 0.5, 0.0F));
+		InputLock.set(true);
+		InputLock.apply(input);
+		assertEquals(0.0F, input.forwardImpulse);
+		assertEquals(0.0F, input.leftImpulse);
 	}
 
 	@Test

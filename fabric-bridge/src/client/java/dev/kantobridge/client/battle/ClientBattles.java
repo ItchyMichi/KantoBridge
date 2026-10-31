@@ -16,4 +16,13 @@ public final class ClientBattles {
 		ClientBattle battle = CobblemonClient.INSTANCE.getBattle();
 		return battle != null && !battle.getSpectating();
 	}
+
+	/**
+	 * BATTLE_ROAM_PLAN: this player's battle runs with its screen minimised (Cobblemon's send-out key, R, or the screen
+	 * closed), so the player may walk about.
+	 */
+	public static boolean minimised() {
+		ClientBattle battle = CobblemonClient.INSTANCE.getBattle();
+		return battle != null && !battle.getSpectating() && battle.getMinimised();
+	}
 }

@@ -1169,3 +1169,11 @@ Quit" saves them first. Start every game the world needs (or use `-Engines minec
       Blue + Crystal world: the HUD says "Starting Blue…" / "Starting Crystal…", both Gen1Recomp windows appear and the
       games continue. Save and Quit: both save, go to their title and their windows close. Start Blue yourself first and
       repeat: Blue is used and stays open after the quit; only Crystal's window closes.
+
+## Walking about in a battle (specs/BATTLE_ROAM_PLAN.md; no world rebuild needed)
+- [ ] **R in a battle:** start any Cobblemon battle (a trainer, the rival, a wild Pokémon in grass). Press **R**: the battle
+      screen goes away and you can walk with WASD, but not jump or sneak. About 6 blocks from where the battle began you
+      stop; walking along that edge or back still works. A, Start and the bike key do nothing. Press **R** again: the
+      screen is back and you are held.
+- [ ] **The snap back:** walk off while minimised, press R, finish the battle: after the fade you stand on the hidden
+      player's cell again, facing its way. Walking away never ends a wild battle; Run still does (where running is allowed).

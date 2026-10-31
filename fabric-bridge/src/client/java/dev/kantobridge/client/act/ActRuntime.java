@@ -3,6 +3,7 @@ package dev.kantobridge.client.act;
 import com.google.gson.JsonObject;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.kantobridge.block.TileBlock;
+import dev.kantobridge.client.battle.ClientBattles;
 import dev.kantobridge.client.bridge.BridgeClock;
 import dev.kantobridge.client.bridge.BridgeRuntime;
 import dev.kantobridge.client.bridge.ClientBridgeState;
@@ -361,8 +362,9 @@ public final class ActRuntime {
 	private boolean idle() {
 		ClientBridgeState state = this.bridge.state();
 		UiRuntime ui = UiRuntime.get();
+		// BATTLE_ROAM_PLAN: roaming in a battle isn't locked, but the waiting hidden game still gets nothing
 		return ActionGate.idle(MoveRuntime.following(), this.bridge.client().state() == ConnectionState.CONNECTED, state.ingame(), state.mode(),
-				InputLock.locked(), ui != null && ui.open());
+				InputLock.locked() || ClientBattles.active(), ui != null && ui.open());
 	}
 
 	private static boolean drain(KeyMapping mapping) {
