@@ -87,6 +87,11 @@ public final class TemplateRule {
 		public List<ShapeQuad> block(int bx, int by, int bz) {
 			return this.blocks.getOrDefault(QuadMerger.blockKey(bx, by, bz), List.of());
 		}
+
+		/** This template without its geometry (no blocks, colours, voxels or tiles): what a build's report reads of it. */
+		public Template summary() {
+			return new Template(this.kind, this.failed, this.match, this.maxQuads, Map.of(), null, null, null, this.roofRows);
+		}
 	}
 
 	/** One run of the template: rows {@code n..f} of grid column {@code x}, its fold origin and its blocks. */

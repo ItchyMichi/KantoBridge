@@ -10,6 +10,18 @@ import org.junit.jupiter.api.Test;
 
 /** The dev measuring tool's arithmetic and its gate (docs/specs/VOXEL_BLOCKS_PLAN.md V1a). */
 class MeshStatsTest {
+	@Test void galleryAccessorRequiresItsOwnExplicitManifestAndDoesNotEnableTiming() {
+		String accessor = "dev.kantobridge.mixin.dev.GalleryChunkMapAccessor";
+		Properties properties = new Properties();
+		assertFalse(MeshStatsMixinPlugin.appliesTo(accessor, properties));
+		properties.setProperty(MeshStats.PROPERTY, "true");
+		assertFalse(MeshStatsMixinPlugin.appliesTo(accessor, properties));
+		properties.clear(); properties.setProperty("kantobridge.gallery", " ");
+		assertFalse(MeshStatsMixinPlugin.appliesTo(accessor, properties));
+		properties.setProperty("kantobridge.gallery", "local/manifest.json");
+		assertTrue(MeshStatsMixinPlugin.appliesTo(accessor, properties));
+		assertFalse(MeshStatsMixinPlugin.appliesTo("dev.kantobridge.mixin.dev.SectionCompilerTimingMixin", properties));
+	}
 	@Test
 	void theTimingMixinAppliesOnlyWithTheProperty() {
 		Properties none = new Properties();

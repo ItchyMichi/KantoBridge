@@ -92,7 +92,22 @@ public final class FittedShapes {
 
 	/** One game's table: its cells' fits and its buildings' roof rows. */
 	record Table(Map<String, Entry> cells, Map<String, Integer> roofs, Map<String, String> stacks, java.util.Set<String> seats,
-			Map<String, List<Layer>> layers, List<Building> buildings, java.util.Set<String> walks) {
+			Map<String, List<Layer>> layers, List<Building> buildings, java.util.Set<String> walks,
+			Map<String, java.util.Set<String>> alsoStacks, java.util.Set<String> counters, java.util.Set<String> stackFits) {
+		Table(Map<String, Entry> cells, Map<String, Integer> roofs, Map<String, String> stacks, java.util.Set<String> seats,
+				Map<String, List<Layer>> layers, List<Building> buildings, java.util.Set<String> walks,
+				Map<String, java.util.Set<String>> alsoStacks, java.util.Set<String> counters) {
+			this(cells, roofs, stacks, seats, layers, buildings, walks, alsoStacks, counters, java.util.Set.of());
+		}
+		Table(Map<String, Entry> cells, Map<String, Integer> roofs, Map<String, String> stacks, java.util.Set<String> seats,
+				Map<String, List<Layer>> layers, List<Building> buildings, java.util.Set<String> walks,
+				Map<String, java.util.Set<String>> alsoStacks) {
+			this(cells, roofs, stacks, seats, layers, buildings, walks, alsoStacks, java.util.Set.of());
+		}
+		Table(Map<String, Entry> cells, Map<String, Integer> roofs, Map<String, String> stacks, java.util.Set<String> seats,
+				Map<String, List<Layer>> layers, List<Building> buildings, java.util.Set<String> walks) {
+			this(cells, roofs, stacks, seats, layers, buildings, walks, Map.of());
+		}
 		Table(Map<String, Entry> cells, Map<String, Integer> roofs, Map<String, String> stacks, java.util.Set<String> seats,
 				Map<String, List<Layer>> layers, List<Building> buildings) {
 			this(cells, roofs, stacks, seats, layers, buildings, java.util.Set.of());
@@ -120,6 +135,8 @@ public final class FittedShapes {
 	private static volatile @Nullable Map<String, Table> bundled;
 	private static volatile @Nullable Table forTest;
 	private static final ThreadLocal<String> GAME = new ThreadLocal<>();
+	/** Offline gallery comparisons can resolve older content hashes without changing the live planner's tables. */
+	private static final ThreadLocal<List<Table>> COMPARISON_TABLES = new ThreadLocal<>();
 	/** Off for FitTool's dump, which must see the planner's own pick. */
 	private static volatile boolean enabled = true;
 
@@ -144,6 +161,26 @@ public final class FittedShapes {
 
 	public static void setEnabled(boolean on) {
 		enabled = on;
+	}
+
+	/** Builds a comparison from saved voxel tables, scoped to this thread and restored even when building fails. */
+	public static <T> T withComparisonTables(List<String> jsonTables, java.util.function.Supplier<T> build) {
+		List<Table> extra = new ArrayList<>();
+		for (String json : jsonTables) {
+			Map<String, Entry> cells = new TreeMap<>();
+			Map<String, List<Layer>> layers = new TreeMap<>();
+			parse(json, cells);
+			parseLayers(json, layers);
+			extra.add(new Table(Map.copyOf(cells), Map.of(), Map.of(), java.util.Set.of(), Map.copyOf(layers)));
+		}
+		List<Table> before = COMPARISON_TABLES.get();
+		COMPARISON_TABLES.set(List.copyOf(extra));
+		try {
+			return build.get();
+		} finally {
+			if (before == null) COMPARISON_TABLES.remove();
+			else COMPARISON_TABLES.set(before);
+		}
 	}
 
 	/** Planning {@code game} on this thread from now on; returns the game planned before, for {@link #leave}. */
@@ -204,6 +241,51 @@ public final class FittedShapes {
 		return table == null ? null : table.stacks().get(key(atlas, tiles));
 	}
 
+	/** Exact alternate bases for a shared source cap. The primary legacy on link stays unchanged. */
+	static boolean stacksOn(String atlas, int[] tiles, String base) {
+		Table table = current();
+		if (table == null) return false;
+		String key = key(atlas, tiles);
+		return base.equals(table.stacks().get(key)) || table.alsoStacks().getOrDefault(key, java.util.Set.of()).contains(base);
+	}
+
+	/** Explicit Emerald alias pairs may replace a native roof inference after the planner validates both cells. */
+	static boolean hasStackFits() {
+		Table table = current();
+		return "emerald".equals(GAME.get()) && table != null && !table.stackFits().isEmpty();
+	}
+
+	static boolean fitsAliasStack(String atlas, int[] top, String base) {
+		if (!"emerald".equals(GAME.get())) return false;
+		Table table = current();String key = key(atlas, top);
+		return table != null && table.stackFits().contains(key) && table.stacks().containsKey(key)
+				&& table.alsoStacks().getOrDefault(key, java.util.Set.of()).contains(base);
+	}
+
+	/** An explicitly opted-in parts object may match in Emerald interiors; old buildings remain outdoor-only. */
+	static boolean interiorBuilding(Building building) {
+		return "emerald".equals(GAME.get()) && building.box().has("parts")
+				&& building.box().has("interior") && building.box().get("interior").getAsBoolean();
+	}
+
+	/** Source-pinned cliff interfaces keep their native inference outside the claimed model. */
+	static boolean preserveTerrainBuilding(Building building) {
+		return "emerald".equals(GAME.get()) && building.box().has("parts")
+				&& building.box().has("terrain") && !building.box().getAsJsonArray("terrain").isEmpty()
+				&& building.box().has("preserveTerrain") && building.box().get("preserveTerrain").getAsBoolean();
+	}
+
+	/** Exact Emerald forest assemblies may replace art while retaining the native carrier profile. */
+	static boolean preserveCarriersBuilding(Building building) {
+		return "emerald".equals(GAME.get()) && building.box().has("parts")
+				&& building.box().has("preserveTerrain") && building.box().get("preserveTerrain").getAsBoolean()
+				&& building.box().has("preserveCarriers") && building.box().get("preserveCarriers").getAsBoolean();
+	}
+
+	static boolean berrySoilBuilding(Building building) {
+		return preserveCarriersBuilding(building) && building.box().has("berrySoil") && building.box().get("berrySoil").getAsBoolean();
+	}
+
 	/**
 	 * The seat on a walkable cell (docs/specs/HAND_MODELS.md section 6): the cell's voxel entry when the table marks it a
 	 * seat, else null.
@@ -224,6 +306,18 @@ public final class FittedShapes {
 		return table == null || !table.walks().contains(key) ? null : table.cells().get(key);
 	}
 
+	/** Explicit Emerald counter models; other games and legacy unflagged counters keep their native fold. */
+	static @Nullable Entry counter(String atlas, int[] tiles) {
+		if (!"emerald".equals(GAME.get())) return null;
+		Table table = current();
+		String key = key(atlas, tiles);
+		if (table == null || !table.counters().contains(key) || table.stacks().containsKey(key)
+				|| table.alsoStacks().containsKey(key) || table.seats().contains(key) || table.walks().contains(key)
+				|| !table.layers().getOrDefault(key, List.of()).isEmpty()) return null;
+		Entry entry = table.cells().get(key);
+		return entry != null && VOXELS.equals(entry.cls()) && entry.voxels() != null && entry.voxels().length == VOXEL_BYTES ? entry : null;
+	}
+
 	/** Tests: walkable shapes (their keys) with the given table. */
 	static void useWalksForTest(Map<String, Entry> table, java.util.Set<String> walks) {
 		forTest = new Table(Map.copyOf(table), Map.of(), Map.of(), java.util.Set.of(), Map.of(), List.of(), java.util.Set.copyOf(walks));
@@ -234,6 +328,11 @@ public final class FittedShapes {
 		Table table = current();
 		List<Layer> layers = table == null ? null : table.layers().get(key(atlas, tiles));
 		return layers == null ? 0 : layers.size();
+	}
+
+	/** Tests: walkable shapes (their keys) with layers (by key). */
+	static void useWalkLayersForTest(Map<String, Entry> table, Map<String, List<Layer>> layers, java.util.Set<String> walks) {
+		forTest = new Table(Map.copyOf(table), Map.of(), Map.of(), java.util.Set.of(), Map.copyOf(layers), List.of(), java.util.Set.copyOf(walks));
 	}
 
 	/** Tests: layers (by key) with the given table. */
@@ -249,6 +348,11 @@ public final class FittedShapes {
 	/** Tests: stacks (top key to the key below) with the given table. */
 	static void useStacksForTest(Map<String, Entry> table, Map<String, String> stacks) {
 		forTest = new Table(Map.copyOf(table), Map.of(), Map.copyOf(stacks));
+	}
+
+	static void useStacksForTest(Map<String, Entry> table, Map<String, String> stacks, Map<String, java.util.Set<String>> alsoStacks) {
+		forTest = new Table(Map.copyOf(table), Map.of(), Map.copyOf(stacks), java.util.Set.of(), Map.of(), List.of(),
+				java.util.Set.of(), Map.copyOf(alsoStacks));
 	}
 
 	/** A building template's fitted roof rows (0 the column version), by its atlas and signature; -1 for none. */
@@ -283,6 +387,8 @@ public final class FittedShapes {
 		int layer = params.size() == HASH_PARAMS + 1 ? params.get(HASH_PARAMS) : 0;
 		List<Integer> hash = layer > 0 ? params.subList(0, HASH_PARAMS) : params;
 		List<Table> all = new ArrayList<>(tables().values());
+		List<Table> comparison = COMPARISON_TABLES.get();
+		if (comparison != null) all.addAll(0, comparison);
 		Table test = forTest;
 		if (test != null) {
 			all.add(0, test);
@@ -367,20 +473,26 @@ public final class FittedShapes {
 								Map<String, Entry> cells = new TreeMap<>();
 								Map<String, Integer> roofs = new TreeMap<>();
 								Map<String, String> stacks = new TreeMap<>();
+								Map<String, java.util.Set<String>> alsoStacks = new TreeMap<>();
 								java.util.Set<String> seats = new java.util.TreeSet<>();
 								Map<String, List<Layer>> layers = new TreeMap<>();
 								List<Building> buildings = new ArrayList<>();
 								parse(text, cells);
 								parseRoofs(text, roofs);
 								parseStacks(text, stacks);
+								parseAlsoStacks(text, alsoStacks);
 								parseSeats(text, seats);
 								java.util.Set<String> walks = new java.util.TreeSet<>();
 								parseFlagged(text, "walk", walks);
+								java.util.Set<String> counters = new java.util.TreeSet<>();
+								parseCounters(text, counters);
+								java.util.Set<String> stackFits = new java.util.TreeSet<>();
+								parseStackFits(text, stackFits);
 								parseLayers(text, layers);
 								parseBuildings(text, buildings);
 								tables.put(game, new Table(Collections.unmodifiableMap(cells), Collections.unmodifiableMap(roofs), Collections.unmodifiableMap(stacks),
 										Collections.unmodifiableSet(seats), Collections.unmodifiableMap(layers), List.copyOf(buildings),
-										Collections.unmodifiableSet(walks)));
+										Collections.unmodifiableSet(walks), Collections.unmodifiableMap(alsoStacks), Collections.unmodifiableSet(counters), Collections.unmodifiableSet(stackFits)));
 							}
 						} catch (IOException e) {
 							throw new UncheckedIOException(e);
@@ -464,6 +576,19 @@ public final class FittedShapes {
 					box.add("parts", o.getAsJsonArray("parts").deepCopy());
 					box.addProperty("height", o.has("height") ? o.get("height").getAsInt() : 64);
 					box.add("terrain", o.has("terrain") ? o.getAsJsonArray("terrain").deepCopy() : new JsonArray());
+					JsonElement interior = o.get("interior");
+					if (interior != null && interior.isJsonPrimitive() && interior.getAsJsonPrimitive().isBoolean() && interior.getAsBoolean())
+						box.addProperty("interior", true);
+					JsonElement preserveTerrain = o.get("preserveTerrain");
+					if (preserveTerrain != null && preserveTerrain.isJsonPrimitive() && preserveTerrain.getAsJsonPrimitive().isBoolean()
+							&& preserveTerrain.getAsBoolean()) box.addProperty("preserveTerrain", true);
+					JsonElement preserveCarriers = o.get("preserveCarriers");
+					if (preserveCarriers != null && preserveCarriers.isJsonPrimitive() && preserveCarriers.getAsJsonPrimitive().isBoolean()
+							&& preserveCarriers.getAsBoolean()) box.addProperty("preserveCarriers", true);
+					if (o.has("carrierLevels")) box.add("carrierLevels", o.get("carrierLevels").deepCopy());
+					JsonElement berrySoil = o.get("berrySoil");
+					if (berrySoil != null && berrySoil.isJsonPrimitive() && berrySoil.getAsJsonPrimitive().isBoolean()
+							&& berrySoil.getAsBoolean()) box.addProperty("berrySoil", true);
 				} else {
 					box.addProperty("roofRows", o.get("roofRows").getAsInt());
 					box.addProperty("roof", o.get("roof").getAsString());
@@ -506,6 +631,27 @@ public final class FittedShapes {
 		parseFlagged(text, "seat", into);
 	}
 
+	/** The new counter opt-in accepts only a JSON boolean on a voxel entry; malformed rows stay native. */
+	static void parseCounters(String text, java.util.Set<String> into) {
+		parseBooleanVoxelFlag(text, "counter", into);
+	}
+
+	static void parseStackFits(String text, java.util.Set<String> into) {
+		parseBooleanVoxelFlag(text, "stackFit", into);
+	}
+
+	private static void parseBooleanVoxelFlag(String text, String name, java.util.Set<String> into) {
+		JsonObject root = JsonParser.parseString(text).getAsJsonObject();
+		if (!root.has("cells") || !root.get("cells").isJsonObject()) return;
+		for (var row : root.getAsJsonObject("cells").entrySet()) {
+			if (!row.getValue().isJsonObject()) continue;
+			JsonObject value = row.getValue().getAsJsonObject();
+			JsonElement flag = value.get(name), cls = value.get("class");
+			if (flag != null && flag.isJsonPrimitive() && flag.getAsJsonPrimitive().isBoolean() && flag.getAsBoolean()
+					&& cls != null && cls.isJsonPrimitive() && VOXELS.equals(cls.getAsString())) into.add(row.getKey());
+		}
+	}
+
 	/** Each voxel entry with {@code flag} true ("seat"; "walk": a walkable cell's shape on decor, docs/specs/WARP_MODELS.md). */
 	static void parseFlagged(String text, String flag, java.util.Set<String> into) {
 		JsonObject root = JsonParser.parseString(text).getAsJsonObject();
@@ -531,6 +677,30 @@ public final class FittedShapes {
 			if (o.has("on") && o.get("on").isJsonPrimitive()) {
 				into.put(e.getKey(), o.get("on").getAsString());
 			}
+		}
+	}
+
+	/** Optional alsoOn list, only alongside a primary on string. Malformed lists never create partial matches. */
+	static void parseAlsoStacks(String text, Map<String, java.util.Set<String>> into) {
+		JsonObject root = JsonParser.parseString(text).getAsJsonObject();
+		if (!root.has("cells")) return;
+		for (var entry : root.getAsJsonObject("cells").entrySet()) {
+			JsonObject value = entry.getValue().getAsJsonObject();
+			if (!value.has("on") || !value.get("on").isJsonPrimitive() || !value.getAsJsonPrimitive("on").isString()
+					|| !value.has("alsoOn") || !value.get("alsoOn").isJsonArray()) continue;
+			JsonArray candidates = value.getAsJsonArray("alsoOn");
+			if (candidates.size() > 32) continue;
+			java.util.Set<String> bases = new java.util.TreeSet<>();
+			boolean valid = true;
+			for (var candidate : candidates) {
+				if (!candidate.isJsonPrimitive() || !candidate.getAsJsonPrimitive().isString()
+						|| !candidate.getAsString().matches("[^/\\s]+/\\d+(?:-\\d+)*")) {
+					valid = false;
+					break;
+				}
+				bases.add(candidate.getAsString());
+			}
+			if (valid && !bases.isEmpty()) into.put(entry.getKey(), java.util.Set.copyOf(bases));
 		}
 	}
 

@@ -1,0 +1,902 @@
+{
+  "schema": 1,
+  "inspection": "All39 source/model cards, four source room maps and12 complete assemblies inspected; identified and corrected three open-mortar friezes. Minecraft pending.",
+  "entries": [
+    {
+      "key": "g3q/8797-8798-8799-6954",
+      "group": "building__rustboro_gym",
+      "label": "Rock dais northwest corner",
+      "family": "gym fixture",
+      "recipe": null,
+      "reason": "Low curved stone boundary turns from north to west; the pale arena surface stays horizontal.",
+      "baseline_entry_sha256": "aa63b0d58df708ac25e0fe07332807c914cb2249bd3d99e532425394307a7f02",
+      "source_contact": "../inventory/building__rustboro_gym/page-001.png",
+      "source_card": 1,
+      "assemblies": [
+        "emerald_gym_rustboro_dais"
+      ]
+    },
+    {
+      "key": "g3q/8800-8801-8802-8803",
+      "group": "building__rustboro_gym",
+      "label": "Rock dais north-left gold trim",
+      "family": "gym fixture",
+      "recipe": null,
+      "reason": "Thin gold surface and inset pale floor align with the center north strip; no upright background plane.",
+      "baseline_entry_sha256": "e70bd0d648ec84e210f84d2d6ac7af1593157fdbecd12ef6278300d76f683b81",
+      "source_contact": "../inventory/building__rustboro_gym/page-001.png",
+      "source_card": 2,
+      "assemblies": [
+        "emerald_gym_rustboro_dais"
+      ]
+    },
+    {
+      "key": "g3q/8804-8805-8806-8806",
+      "group": "building__rustboro_gym",
+      "label": "Rock dais north-center gold trim",
+      "family": "gym fixture",
+      "recipe": null,
+      "reason": "Low continuous ochre band occupies the top surface and meets both neighboring trim cells.",
+      "baseline_entry_sha256": "c24d4aa359e78ac250b93278d53d80c752cad7fc8a4885b693fe2e798b0f201e",
+      "source_contact": "../inventory/building__rustboro_gym/page-001.png",
+      "source_card": 3,
+      "assemblies": [
+        "emerald_gym_rustboro_dais"
+      ]
+    },
+    {
+      "key": "g3q/8807-8798-8808-8802",
+      "group": "building__rustboro_gym",
+      "label": "Rock dais north-right gold trim",
+      "family": "gym fixture",
+      "recipe": null,
+      "reason": "Mirrored inset gold corner preserves the pale floor and joins the northern center strip.",
+      "baseline_entry_sha256": "60f046b09cbebbf9c783ef7e919b93d39334ba556d38f1da2bd6128f340c086a",
+      "source_contact": "../inventory/building__rustboro_gym/page-001.png",
+      "source_card": 4,
+      "assemblies": [
+        "emerald_gym_rustboro_dais"
+      ]
+    },
+    {
+      "key": "g3q/8800-8809-6954-8810",
+      "group": "building__rustboro_gym",
+      "label": "Rock dais northeast corner",
+      "family": "gym fixture",
+      "recipe": null,
+      "reason": "The curved dark stone edge turns east while leaving the arena center flat.",
+      "baseline_entry_sha256": "ba84e08986d2e8adfce78ec45462c172009d26e18557f6fc990dd69109354885",
+      "source_contact": "../inventory/building__rustboro_gym/page-001.png",
+      "source_card": 5,
+      "assemblies": [
+        "emerald_gym_rustboro_dais"
+      ]
+    },
+    {
+      "key": "g3q/8818-6954-8819-8820",
+      "group": "building__rustboro_gym",
+      "label": "Rock dais southwest corner",
+      "family": "gym fixture",
+      "recipe": null,
+      "reason": "Low rounded stone return joins the northwest edge and southern pale step.",
+      "baseline_entry_sha256": "563e9e2083cf5308bb32503d21a060a5806463c5d1225c8cab67ec280ca51564",
+      "source_contact": "../inventory/building__rustboro_gym/page-001.png",
+      "source_card": 6,
+      "assemblies": [
+        "emerald_gym_rustboro_dais"
+      ]
+    },
+    {
+      "key": "g3q/8821-8802-8822-8823",
+      "group": "building__rustboro_gym",
+      "label": "Rock dais south-left insignia floor",
+      "family": "gym fixture",
+      "recipe": null,
+      "reason": "Pink and yellow floor insignia remain painted on a thin horizontal step.",
+      "baseline_entry_sha256": "06614287b9b22cca082bc57182284c28a47b99a5a1db484afc1d4330937f2437",
+      "source_contact": "../inventory/building__rustboro_gym/page-001.png",
+      "source_card": 7,
+      "assemblies": [
+        "emerald_gym_rustboro_dais"
+      ]
+    },
+    {
+      "key": "g3q/6954-6954-8823-8823",
+      "group": "building__rustboro_gym",
+      "label": "Rock dais south-center step",
+      "family": "gym fixture",
+      "recipe": null,
+      "reason": "Two pale riser bands remain low and align with both insignia floor cells.",
+      "baseline_entry_sha256": "381492a87444f68f3803f5778633da11c52e540497bd3efcb302a2235feb1fd5",
+      "source_contact": "../inventory/building__rustboro_gym/page-001.png",
+      "source_card": 8,
+      "assemblies": [
+        "emerald_gym_rustboro_dais"
+      ]
+    },
+    {
+      "key": "g3q/8802-8821-8823-8824",
+      "group": "building__rustboro_gym",
+      "label": "Rock dais south-right insignia floor",
+      "family": "gym fixture",
+      "recipe": null,
+      "reason": "Mirrored pink/yellow insignia stay on the horizontal step and match the left half.",
+      "baseline_entry_sha256": "f2294fae49093e9229de930314affdc87a25cb3ad715207b971b72e2d964e34a",
+      "source_contact": "../inventory/building__rustboro_gym/page-001.png",
+      "source_card": 9,
+      "assemblies": [
+        "emerald_gym_rustboro_dais"
+      ]
+    },
+    {
+      "key": "g3q/6954-8825-8826-8827",
+      "group": "building__rustboro_gym",
+      "label": "Rock dais southeast corner",
+      "family": "gym fixture",
+      "recipe": null,
+      "reason": "The rounded stone return joins the east edge and ends at the shallow south step.",
+      "baseline_entry_sha256": "0b10e0ab280ecf6c6d32596d93a2356908721139275c5acd6a70fc2bfc0caf8d",
+      "source_contact": "../inventory/building__rustboro_gym/page-001.png",
+      "source_card": 10,
+      "assemblies": [
+        "emerald_gym_rustboro_dais"
+      ]
+    },
+    {
+      "key": "g3q/8842-8843-3262-3263",
+      "group": "building__rustboro_gym",
+      "label": "Rustboro entrance statue globe",
+      "family": "gym fixture",
+      "recipe": null,
+      "reason": "Rounded grey globe and collar sit above the existing plaque pedestal; pale surrounding floor is excluded.",
+      "baseline_entry_sha256": "b029724f32d8cfbef316675f0f46247774d4a4d462698d8e858346c94385c0e0",
+      "source_contact": "../inventory/building__rustboro_gym/page-001.png",
+      "source_card": 11,
+      "assemblies": [
+        "emerald_gym_rustboro_statue"
+      ]
+    },
+    {
+      "key": "g3q/3267-3268-8847-8848",
+      "group": "building__rustboro_gym",
+      "label": "Rustboro entrance statue pedestal",
+      "family": "gym fixture",
+      "recipe": null,
+      "reason": "Grounded plaque body has a separate foot and chamfered side; it supports the exact globe pair.",
+      "baseline_entry_sha256": "aa1cf383c231f8f118a17fa9c8ec87cd66df43e5855c3c3fdfb69f5af045a72f",
+      "source_contact": "../inventory/building__rustboro_gym/page-001.png",
+      "source_card": 12,
+      "assemblies": [
+        "emerald_gym_rustboro_statue"
+      ]
+    },
+    {
+      "key": "g3q/8853-8858-8855-8859",
+      "group": "building__rustboro_gym",
+      "label": "Rustboro maze barrier corner",
+      "family": "gym fixture",
+      "recipe": "barrier_corner",
+      "reason": "Replace the empty upper frame with a solid ochre cap above a stone support; source yellow is the barrier top rather than air.",
+      "baseline_entry_sha256": "12d0816bef9dfb7e0c8ed77d3fc8f29caebd20581e4c5f639262587035f13553",
+      "source_contact": "../inventory/building__rustboro_gym/page-001.png",
+      "source_card": 13,
+      "assemblies": [
+        "emerald_gym_rustboro_barrier_corner"
+      ]
+    },
+    {
+      "key": "g3q/3931-3932-3931-3933",
+      "group": "building__dewford_gym",
+      "label": "Dewford maze wall east end",
+      "family": "gym fixture",
+      "recipe": null,
+      "reason": "Upright brown wall has a projecting top and bottom trim; its side is bounded before the pale corridor strip.",
+      "baseline_entry_sha256": "36a968e5db0b925f62107c19ca6bfbbd559b52459abd3ae0c90e5a09510ad2f6",
+      "source_contact": "../inventory/building__dewford_gym/page-001.png",
+      "source_card": 1,
+      "assemblies": []
+    },
+    {
+      "key": "g3q/3937-3931-3938-3931",
+      "group": "building__dewford_gym",
+      "label": "Dewford maze wall west end",
+      "family": "gym fixture",
+      "recipe": null,
+      "reason": "The opposite end retains its projecting brown trim and clean pale corridor boundary.",
+      "baseline_entry_sha256": "64278da415641d7e07dd1a1e8dd7e5f53e74a4d5ba174792d50a682c759d2d72",
+      "source_contact": "../inventory/building__dewford_gym/page-001.png",
+      "source_card": 2,
+      "assemblies": []
+    },
+    {
+      "key": "g3q/3949-3950-3262-3263",
+      "group": "building__dewford_gym",
+      "label": "Dewford entrance statue globe",
+      "family": "gym fixture",
+      "recipe": null,
+      "reason": "Grey globe and collar sit above the matched base; surrounding floor is outside the rounded footprint.",
+      "baseline_entry_sha256": "2fd7d796061e3045b33a53a510a19a073842cfab5e7cd949bd27e3c373fbbc2c",
+      "source_contact": "../inventory/building__dewford_gym/page-001.png",
+      "source_card": 3,
+      "assemblies": [
+        "emerald_gym_dewford_statue"
+      ]
+    },
+    {
+      "key": "g3q/3267-3268-3957-3958",
+      "group": "building__dewford_gym",
+      "label": "Dewford entrance statue pedestal",
+      "family": "gym fixture",
+      "recipe": null,
+      "reason": "Plaque face stays upright above its bounded base; the existing on pair forms one grounded statue.",
+      "baseline_entry_sha256": "ffb327a256dccc49d209cddf2a720e603819f34e17ee048d392b7fcd352c2229",
+      "source_contact": "../inventory/building__dewford_gym/page-001.png",
+      "source_card": 4,
+      "assemblies": [
+        "emerald_gym_dewford_statue"
+      ]
+    },
+    {
+      "key": "g3q/3959-3960-3961-3962",
+      "group": "building__dewford_gym",
+      "label": "Dewford dais northwest rail",
+      "family": "gym fixture",
+      "recipe": null,
+      "reason": "Raised orange post and dark rail border the low violet arena surface without making the floor upright.",
+      "baseline_entry_sha256": "97a66dfc9793bb1be56e3274fe120672bcdd9663ee26feb24233a65ee411b714",
+      "source_contact": "../inventory/building__dewford_gym/page-001.png",
+      "source_card": 5,
+      "assemblies": [
+        "emerald_gym_dewford_dais"
+      ]
+    },
+    {
+      "key": "g3q/3963-3964-3965-3966",
+      "group": "building__dewford_gym",
+      "label": "Dewford dais north-left mat",
+      "family": "gym fixture",
+      "recipe": null,
+      "reason": "Blue transverse lines are horizontal floor markings on a thin platform section.",
+      "baseline_entry_sha256": "9696fd5c30f14d07c655530e4c157ebd07bb51c38efa8ad4a8677075a3a6153e",
+      "source_contact": "../inventory/building__dewford_gym/page-001.png",
+      "source_card": 6,
+      "assemblies": [
+        "emerald_gym_dewford_dais"
+      ]
+    },
+    {
+      "key": "g3q/3964-3967-3966-3968",
+      "group": "building__dewford_gym",
+      "label": "Dewford dais north-right mat",
+      "family": "gym fixture",
+      "recipe": null,
+      "reason": "The mirrored blue floor stripes align with the left mat and eastern rail.",
+      "baseline_entry_sha256": "e1b68b4985e53fad27f659db576600cb4a05ce1e9e75ee4f90ca5b22e34b9c1e",
+      "source_contact": "../inventory/building__dewford_gym/page-001.png",
+      "source_card": 7,
+      "assemblies": [
+        "emerald_gym_dewford_dais"
+      ]
+    },
+    {
+      "key": "g3q/3960-3969-3962-3970",
+      "group": "building__dewford_gym",
+      "label": "Dewford dais northeast rail",
+      "family": "gym fixture",
+      "recipe": null,
+      "reason": "Orange end post and right rail mirror the west boundary while keeping the arena center low.",
+      "baseline_entry_sha256": "5c56e281126a94d470488e897a636fbf956b1a3fcec7760561507ea577cfb51c",
+      "source_contact": "../inventory/building__dewford_gym/page-001.png",
+      "source_card": 8,
+      "assemblies": [
+        "emerald_gym_dewford_dais"
+      ]
+    },
+    {
+      "key": "g3q/3971-3972-3973-3974",
+      "group": "building__dewford_gym",
+      "label": "Dewford gold cabinet upper",
+      "family": "gym fixture",
+      "recipe": null,
+      "reason": "Two framed gold panels and inset side form the upper half of the source cabinet beside the arena.",
+      "baseline_entry_sha256": "2446a62100e37d41c820b8766168288bd25ff7b1cec58fd441c6d59a665fffbc",
+      "source_contact": "../inventory/building__dewford_gym/page-001.png",
+      "source_card": 9,
+      "assemblies": [
+        "emerald_gym_dewford_cabinet"
+      ]
+    },
+    {
+      "key": "g3q/3975-3976-3977-3978",
+      "group": "building__dewford_gym",
+      "label": "Dewford dais southwest stair",
+      "family": "gym fixture",
+      "recipe": null,
+      "reason": "Three shallow step bands lead to the violet surface beside a raised orange post.",
+      "baseline_entry_sha256": "10dff1a12bca326c0653953493a38feb5f7bfb5ad302b4423bb79d8454d193c1",
+      "source_contact": "../inventory/building__dewford_gym/page-001.png",
+      "source_card": 10,
+      "assemblies": [
+        "emerald_gym_dewford_dais"
+      ]
+    },
+    {
+      "key": "g3q/3979-3962-3980-3981",
+      "group": "building__dewford_gym",
+      "label": "Dewford dais south-left floor",
+      "family": "gym fixture",
+      "recipe": null,
+      "reason": "Two thin step lines stay on the violet floor and connect the southwest stair.",
+      "baseline_entry_sha256": "a445e428a1a3769b7c2648930cbd035037ab56247752dadd9ee270aa90da9381",
+      "source_contact": "../inventory/building__dewford_gym/page-001.png",
+      "source_card": 11,
+      "assemblies": [
+        "emerald_gym_dewford_dais"
+      ]
+    },
+    {
+      "key": "g3q/3962-3982-3981-3983",
+      "group": "building__dewford_gym",
+      "label": "Dewford dais south-right floor",
+      "family": "gym fixture",
+      "recipe": null,
+      "reason": "Mirrored low step lines connect the center floor to the southeast stair.",
+      "baseline_entry_sha256": "e669ec99a616b9508d1ac6eec32f6eaaaa37a00955ba881a5e43af5019936fb6",
+      "source_contact": "../inventory/building__dewford_gym/page-001.png",
+      "source_card": 12,
+      "assemblies": [
+        "emerald_gym_dewford_dais"
+      ]
+    },
+    {
+      "key": "g3q/3976-3984-3978-3985",
+      "group": "building__dewford_gym",
+      "label": "Dewford dais southeast stair",
+      "family": "gym fixture",
+      "recipe": null,
+      "reason": "The right orange post and three shallow bands mirror the opposite entrance stair.",
+      "baseline_entry_sha256": "46c6750d170f1c4d88c056e53a765b385bfab58805ddb86f539055b4adab2b66",
+      "source_contact": "../inventory/building__dewford_gym/page-001.png",
+      "source_card": 13,
+      "assemblies": [
+        "emerald_gym_dewford_dais"
+      ]
+    },
+    {
+      "key": "g3q/3973-3974-3973-3974",
+      "group": "building__dewford_gym",
+      "label": "Dewford gold cabinet lower",
+      "family": "gym fixture",
+      "recipe": null,
+      "reason": "The stepped lower foot supports the paired cabinet top with the olive panels preserved on its face.",
+      "baseline_entry_sha256": "f341efd59be99356f29f008be8209a214d8be1bbdaa3acbc215f7ddf89703810",
+      "source_contact": "../inventory/building__dewford_gym/page-001.png",
+      "source_card": 14,
+      "assemblies": [
+        "emerald_gym_dewford_cabinet"
+      ]
+    },
+    {
+      "key": "g3q/6653-6653-6635-6636",
+      "group": "building__lavaridge_gym",
+      "label": "Lavaridge red wall frieze",
+      "family": "gym fixture",
+      "recipe": "closed_frieze",
+      "reason": "Close the brick mortar holes revealed by the whole wall run. The red cornice, badge where present, and brick courses are painted on one shallow continuous wall face with solid native-brown sides.",
+      "baseline_entry_sha256": "f0a5206d8c0453589764441e4519cf35d94cf9fb5a0db1bec29efb2c74d7e669",
+      "source_contact": "../inventory/building__lavaridge_gym/page-001.png",
+      "source_card": 1,
+      "assemblies": [
+        "emerald_gym_lavaridge_frieze"
+      ]
+    },
+    {
+      "key": "g3q/6664-6665-3262-3263",
+      "group": "building__lavaridge_gym",
+      "label": "Lavaridge entrance statue globe",
+      "family": "gym fixture",
+      "recipe": null,
+      "reason": "Grey globe and collar have a red rear surround matching the nearby wall; the exact pedestal pair remains intact.",
+      "baseline_entry_sha256": "24eed04b52045c02e872b1054a217ad372be593026d282f7251c5243dde13b3c",
+      "source_contact": "../inventory/building__lavaridge_gym/page-001.png",
+      "source_card": 2,
+      "assemblies": [
+        "emerald_gym_lavaridge_statue"
+      ]
+    },
+    {
+      "key": "g3q/6668-6669-6670-6671",
+      "group": "building__lavaridge_gym",
+      "label": "Lavaridge dais northwest corner",
+      "family": "gym fixture",
+      "recipe": "dais_0_0",
+      "reason": "Rebuild together with the complete platform so the timber rail and orange floor join all six previously unfitted center cells.",
+      "baseline_entry_sha256": "64fd00728a72419f7b67d66c359c709fcb8c4d1e4cdd8e7d661748f85cb43ece",
+      "source_contact": "../inventory/building__lavaridge_gym/page-001.png",
+      "source_card": 3,
+      "assemblies": [
+        "emerald_gym_lavaridge_dais"
+      ],
+      "collision": 7
+    },
+    {
+      "key": "g3q/6672-6680-6671-6681",
+      "group": "building__lavaridge_gym",
+      "label": "Lavaridge dais northeast corner",
+      "family": "gym fixture",
+      "recipe": "dais_4_0",
+      "reason": "Mirror the left timber rail within the same global platform; the center stays a horizontal orange mat.",
+      "baseline_entry_sha256": "e1a932e4067ef1d5955454c1ca7ec22d5ccd144b78d095209866060d5793b400",
+      "source_contact": "../inventory/building__lavaridge_gym/page-001.png",
+      "source_card": 4,
+      "assemblies": [
+        "emerald_gym_lavaridge_dais"
+      ],
+      "collision": 7
+    },
+    {
+      "key": "g3q/6683-6684-6635-6636",
+      "group": "building__lavaridge_gym",
+      "label": "Lavaridge gym badge frieze",
+      "family": "gym fixture",
+      "recipe": "closed_frieze",
+      "reason": "Close the brick mortar holes revealed by the whole wall run. The red cornice, badge where present, and brick courses are painted on one shallow continuous wall face with solid native-brown sides.",
+      "baseline_entry_sha256": "f6bca88257550cc242fa2c4cbe56839c40559d0479799df4ab86c3a3c21efa87",
+      "source_contact": "../inventory/building__lavaridge_gym/page-001.png",
+      "source_card": 5,
+      "assemblies": [
+        "emerald_gym_lavaridge_frieze"
+      ]
+    },
+    {
+      "key": "g3q/3267-3268-6685-6686",
+      "group": "building__lavaridge_gym",
+      "label": "Lavaridge entrance statue pedestal",
+      "family": "gym fixture",
+      "recipe": null,
+      "reason": "The plaque body has a separate low foot and supports its existing globe without a floor slab.",
+      "baseline_entry_sha256": "e218e5053cfe57e6f2343632d5c63e3dccd787fcaff7a24089dffe7ac8fd1b0e",
+      "source_contact": "../inventory/building__lavaridge_gym/page-001.png",
+      "source_card": 6,
+      "assemblies": [
+        "emerald_gym_lavaridge_statue"
+      ]
+    },
+    {
+      "key": "g3q/6670-6671-6687-6688",
+      "group": "building__lavaridge_gym",
+      "label": "Lavaridge dais southwest step",
+      "family": "gym fixture",
+      "recipe": "dais_0_1",
+      "reason": "The left lower corner becomes part of one shallow front step aligned across the whole orange platform.",
+      "baseline_entry_sha256": "15fb89fcfe4b6d098b0048604bbfb87a93d7fbd1f4d27f2b11b721b730a008e8",
+      "source_contact": "../inventory/building__lavaridge_gym/page-001.png",
+      "source_card": 7,
+      "assemblies": [
+        "emerald_gym_lavaridge_dais"
+      ],
+      "collision": 7
+    },
+    {
+      "key": "g3q/6671-6681-6688-6692",
+      "group": "building__lavaridge_gym",
+      "label": "Lavaridge dais southeast step",
+      "family": "gym fixture",
+      "recipe": "dais_4_1",
+      "reason": "The right lower corner continues the same front step and bounded timber side rail.",
+      "baseline_entry_sha256": "84b1920f7aa4ddb93bb668376c0be6202bccfa7b6b8971e875c5658456abe9bc",
+      "source_contact": "../inventory/building__lavaridge_gym/page-001.png",
+      "source_card": 8,
+      "assemblies": [
+        "emerald_gym_lavaridge_dais"
+      ],
+      "collision": 7
+    },
+    {
+      "key": "g3q/6635-6637-6693-6694",
+      "group": "building__lavaridge_gym",
+      "label": "Lavaridge south-facing ledge left edge",
+      "family": "gym fixture",
+      "recipe": null,
+      "reason": "Exported collision163 is a south ledge. Retain the low four-voxel brown tread; the brick art is the ledge face projection, not a tall freestanding wall.",
+      "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+      "source_contact": "../inventory/building__lavaridge_gym/page-001.png",
+      "source_card": 9,
+      "assemblies": [
+        "emerald_gym_lavaridge_ledge"
+      ]
+    },
+    {
+      "key": "g3q/6638-6637-6694-6694",
+      "group": "building__lavaridge_gym",
+      "label": "Lavaridge south-facing ledge repeat",
+      "family": "gym fixture",
+      "recipe": null,
+      "reason": "Repeated collision163 ledge keeps the same low tread height and uninterrupted brown upper surface across the five-cell run.",
+      "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+      "source_contact": "../inventory/building__lavaridge_gym/page-001.png",
+      "source_card": 10,
+      "assemblies": [
+        "emerald_gym_lavaridge_ledge"
+      ]
+    },
+    {
+      "key": "g3q/6707-6708-6709-6710",
+      "group": "building__lavaridge_gym",
+      "label": "Lavaridge basement pillar end",
+      "family": "gym fixture",
+      "recipe": null,
+      "reason": "Red inset shaft and wider brown foot form a bounded upright terminal at each partition end.",
+      "baseline_entry_sha256": "897386778d4faf5bdfd5f01250b719254f24c97ad0bc6ceed4bbcf947dfc67e9",
+      "source_contact": "../inventory/building__lavaridge_gym/page-001.png",
+      "source_card": 11,
+      "assemblies": [
+        "emerald_gym_lavaridge_partition_end"
+      ]
+    },
+    {
+      "key": "g3q/6711-6711-6635-6636",
+      "group": "building__lavaridge_gym",
+      "label": "Lavaridge basement crimson frieze",
+      "family": "gym fixture",
+      "recipe": "closed_frieze",
+      "reason": "Close the brick mortar holes revealed by the whole wall run. The red cornice, badge where present, and brick courses are painted on one shallow continuous wall face with solid native-brown sides.",
+      "baseline_entry_sha256": "f0a5206d8c0453589764441e4519cf35d94cf9fb5a0db1bec29efb2c74d7e669",
+      "source_contact": "../inventory/building__lavaridge_gym/page-001.png",
+      "source_card": 12,
+      "assemblies": [
+        "emerald_gym_lavaridge_basement_frieze"
+      ]
+    },
+    {
+      "key": "g3q/6672-6673-6671-6674",
+      "group": "building__lavaridge_gym",
+      "label": "Lavaridge complete dais center 1,0",
+      "family": "gym platform",
+      "reason": "This source floor section was missing from the fitted inventory. Add the low horizontal center of the single whole platform, keeping native orange mat/badge paint on top and the entry step shallow.",
+      "baseline_entry_sha256": null,
+      "source_contact": "../gym-study/EM_LAVARIDGE_TOWN_GYM_1F.png",
+      "source_card": null,
+      "assemblies": [
+        "emerald_gym_lavaridge_dais"
+      ],
+      "recipe": "dais_1_0",
+      "collision": 0
+    },
+    {
+      "key": "g3q/6675-6676-6677-6677",
+      "group": "building__lavaridge_gym",
+      "label": "Lavaridge complete dais center 2,0",
+      "family": "gym platform",
+      "reason": "This source floor section was missing from the fitted inventory. Add the low horizontal center of the single whole platform, keeping native orange mat/badge paint on top and the entry step shallow.",
+      "baseline_entry_sha256": null,
+      "source_contact": "../gym-study/EM_LAVARIDGE_TOWN_GYM_1F.png",
+      "source_card": null,
+      "assemblies": [
+        "emerald_gym_lavaridge_dais"
+      ],
+      "recipe": "dais_2_0",
+      "collision": 0
+    },
+    {
+      "key": "g3q/6678-6669-6679-6671",
+      "group": "building__lavaridge_gym",
+      "label": "Lavaridge complete dais center 3,0",
+      "family": "gym platform",
+      "reason": "This source floor section was missing from the fitted inventory. Add the low horizontal center of the single whole platform, keeping native orange mat/badge paint on top and the entry step shallow.",
+      "baseline_entry_sha256": null,
+      "source_contact": "../gym-study/EM_LAVARIDGE_TOWN_GYM_1F.png",
+      "source_card": null,
+      "assemblies": [
+        "emerald_gym_lavaridge_dais"
+      ],
+      "recipe": "dais_3_0",
+      "collision": 0
+    },
+    {
+      "key": "g3q/6671-6671-6689-6690",
+      "group": "building__lavaridge_gym",
+      "label": "Lavaridge complete dais center 1,1",
+      "family": "gym platform",
+      "reason": "This source floor section was missing from the fitted inventory. Add the low horizontal center of the single whole platform, keeping native orange mat/badge paint on top and the entry step shallow.",
+      "baseline_entry_sha256": null,
+      "source_contact": "../gym-study/EM_LAVARIDGE_TOWN_GYM_1F.png",
+      "source_card": null,
+      "assemblies": [
+        "emerald_gym_lavaridge_dais"
+      ],
+      "recipe": "dais_1_1",
+      "collision": 0
+    },
+    {
+      "key": "g3q/6671-6671-6690-6690",
+      "group": "building__lavaridge_gym",
+      "label": "Lavaridge complete dais center 2,1",
+      "family": "gym platform",
+      "reason": "This source floor section was missing from the fitted inventory. Add the low horizontal center of the single whole platform, keeping native orange mat/badge paint on top and the entry step shallow.",
+      "baseline_entry_sha256": null,
+      "source_contact": "../gym-study/EM_LAVARIDGE_TOWN_GYM_1F.png",
+      "source_card": null,
+      "assemblies": [
+        "emerald_gym_lavaridge_dais"
+      ],
+      "recipe": "dais_2_1",
+      "collision": 0
+    },
+    {
+      "key": "g3q/6671-6671-6690-6691",
+      "group": "building__lavaridge_gym",
+      "label": "Lavaridge complete dais center 3,1",
+      "family": "gym platform",
+      "reason": "This source floor section was missing from the fitted inventory. Add the low horizontal center of the single whole platform, keeping native orange mat/badge paint on top and the entry step shallow.",
+      "baseline_entry_sha256": null,
+      "source_contact": "../gym-study/EM_LAVARIDGE_TOWN_GYM_1F.png",
+      "source_card": null,
+      "assemblies": [
+        "emerald_gym_lavaridge_dais"
+      ],
+      "recipe": "dais_3_1",
+      "collision": 0
+    }
+  ],
+  "assemblies": [
+    {
+      "id": "emerald_gym_rustboro_dais",
+      "map": "EM_RUSTBORO_CITY_GYM",
+      "rect": [
+        3,
+        2,
+        5,
+        2
+      ],
+      "kind": "floor (model as one)",
+      "note": "Complete curved stone dais, gold rear trim and southern insignia step.",
+      "source_layout": [
+        [
+          "g3q/8797-8798-8799-6954",
+          "g3q/8800-8801-8802-8803",
+          "g3q/8804-8805-8806-8806",
+          "g3q/8807-8798-8808-8802",
+          "g3q/8800-8809-6954-8810"
+        ],
+        [
+          "g3q/8818-6954-8819-8820",
+          "g3q/8821-8802-8822-8823",
+          "g3q/6954-6954-8823-8823",
+          "g3q/8802-8821-8823-8824",
+          "g3q/6954-8825-8826-8827"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_gym_rustboro_statue",
+      "map": "EM_RUSTBORO_CITY_GYM",
+      "rect": [
+        2,
+        17,
+        1,
+        2
+      ],
+      "kind": "stack (model as one)",
+      "note": "Complete globe and plaque pedestal; repeated at both entry sides.",
+      "source_layout": [
+        [
+          "g3q/8842-8843-3262-3263"
+        ],
+        [
+          "g3q/3267-3268-8847-8848"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_gym_rustboro_barrier_corner",
+      "map": "EM_RUSTBORO_CITY_GYM",
+      "rect": [
+        0,
+        15,
+        1,
+        1
+      ],
+      "kind": "fixture (model as one)",
+      "note": "Fitted corner insert in the larger terrain maze; full maze context is the source room map.",
+      "source_layout": [
+        [
+          "g3q/8853-8858-8855-8859"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_gym_dewford_dais",
+      "map": "EM_DEWFORD_TOWN_GYM",
+      "rect": [
+        2,
+        3,
+        4,
+        2
+      ],
+      "kind": "floor (model as one)",
+      "note": "Complete violet dais with orange posts and shallow entry steps.",
+      "source_layout": [
+        [
+          "g3q/3959-3960-3961-3962",
+          "g3q/3963-3964-3965-3966",
+          "g3q/3964-3967-3966-3968",
+          "g3q/3960-3969-3962-3970"
+        ],
+        [
+          "g3q/3975-3976-3977-3978",
+          "g3q/3979-3962-3980-3981",
+          "g3q/3962-3982-3981-3983",
+          "g3q/3976-3984-3978-3985"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_gym_dewford_cabinet",
+      "map": "EM_DEWFORD_TOWN_GYM",
+      "rect": [
+        1,
+        2,
+        1,
+        2
+      ],
+      "kind": "stack (model as one)",
+      "note": "Two-panel gold cabinet beside the arena, including its lower foot.",
+      "source_layout": [
+        [
+          "g3q/3971-3972-3973-3974"
+        ],
+        [
+          "g3q/3973-3974-3973-3974"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_gym_dewford_statue",
+      "map": "EM_DEWFORD_TOWN_GYM",
+      "rect": [
+        4,
+        23,
+        1,
+        2
+      ],
+      "kind": "stack (model as one)",
+      "note": "Complete entry globe and plaque pedestal.",
+      "source_layout": [
+        [
+          "g3q/3949-3950-3262-3263"
+        ],
+        [
+          "g3q/3267-3268-3957-3958"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_gym_lavaridge_frieze",
+      "map": "EM_LAVARIDGE_TOWN_GYM_1F",
+      "rect": [
+        11,
+        8,
+        5,
+        1
+      ],
+      "kind": "wall (model as one)",
+      "note": "Complete five-cell red cornice with the centered gym badge.",
+      "source_layout": [
+        [
+          "g3q/6653-6653-6635-6636",
+          "g3q/6653-6653-6635-6636",
+          "g3q/6683-6684-6635-6636",
+          "g3q/6653-6653-6635-6636",
+          "g3q/6653-6653-6635-6636"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_gym_lavaridge_statue",
+      "map": "EM_LAVARIDGE_TOWN_GYM_1F",
+      "rect": [
+        10,
+        14,
+        1,
+        2
+      ],
+      "kind": "stack (model as one)",
+      "note": "Complete grey entry statue and pedestal.",
+      "source_layout": [
+        [
+          "g3q/6664-6665-3262-3263"
+        ],
+        [
+          "g3q/3267-3268-6685-6686"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_gym_lavaridge_ledge",
+      "map": "EM_LAVARIDGE_TOWN_GYM_1F",
+      "rect": [
+        11,
+        13,
+        5,
+        1
+      ],
+      "kind": "floor (model as one)",
+      "note": "Five-cell south-facing jump ledge; all cells carry collision163.",
+      "source_layout": [
+        [
+          "g3q/6635-6637-6693-6694",
+          "g3q/6638-6637-6694-6694",
+          "g3q/6638-6637-6694-6694",
+          "g3q/6638-6637-6694-6694",
+          "g3q/6638-6637-6694-6694"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_gym_lavaridge_basement_frieze",
+      "map": "EM_LAVARIDGE_TOWN_GYM_B1F",
+      "rect": [
+        0,
+        1,
+        4,
+        1
+      ],
+      "kind": "wall (model as one)",
+      "note": "Uninterrupted crimson cornice run before the partition end.",
+      "source_layout": [
+        [
+          "g3q/6711-6711-6635-6636",
+          "g3q/6711-6711-6635-6636",
+          "g3q/6711-6711-6635-6636",
+          "g3q/6711-6711-6635-6636"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_gym_lavaridge_partition_end",
+      "map": "EM_LAVARIDGE_TOWN_GYM_B1F",
+      "rect": [
+        4,
+        2,
+        1,
+        1
+      ],
+      "kind": "fixture (model as one)",
+      "note": "Bounded red end pillar below the partition cap.",
+      "source_layout": [
+        [
+          "g3q/6707-6708-6709-6710"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_gym_lavaridge_dais",
+      "map": "EM_LAVARIDGE_TOWN_GYM_1F",
+      "rect": [
+        11,
+        9,
+        5,
+        2
+      ],
+      "kind": "floor (model as one)",
+      "note": "One complete orange gym platform, including six newly fitted center floor cells; timber rails and shallow front step share one geometry.",
+      "source_layout": [
+        [
+          "g3q/6668-6669-6670-6671",
+          "g3q/6672-6673-6671-6674",
+          "g3q/6675-6676-6677-6677",
+          "g3q/6678-6669-6679-6671",
+          "g3q/6672-6680-6671-6681"
+        ],
+        [
+          "g3q/6670-6671-6687-6688",
+          "g3q/6671-6671-6689-6690",
+          "g3q/6671-6671-6690-6690",
+          "g3q/6671-6671-6690-6691",
+          "g3q/6671-6681-6688-6692"
+        ]
+      ]
+    }
+  ]
+}

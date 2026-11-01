@@ -61,6 +61,18 @@ loom {
 	}
 }
 
+// Offline gallery: its manifest names the local export, complete models and screenshot output.
+def kbGallery = providers.gradleProperty("kb.gallery").getOrNull()
+if (kbGallery != null && !kbGallery.isBlank()) {
+	loom.runs.client {
+		vmArg "-Dkantobridge.gallery=${file(kbGallery).absolutePath}"
+		vmArg "-Dkantobridge.gallery.quit=${providers.gradleProperty('kb.galleryQuit').getOrElse('false')}"
+		vmArg "-Dkantobridge.gallery.settleTicks=${providers.gradleProperty('kb.gallerySettleTicks').getOrElse('15')}"
+		vmArg "-Dkantobridge.gallery.capture=${providers.gradleProperty('kb.galleryCapture').getOrElse('true')}"
+		programArgs "--width", "1280", "--height", "960"
+	}
+}
+
 // Rendering measurements (docs/specs/VOXEL_BLOCKS_PLAN.md §10): `./gradlew runClient -Pkb.meshstats=true` turns on the dev-only
 // MeshStats counters and its timing mixin; F8 in game appends a run to local/reports/mesh_report.json (numbers only).
 def kbMeshStats = providers.gradleProperty("kb.meshstats").getOrElse("false") == "true"
@@ -189,6 +201,11 @@ loom {
 	runs {
 		gameTest {
 			vmArg "-Dfabric-api.gametest.report-file=${file('build/reports/gametest/TEST-gametest.xml').absolutePath}"
+			// The GameTests' synthetic worlds stay flat: raised outdoor ground, the chain and the jar's landscape models are
+			// every other build's default since 2026-11-01 (OutdoorLevels, MapChain, LandscapeModels)
+			vmArg "-Dkantobridge.outdoorLevels=none"
+			vmArg "-Dkantobridge.chainLevels=false"
+			vmArg "-Dkantobridge.landscape.models=none"
 		}
 	}
 }
@@ -197,7 +214,9 @@ loom {
 // [-Pkb.buildReport=<path>] [-Pkb.buildExit=true] [-Pkb.buildRegion=<id> -Pkb.buildSlot=<n>]` hands these to the server as
 // -Dkantobridge.build* (HeadlessBuild). The last two make a region build (docs/specs/MULTI_GAME_PLAN.md §4.6, MG3).
 // -Pkb.landscapeModels=<table> builds the landscape sections' models (docs/specs/LANDSCAPE_MODELS.md; LandscapeModels).
-// Relative paths resolve against this project directory. Added after the GameTest run is configured, so the GameTest
+// Since 2026-11-01 every build has raised outdoor ground, the chain and the jar's models table by default:
+// -Pkb.outdoorLevels=none -Pkb.chainLevels=false -Pkb.landscapeModels=none builds the old flat outdoors.
+// Relative paths resolve against this project directory ("none" stays "none"). Added after the GameTest run is configured, so the GameTest
 // server (which inherits the server run) never gets them.
 def kbBuildProperties = [
 	"kb.build"      : ["kantobridge.build", true],
@@ -212,12 +231,15 @@ def kbBuildProperties = [
 	"kb.landscapeModels": ["kantobridge.landscape.models", true],
 	"kb.outdoorLevels"  : ["kantobridge.outdoorLevels", false],
 	"kb.chainLevels"    : ["kantobridge.chainLevels", false],
+	// the pack's folder for a build that mustn't touch the player's, and the shape report off (as in the client's builds)
+	"kb.buildPackDir"     : ["kantobridge.build.packDir", true],
+	"kb.buildShapeReport" : ["kantobridge.build.shapeReport", false],
 ]
 def kbBuildVmArgs = []
 kbBuildProperties.each { gradleName, spec ->
 	def value = providers.gradleProperty(gradleName).getOrNull()
 	if (value != null && !value.isBlank()) {
-		def resolved = spec[1] ? file(value).absolutePath : value
+		def resolved = spec[1] && value != "none" ? file(value).absolutePath : value
 		kbBuildVmArgs << "-D${spec[0]}=${resolved}"
 	}
 }

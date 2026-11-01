@@ -1,0 +1,3256 @@
+[
+  {
+    "name": "stairs1",
+    "map": "EM_LILYCOVE_CITY_LILYCOVE_MUSEUM_1F",
+    "rect": [
+      15,
+      0,
+      3,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/6724-6725-6726-6727",
+        "g3q/6728-6728-3656-6729",
+        "g3q/6730-6724-6731-6726"
+      ],
+      [
+        "g3q/6735-6736-6737-6738",
+        "g3q/6739-6740-6741-6742",
+        "g3q/6743-6735-6744-6737"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/6724-6725-6726-6727",
+        "g3q/6728-6728-3656-6729",
+        "g3q/6730-6724-6731-6726"
+      ],
+      [
+        "g3q/6735-6736-6737-6738",
+        "g3q/6739-6740-6741-6742",
+        "g3q/6743-6735-6744-6737"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          2,
+          1
+        ],
+        "offset": [
+          2,
+          0,
+          1
+        ]
+      }
+    ],
+    "id": "emerald_lilycove_museum_stairs1",
+    "kind": "object (model as one)",
+    "note": "stairs1; complete source-audited museum assembly",
+    "baseline_layout": [
+      [
+        "g3q/6724-6725-6726-6727",
+        "g3q/6728-6728-3656-6729",
+        "g3q/6730-6724-6731-6726"
+      ],
+      [
+        "g3q/6735-6736-6737-6738",
+        "g3q/6739-6740-6741-6742",
+        "g3q/6743-6735-6744-6737"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          2,
+          1
+        ],
+        "offset": [
+          2,
+          0,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "name": "stairs2",
+    "map": "EM_LILYCOVE_CITY_LILYCOVE_MUSEUM_2F",
+    "rect": [
+      12,
+      0,
+      3,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/6923-6924-6925-6926",
+        "g3q/6927-6927-3656-3656",
+        "g3q/6928-6929-6930-6931"
+      ],
+      [
+        "g3q/6925-6926-6944-6945",
+        "g3q/3656-3656-6946-6947",
+        "g3q/6930-6931-6948-6949"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/6923-6924-6925-6926",
+        "g3q/6927-6927-3656-3656",
+        "g3q/6928-6929-6930-6931"
+      ],
+      [
+        "g3q/6925-6926-6944-6945",
+        "g3q/3656-3656-6946-6947",
+        "g3q/6930-6931-6948-6949"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          2,
+          1
+        ],
+        "offset": [
+          2,
+          0,
+          1
+        ]
+      }
+    ],
+    "id": "emerald_lilycove_museum_stairs2",
+    "kind": "object (model as one)",
+    "note": "stairs2; complete source-audited museum assembly",
+    "baseline_layout": [
+      [
+        "g3q/6923-6924-6925-6926",
+        "g3q/6927-6927-3656-3656",
+        "g3q/6928-6929-6930-6931"
+      ],
+      [
+        "g3q/6925-6926-6944-6945",
+        "g3q/3656-3656-6946-6947",
+        "g3q/6930-6931-6948-6949"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          2,
+          1
+        ],
+        "offset": [
+          2,
+          0,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "name": "painting-blue",
+    "map": "EM_LILYCOVE_CITY_LILYCOVE_MUSEUM_1F",
+    "rect": [
+      1,
+      0,
+      2,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/6763-6764-6765-6766",
+        "g3q/6767-6768-6769-6770"
+      ],
+      [
+        "g3q/6793-6794-6737-6737",
+        "g3q/6795-6796-6737-6737"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/6763-6764-6765-6766",
+        "g3q/6767-6768-6769-6770"
+      ],
+      [
+        "g3q/6793-6794-6737-6737",
+        "g3q/6795-6796-6737-6737"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      }
+    ],
+    "id": "emerald_lilycove_museum_painting_blue",
+    "kind": "object (model as one)",
+    "note": "painting blue; complete source-audited museum assembly",
+    "baseline_layout": [
+      [
+        "g3q/6763-6764-6765-6766",
+        "g3q/6767-6768-6769-6770"
+      ],
+      [
+        "g3q/6793-6794-6737-6737",
+        "g3q/6795-6796-6737-6737"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      }
+    ]
+  },
+  {
+    "name": "painting-green",
+    "map": "EM_LILYCOVE_CITY_LILYCOVE_MUSEUM_1F",
+    "rect": [
+      5,
+      0,
+      2,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/6771-6772-6773-6774",
+        "g3q/6775-6776-6777-6778"
+      ],
+      [
+        "g3q/6797-6798-6737-6737",
+        "g3q/6799-6800-6737-6737"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/6771-6772-6773-6774",
+        "g3q/6775-6776-6777-6778"
+      ],
+      [
+        "g3q/6797-6798-6737-6737",
+        "g3q/6799-6800-6737-6737"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      }
+    ],
+    "id": "emerald_lilycove_museum_painting_green",
+    "kind": "object (model as one)",
+    "note": "painting green; complete source-audited museum assembly",
+    "baseline_layout": [
+      [
+        "g3q/6771-6772-6773-6774",
+        "g3q/6775-6776-6777-6778"
+      ],
+      [
+        "g3q/6797-6798-6737-6737",
+        "g3q/6799-6800-6737-6737"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      }
+    ]
+  },
+  {
+    "name": "painting-portrait",
+    "map": "EM_LILYCOVE_CITY_LILYCOVE_MUSEUM_1F",
+    "rect": [
+      19,
+      0,
+      2,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/6787-6788-6789-6790",
+        "g3q/6791-6724-6792-6726"
+      ],
+      [
+        "g3q/6801-6802-6737-6737",
+        "g3q/6803-6735-6737-6737"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/6787-6788-6789-6790",
+        "g3q/6791-6724-6792-6726"
+      ],
+      [
+        "g3q/6801-6802-6737-6737",
+        "g3q/6803-6735-6737-6737"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      }
+    ],
+    "id": "emerald_lilycove_museum_painting_portrait",
+    "kind": "object (model as one)",
+    "note": "painting portrait; complete source-audited museum assembly",
+    "baseline_layout": [
+      [
+        "g3q/6787-6788-6789-6790",
+        "g3q/6791-6724-6792-6726"
+      ],
+      [
+        "g3q/6801-6802-6737-6737",
+        "g3q/6803-6735-6737-6737"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      }
+    ]
+  },
+  {
+    "name": "painting-white",
+    "map": "EM_LILYCOVE_CITY_LILYCOVE_MUSEUM_1F",
+    "rect": [
+      2,
+      5,
+      2,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/6824-6825-6826-6827",
+        "g3q/6828-6724-6829-6726"
+      ],
+      [
+        "g3q/6844-6845-6737-6737",
+        "g3q/6846-6735-6737-6737"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/6824-6825-6826-6827",
+        "g3q/6828-6724-6829-6726"
+      ],
+      [
+        "g3q/6844-6845-6737-6737",
+        "g3q/6846-6735-6737-6737"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      }
+    ],
+    "id": "emerald_lilycove_museum_painting_white",
+    "kind": "object (model as one)",
+    "note": "painting white; complete source-audited museum assembly",
+    "baseline_layout": [
+      [
+        "g3q/6824-6825-6826-6827",
+        "g3q/6828-6724-6829-6726"
+      ],
+      [
+        "g3q/6844-6845-6737-6737",
+        "g3q/6846-6735-6737-6737"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      }
+    ]
+  },
+  {
+    "name": "painting-gold",
+    "map": "EM_LILYCOVE_CITY_LILYCOVE_MUSEUM_1F",
+    "rect": [
+      6,
+      5,
+      1,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/6830-6831-6832-6833"
+      ],
+      [
+        "g3q/6847-6848-6737-6737"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/6830-6831-6832-6833"
+      ],
+      [
+        "g3q/6847-6848-6737-6737"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      }
+    ],
+    "id": "emerald_lilycove_museum_painting_gold",
+    "kind": "object (model as one)",
+    "note": "painting gold; complete source-audited museum assembly",
+    "baseline_layout": [
+      [
+        "g3q/6830-6831-6832-6833"
+      ],
+      [
+        "g3q/6847-6848-6737-6737"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    ]
+  },
+  {
+    "name": "painting-small-red",
+    "map": "EM_LILYCOVE_CITY_LILYCOVE_MUSEUM_1F",
+    "rect": [
+      9,
+      0,
+      1,
+      1
+    ],
+    "source_layout": [
+      [
+        "g3q/6779-6780-6781-6782"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/6779-6780-6781-6782"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    ],
+    "id": "emerald_lilycove_museum_painting_small_red",
+    "kind": "object (model as one)",
+    "note": "painting small red; complete source-audited museum assembly",
+    "baseline_layout": [
+      [
+        "g3q/6779-6780-6781-6782"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    ]
+  },
+  {
+    "name": "painting-small-blue",
+    "map": "EM_LILYCOVE_CITY_LILYCOVE_MUSEUM_1F",
+    "rect": [
+      11,
+      0,
+      1,
+      1
+    ],
+    "source_layout": [
+      [
+        "g3q/6783-6784-6785-6786"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/6783-6784-6785-6786"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    ],
+    "id": "emerald_lilycove_museum_painting_small_blue",
+    "kind": "object (model as one)",
+    "note": "painting small blue; complete source-audited museum assembly",
+    "baseline_layout": [
+      [
+        "g3q/6783-6784-6785-6786"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    ]
+  },
+  {
+    "name": "carved-relief-platform",
+    "map": "EM_LILYCOVE_CITY_LILYCOVE_MUSEUM_1F",
+    "rect": [
+      15,
+      7,
+      5,
+      3
+    ],
+    "source_layout": [
+      [
+        "g3q/6858-6836-6745-6836",
+        "g3q/6804-6805-6806-6807",
+        "g3q/6808-6809-6810-6811",
+        "g3q/6812-6813-6814-6815",
+        "g3q/6836-6859-6836-6746"
+      ],
+      [
+        "g3q/6745-6836-6745-6836",
+        "g3q/6834-6835-6836-6836",
+        "g3q/6835-6835-6836-6836",
+        "g3q/6835-6837-6836-6836",
+        "g3q/6836-6746-6836-6746"
+      ],
+      [
+        "g3q/6862-6855-6863-6856",
+        "g3q/6855-6855-6856-6856",
+        "g3q/6855-6855-6856-6856",
+        "g3q/6855-6855-6856-6856",
+        "g3q/6855-6864-6856-6865"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/6858-6836-6745-6836",
+        "g3q/6804-6805-6806-6807",
+        "g3q/6808-6809-6810-6811",
+        "g3q/6812-6813-6814-6815",
+        "g3q/6836-6859-6836-6746"
+      ],
+      [
+        "g3q/6745-6836-6745-6836",
+        "g3q/6834-6835-6836-6836",
+        "g3q/6835-6835-6836-6836",
+        "g3q/6835-6837-6836-6836",
+        "g3q/6836-6746-6836-6746"
+      ],
+      [
+        "g3q/6862-6855-6863-6856",
+        "g3q/6855-6855-6856-6856",
+        "g3q/6855-6855-6856-6856",
+        "g3q/6855-6855-6856-6856",
+        "g3q/6855-6864-6856-6865"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          3,
+          0
+        ],
+        "offset": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          4,
+          0
+        ],
+        "offset": [
+          4,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          2,
+          1
+        ],
+        "offset": [
+          2,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          3,
+          1
+        ],
+        "offset": [
+          3,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          4,
+          1
+        ],
+        "offset": [
+          4,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          0,
+          2
+        ],
+        "offset": [
+          0,
+          0,
+          2
+        ]
+      },
+      {
+        "source": [
+          1,
+          2
+        ],
+        "offset": [
+          1,
+          0,
+          2
+        ]
+      },
+      {
+        "source": [
+          2,
+          2
+        ],
+        "offset": [
+          2,
+          0,
+          2
+        ]
+      },
+      {
+        "source": [
+          3,
+          2
+        ],
+        "offset": [
+          3,
+          0,
+          2
+        ]
+      },
+      {
+        "source": [
+          4,
+          2
+        ],
+        "offset": [
+          4,
+          0,
+          2
+        ]
+      }
+    ],
+    "id": "emerald_lilycove_museum_carved_relief_platform",
+    "kind": "object (model as one)",
+    "note": "carved relief platform; complete source-audited museum assembly",
+    "baseline_layout": [
+      [
+        "g3q/6858-6836-6745-6836",
+        "g3q/6804-6805-6806-6807",
+        "g3q/6808-6809-6810-6811",
+        "g3q/6812-6813-6814-6815",
+        "g3q/6836-6859-6836-6746"
+      ],
+      [
+        "g3q/6745-6836-6745-6836",
+        "g3q/6834-6835-6836-6836",
+        "g3q/6835-6835-6836-6836",
+        "g3q/6835-6837-6836-6836",
+        "g3q/6836-6746-6836-6746"
+      ],
+      [
+        "g3q/6862-6855-6863-6856",
+        "g3q/6855-6855-6856-6856",
+        "g3q/6855-6855-6856-6856",
+        "g3q/6855-6855-6856-6856",
+        "g3q/6855-6864-6856-6865"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          3,
+          0
+        ],
+        "offset": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          4,
+          0
+        ],
+        "offset": [
+          4,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          2,
+          1
+        ],
+        "offset": [
+          2,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          3,
+          1
+        ],
+        "offset": [
+          3,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          4,
+          1
+        ],
+        "offset": [
+          4,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          0,
+          2
+        ],
+        "offset": [
+          0,
+          0,
+          2
+        ]
+      },
+      {
+        "source": [
+          1,
+          2
+        ],
+        "offset": [
+          1,
+          0,
+          2
+        ]
+      },
+      {
+        "source": [
+          2,
+          2
+        ],
+        "offset": [
+          2,
+          0,
+          2
+        ]
+      },
+      {
+        "source": [
+          3,
+          2
+        ],
+        "offset": [
+          3,
+          0,
+          2
+        ]
+      },
+      {
+        "source": [
+          4,
+          2
+        ],
+        "offset": [
+          4,
+          0,
+          2
+        ]
+      }
+    ]
+  },
+  {
+    "name": "reception-desk",
+    "map": "EM_LILYCOVE_CITY_LILYCOVE_MUSEUM_1F",
+    "rect": [
+      1,
+      10,
+      6,
+      4
+    ],
+    "source_layout": [
+      [
+        "g3q/6858-6836-6745-6746",
+        "g3q/6855-6855-6856-6856",
+        "g3q/6854-6857-6856-6856",
+        "g3q/6855-6855-6856-6856",
+        "g3q/6854-6855-6856-6856",
+        "g3q/6836-6859-6745-6746"
+      ],
+      [
+        "g3q/6745-6746-6745-6746",
+        "g3q/6716-6717-6718-6715",
+        "g3q/6716-6717-6714-6715",
+        "g3q/6716-6717-6714-6715",
+        "g3q/6716-6717-6714-6715",
+        "g3q/6745-6746-6745-6746"
+      ],
+      [
+        "g3q/6745-6746-6745-6849",
+        "g3q/6716-6713-6842-6843",
+        "g3q/6712-6713-6852-6843",
+        "g3q/6712-6713-6852-6843",
+        "g3q/6712-6713-6852-6843",
+        "g3q/6745-6746-6850-6746"
+      ],
+      [
+        "g3q/6862-6855-6863-6856",
+        "g3q/6855-6855-6856-6856",
+        "g3q/6855-6855-6856-6856",
+        "g3q/6855-6855-6856-6856",
+        "g3q/6855-6855-6856-6856",
+        "g3q/6855-6864-6856-6865"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/6858-6836-6745-6746",
+        "g3q/6855-6855-6856-6856",
+        "g3q/6854-6857-6856-6856",
+        "g3q/6855-6855-6856-6856",
+        "g3q/6854-6855-6856-6856",
+        "g3q/6836-6859-6745-6746"
+      ],
+      [
+        "g3q/6745-6746-6745-6746",
+        null,
+        null,
+        null,
+        null,
+        "g3q/6745-6746-6745-6746"
+      ],
+      [
+        "g3q/6745-6746-6745-6849",
+        null,
+        null,
+        null,
+        null,
+        "g3q/6745-6746-6850-6746"
+      ],
+      [
+        "g3q/6862-6855-6863-6856",
+        "g3q/6855-6855-6856-6856",
+        "g3q/6855-6855-6856-6856",
+        "g3q/6855-6855-6856-6856",
+        "g3q/6855-6855-6856-6856",
+        "g3q/6855-6864-6856-6865"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          3,
+          0
+        ],
+        "offset": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          4,
+          0
+        ],
+        "offset": [
+          4,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          5,
+          0
+        ],
+        "offset": [
+          5,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          5,
+          1
+        ],
+        "offset": [
+          5,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          0,
+          2
+        ],
+        "offset": [
+          0,
+          0,
+          2
+        ]
+      },
+      {
+        "source": [
+          5,
+          2
+        ],
+        "offset": [
+          5,
+          0,
+          2
+        ]
+      },
+      {
+        "source": [
+          0,
+          3
+        ],
+        "offset": [
+          0,
+          0,
+          3
+        ]
+      },
+      {
+        "source": [
+          1,
+          3
+        ],
+        "offset": [
+          1,
+          0,
+          3
+        ]
+      },
+      {
+        "source": [
+          2,
+          3
+        ],
+        "offset": [
+          2,
+          0,
+          3
+        ]
+      },
+      {
+        "source": [
+          3,
+          3
+        ],
+        "offset": [
+          3,
+          0,
+          3
+        ]
+      },
+      {
+        "source": [
+          4,
+          3
+        ],
+        "offset": [
+          4,
+          0,
+          3
+        ]
+      },
+      {
+        "source": [
+          5,
+          3
+        ],
+        "offset": [
+          5,
+          0,
+          3
+        ]
+      }
+    ],
+    "id": "emerald_lilycove_museum_reception_desk",
+    "kind": "object (model as one)",
+    "note": "reception desk; complete source-audited museum assembly",
+    "baseline_layout": [
+      [
+        "g3q/6858-6836-6745-6746",
+        "g3q/6855-6855-6856-6856",
+        "g3q/6854-6857-6856-6856",
+        "g3q/6855-6855-6856-6856",
+        "g3q/6854-6855-6856-6856",
+        "g3q/6836-6859-6745-6746"
+      ],
+      [
+        "g3q/6745-6746-6745-6746",
+        null,
+        null,
+        null,
+        null,
+        "g3q/6745-6746-6745-6746"
+      ],
+      [
+        "g3q/6745-6746-6745-6849",
+        null,
+        null,
+        null,
+        null,
+        "g3q/6745-6746-6850-6746"
+      ],
+      [
+        "g3q/6862-6855-6863-6856",
+        "g3q/6855-6855-6856-6856",
+        "g3q/6855-6855-6856-6856",
+        "g3q/6855-6855-6856-6856",
+        "g3q/6855-6855-6856-6856",
+        "g3q/6855-6864-6856-6865"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          3,
+          0
+        ],
+        "offset": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          4,
+          0
+        ],
+        "offset": [
+          4,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          5,
+          0
+        ],
+        "offset": [
+          5,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          5,
+          1
+        ],
+        "offset": [
+          5,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          0,
+          2
+        ],
+        "offset": [
+          0,
+          0,
+          2
+        ]
+      },
+      {
+        "source": [
+          5,
+          2
+        ],
+        "offset": [
+          5,
+          0,
+          2
+        ]
+      },
+      {
+        "source": [
+          0,
+          3
+        ],
+        "offset": [
+          0,
+          0,
+          3
+        ]
+      },
+      {
+        "source": [
+          1,
+          3
+        ],
+        "offset": [
+          1,
+          0,
+          3
+        ]
+      },
+      {
+        "source": [
+          2,
+          3
+        ],
+        "offset": [
+          2,
+          0,
+          3
+        ]
+      },
+      {
+        "source": [
+          3,
+          3
+        ],
+        "offset": [
+          3,
+          0,
+          3
+        ]
+      },
+      {
+        "source": [
+          4,
+          3
+        ],
+        "offset": [
+          4,
+          0,
+          3
+        ]
+      },
+      {
+        "source": [
+          5,
+          3
+        ],
+        "offset": [
+          5,
+          0,
+          3
+        ]
+      }
+    ]
+  },
+  {
+    "name": "statue1",
+    "map": "EM_LILYCOVE_CITY_LILYCOVE_MUSEUM_1F",
+    "rect": [
+      15,
+      11,
+      1,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/6816-6817-6818-6819"
+      ],
+      [
+        "g3q/6838-6839-6840-6841"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/6816-6817-6818-6819"
+      ],
+      [
+        "g3q/6838-6839-6840-6841"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    ],
+    "id": "emerald_lilycove_museum_statue1",
+    "kind": "object (model as one)",
+    "note": "statue1; complete source-audited museum assembly",
+    "baseline_layout": [
+      [
+        "g3q/6816-6817-6818-6819"
+      ],
+      [
+        "g3q/6838-6839-6840-6841"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    ]
+  },
+  {
+    "name": "round-exhibit",
+    "map": "EM_LILYCOVE_CITY_LILYCOVE_MUSEUM_1F",
+    "rect": [
+      18,
+      11,
+      1,
+      1
+    ],
+    "source_layout": [
+      [
+        "g3q/6820-6821-6822-6823"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/6820-6821-6822-6823"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    ],
+    "id": "emerald_lilycove_museum_round_exhibit",
+    "kind": "object (model as one)",
+    "note": "round exhibit; complete source-audited museum assembly",
+    "baseline_layout": [
+      [
+        "g3q/6820-6821-6822-6823"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    ]
+  },
+  {
+    "name": "statue2",
+    "map": "EM_LILYCOVE_CITY_LILYCOVE_MUSEUM_2F",
+    "rect": [
+      11,
+      1,
+      1,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/6961-6962-6963-6964"
+      ],
+      [
+        "g3q/6974-6975-6840-6841"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/6961-6962-6963-6964"
+      ],
+      [
+        "g3q/6974-6975-6840-6841"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    ],
+    "id": "emerald_lilycove_museum_statue2",
+    "kind": "object (model as one)",
+    "note": "statue2; complete source-audited museum assembly",
+    "baseline_layout": [
+      [
+        "g3q/6961-6962-6963-6964"
+      ],
+      [
+        "g3q/6974-6975-6840-6841"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    ]
+  },
+  {
+    "name": "statue3",
+    "map": "EM_LILYCOVE_CITY_LILYCOVE_MUSEUM_2F",
+    "rect": [
+      15,
+      1,
+      1,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/6965-6966-6967-6968"
+      ],
+      [
+        "g3q/6976-6977-6978-6979"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/6965-6966-6967-6968"
+      ],
+      [
+        "g3q/6976-6977-6978-6979"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    ],
+    "id": "emerald_lilycove_museum_statue3",
+    "kind": "object (model as one)",
+    "note": "statue3; complete source-audited museum assembly",
+    "baseline_layout": [
+      [
+        "g3q/6965-6966-6967-6968"
+      ],
+      [
+        "g3q/6976-6977-6978-6979"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    ]
+  },
+  {
+    "name": "display-wall-1",
+    "map": "EM_LILYCOVE_CITY_LILYCOVE_MUSEUM_2F",
+    "rect": [
+      1,
+      5,
+      4,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/6969-6932-6970-6933",
+        "g3q/6932-6932-6933-6933",
+        "g3q/6932-6932-6933-6933",
+        "g3q/6932-6934-6933-6935"
+      ],
+      [
+        "g3q/6980-6950-6981-6950",
+        "g3q/6866-6867-6868-6869",
+        "g3q/6867-6870-6869-6871",
+        "g3q/6950-6951-6950-6952"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/6969-6932-6970-6933",
+        "g3q/6932-6932-6933-6933",
+        "g3q/6932-6932-6933-6933",
+        "g3q/6932-6934-6933-6935"
+      ],
+      [
+        null,
+        "g3q/6866-6867-6868-6869",
+        "g3q/6867-6870-6869-6871",
+        null
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          3,
+          0
+        ],
+        "offset": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          2,
+          1
+        ],
+        "offset": [
+          2,
+          0,
+          1
+        ]
+      }
+    ],
+    "id": "emerald_lilycove_museum_display_wall_1",
+    "kind": "object (model as one)",
+    "note": "display wall 1; complete source-audited museum assembly",
+    "baseline_layout": [
+      [
+        "g3q/6969-6932-6970-6933",
+        "g3q/6932-6932-6933-6933",
+        "g3q/6932-6932-6933-6933",
+        "g3q/6932-6934-6933-6935"
+      ],
+      [
+        null,
+        "g3q/6866-6867-6868-6869",
+        "g3q/6867-6870-6869-6871",
+        null
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          3,
+          0
+        ],
+        "offset": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          2,
+          1
+        ],
+        "offset": [
+          2,
+          0,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "name": "display-wall-2",
+    "map": "EM_LILYCOVE_CITY_LILYCOVE_MUSEUM_2F",
+    "rect": [
+      9,
+      5,
+      4,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/6969-6932-6970-6933",
+        "g3q/6932-6932-6933-6933",
+        "g3q/6932-6932-6933-6933",
+        "g3q/6932-6934-6933-6935"
+      ],
+      [
+        "g3q/6980-6950-6981-6950",
+        "g3q/6866-6867-6868-6869",
+        "g3q/6867-6870-6869-6871",
+        "g3q/6950-6951-6950-6952"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/6969-6932-6970-6933",
+        "g3q/6932-6932-6933-6933",
+        "g3q/6932-6932-6933-6933",
+        "g3q/6932-6934-6933-6935"
+      ],
+      [
+        null,
+        "g3q/6866-6867-6868-6869",
+        "g3q/6867-6870-6869-6871",
+        null
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          3,
+          0
+        ],
+        "offset": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          2,
+          1
+        ],
+        "offset": [
+          2,
+          0,
+          1
+        ]
+      }
+    ],
+    "id": "emerald_lilycove_museum_display_wall_2",
+    "kind": "object (model as one)",
+    "note": "display wall 2; complete source-audited museum assembly",
+    "baseline_layout": [
+      [
+        "g3q/6969-6932-6970-6933",
+        "g3q/6932-6932-6933-6933",
+        "g3q/6932-6932-6933-6933",
+        "g3q/6932-6934-6933-6935"
+      ],
+      [
+        null,
+        "g3q/6866-6867-6868-6869",
+        "g3q/6867-6870-6869-6871",
+        null
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          3,
+          0
+        ],
+        "offset": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          2,
+          1
+        ],
+        "offset": [
+          2,
+          0,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "name": "display-wall-3",
+    "map": "EM_LILYCOVE_CITY_LILYCOVE_MUSEUM_2F",
+    "rect": [
+      17,
+      5,
+      4,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/6969-6932-6970-6933",
+        "g3q/6932-6932-6933-6933",
+        "g3q/6932-6932-6933-6933",
+        "g3q/6932-6934-6933-6935"
+      ],
+      [
+        "g3q/6980-6950-6981-6950",
+        "g3q/6866-6867-6868-6869",
+        "g3q/6867-6870-6869-6871",
+        "g3q/6950-6951-6950-6952"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/6969-6932-6970-6933",
+        "g3q/6932-6932-6933-6933",
+        "g3q/6932-6932-6933-6933",
+        "g3q/6932-6934-6933-6935"
+      ],
+      [
+        null,
+        "g3q/6866-6867-6868-6869",
+        "g3q/6867-6870-6869-6871",
+        null
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          3,
+          0
+        ],
+        "offset": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          2,
+          1
+        ],
+        "offset": [
+          2,
+          0,
+          1
+        ]
+      }
+    ],
+    "id": "emerald_lilycove_museum_display_wall_3",
+    "kind": "object (model as one)",
+    "note": "display wall 3; complete source-audited museum assembly",
+    "baseline_layout": [
+      [
+        "g3q/6969-6932-6970-6933",
+        "g3q/6932-6932-6933-6933",
+        "g3q/6932-6932-6933-6933",
+        "g3q/6932-6934-6933-6935"
+      ],
+      [
+        null,
+        "g3q/6866-6867-6868-6869",
+        "g3q/6867-6870-6869-6871",
+        null
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          3,
+          0
+        ],
+        "offset": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          2,
+          1
+        ],
+        "offset": [
+          2,
+          0,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "name": "display-wall-4",
+    "map": "EM_LILYCOVE_CITY_LILYCOVE_MUSEUM_2F",
+    "rect": [
+      5,
+      9,
+      4,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/6969-6932-6970-6933",
+        "g3q/6932-6932-6933-6933",
+        "g3q/6932-6932-6933-6933",
+        "g3q/6932-6934-6933-6935"
+      ],
+      [
+        "g3q/6980-6950-6981-6950",
+        "g3q/6866-6867-6868-6869",
+        "g3q/6867-6870-6869-6871",
+        "g3q/6950-6951-6950-6952"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/6969-6932-6970-6933",
+        "g3q/6932-6932-6933-6933",
+        "g3q/6932-6932-6933-6933",
+        "g3q/6932-6934-6933-6935"
+      ],
+      [
+        null,
+        "g3q/6866-6867-6868-6869",
+        "g3q/6867-6870-6869-6871",
+        null
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          3,
+          0
+        ],
+        "offset": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          2,
+          1
+        ],
+        "offset": [
+          2,
+          0,
+          1
+        ]
+      }
+    ],
+    "id": "emerald_lilycove_museum_display_wall_4",
+    "kind": "object (model as one)",
+    "note": "display wall 4; complete source-audited museum assembly",
+    "baseline_layout": [
+      [
+        "g3q/6969-6932-6970-6933",
+        "g3q/6932-6932-6933-6933",
+        "g3q/6932-6932-6933-6933",
+        "g3q/6932-6934-6933-6935"
+      ],
+      [
+        null,
+        "g3q/6866-6867-6868-6869",
+        "g3q/6867-6870-6869-6871",
+        null
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          3,
+          0
+        ],
+        "offset": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          2,
+          1
+        ],
+        "offset": [
+          2,
+          0,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "name": "display-wall-5",
+    "map": "EM_LILYCOVE_CITY_LILYCOVE_MUSEUM_2F",
+    "rect": [
+      13,
+      9,
+      4,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/6969-6932-6970-6933",
+        "g3q/6932-6932-6933-6933",
+        "g3q/6932-6932-6933-6933",
+        "g3q/6932-6934-6933-6935"
+      ],
+      [
+        "g3q/6980-6950-6981-6950",
+        "g3q/6866-6867-6868-6869",
+        "g3q/6867-6870-6869-6871",
+        "g3q/6950-6951-6950-6952"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/6969-6932-6970-6933",
+        "g3q/6932-6932-6933-6933",
+        "g3q/6932-6932-6933-6933",
+        "g3q/6932-6934-6933-6935"
+      ],
+      [
+        null,
+        "g3q/6866-6867-6868-6869",
+        "g3q/6867-6870-6869-6871",
+        null
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          3,
+          0
+        ],
+        "offset": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          2,
+          1
+        ],
+        "offset": [
+          2,
+          0,
+          1
+        ]
+      }
+    ],
+    "id": "emerald_lilycove_museum_display_wall_5",
+    "kind": "object (model as one)",
+    "note": "display wall 5; complete source-audited museum assembly",
+    "baseline_layout": [
+      [
+        "g3q/6969-6932-6970-6933",
+        "g3q/6932-6932-6933-6933",
+        "g3q/6932-6932-6933-6933",
+        "g3q/6932-6934-6933-6935"
+      ],
+      [
+        null,
+        "g3q/6866-6867-6868-6869",
+        "g3q/6867-6870-6869-6871",
+        null
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          3,
+          0
+        ],
+        "offset": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          2,
+          1
+        ],
+        "offset": [
+          2,
+          0,
+          1
+        ]
+      }
+    ]
+  }
+]

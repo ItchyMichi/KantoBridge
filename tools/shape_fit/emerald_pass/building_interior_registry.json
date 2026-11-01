@@ -1,0 +1,1694 @@
+{
+  "schema": 1,
+  "inspection": "Every listed source/model card and its room map inspected; no grouping implies approval. Runtime QA pending.",
+  "entries": [
+    {
+      "key": "g3q/2918-2918-6363-6364",
+      "group": "building__lab",
+      "label": "Lab wall notices",
+      "family": "wall notices",
+      "reason": "The notices remain upright on a shallow wall strip; the side projection is thin and the source paper rectangles remain legible. Inspected source/model card 1.",
+      "baseline_entry_sha256": "11be7349363ce18c99ef769d28bdd5582e44bdfcdbe45d78052b4101f7e8f533",
+      "source_contact": "../inventory/building__lab/page-001.png",
+      "source_card": 1,
+      "recipe": null,
+      "assemblies": []
+    },
+    {
+      "key": "g3q/6366-6367-6368-6369",
+      "group": "building__lab",
+      "label": "Yellow bench left end",
+      "family": "lab book bench",
+      "reason": "The bench has a horizontal top and separated legs with air beneath. Books/accessories rise separately above the surface, rather than lifting the floor into a solid pedestal. Inspected source/model card 2.",
+      "baseline_entry_sha256": "9afb9a1cabe20808c5172cf1a49820d8db1a26ebec49de85d14fc8bbcb83805d",
+      "source_contact": "../inventory/building__lab/page-001.png",
+      "source_card": 2,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_birch_book_bench"
+      ]
+    },
+    {
+      "key": "g3q/6370-6371-6372-6373",
+      "group": "building__lab",
+      "label": "Bench upright red book",
+      "family": "lab book bench",
+      "reason": "The bench has a horizontal top and separated legs with air beneath. Books/accessories rise separately above the surface, rather than lifting the floor into a solid pedestal. Inspected source/model card 3.",
+      "baseline_entry_sha256": "662b9735ff24e6577c6763672ee9f9fcd2914ff7b2a7d217fdea1048c6e15416",
+      "source_contact": "../inventory/building__lab/page-001.png",
+      "source_card": 3,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_birch_book_bench",
+        "emerald_interior_lanette_open_book_bench"
+      ]
+    },
+    {
+      "key": "g3q/6374-6375-6376-6377",
+      "group": "building__lab",
+      "label": "Bench diagonal red book",
+      "family": "lab book bench",
+      "reason": "The bench has a horizontal top and separated legs with air beneath. Books/accessories rise separately above the surface, rather than lifting the floor into a solid pedestal. Inspected source/model card 4.",
+      "baseline_entry_sha256": "f686c306266dc1d917af2a9418ca80023336a97ff3f9ae9e4d93cfd10b584758",
+      "source_contact": "../inventory/building__lab/page-001.png",
+      "source_card": 4,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_birch_book_bench"
+      ]
+    },
+    {
+      "key": "g3q/6378-6379-6380-6381",
+      "group": "building__lab",
+      "label": "Bench upright blue book",
+      "family": "lab book bench",
+      "reason": "The bench has a horizontal top and separated legs with air beneath. Books/accessories rise separately above the surface, rather than lifting the floor into a solid pedestal. Inspected source/model card 5.",
+      "baseline_entry_sha256": "fd86dcd3f26e9b63e0ed1172992b443ec8deb8ba80032f8a3e6cc5b1c6d91517",
+      "source_contact": "../inventory/building__lab/page-001.png",
+      "source_card": 5,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_birch_book_bench"
+      ]
+    },
+    {
+      "key": "g3q/2918-2918-6384-6385",
+      "group": "building__lab",
+      "label": "Wall bookcase blank upper left",
+      "family": "laboratory bookcases",
+      "reason": "Rebuild the complete shelf as a grounded frame with open shelf recesses, individual book spines and source-local front details; its actual adjoining source rows form one coherent stack. The wall shelf has two rows; the separate crate/floor below remain outside it.",
+      "baseline_entry_sha256": "61a24c5d9ff324ba89b446618e141484050285529b10ae29ddcf476ddca802f1",
+      "source_contact": "../inventory/building__lab/page-001.png",
+      "source_card": 6,
+      "recipe": "shelf_wall_0_1",
+      "assemblies": [
+        "emerald_interior_birch_wall_bookcase"
+      ],
+      "added_on": "g3q/6404-6405-6406-6407"
+    },
+    {
+      "key": "g3q/2918-2918-6385-6386",
+      "group": "building__lab",
+      "label": "Wall bookcase blank upper right",
+      "family": "laboratory bookcases",
+      "reason": "Rebuild the complete shelf as a grounded frame with open shelf recesses, individual book spines and source-local front details; its actual adjoining source rows form one coherent stack. The wall shelf has two rows; the separate crate/floor below remain outside it.",
+      "baseline_entry_sha256": "cfe59538c885461391356108a021b46e1d7186164c36b4ec979f298d13057bf1",
+      "source_contact": "../inventory/building__lab/page-001.png",
+      "source_card": 7,
+      "recipe": "shelf_wall_1_1",
+      "assemblies": [
+        "emerald_interior_birch_wall_bookcase"
+      ],
+      "added_on": "g3q/6408-6409-6410-6411"
+    },
+    {
+      "key": "g3q/2918-2918-6387-6388",
+      "group": "building__lab",
+      "label": "CRT desk wall projection left",
+      "family": "CRT computer desk",
+      "reason": "The CRT has a separate screen housing, horizontal worktop and open space under the desk. The upper source row is the rear wall/monitor continuation, checked with its matching lower desk halves. Inspected source/model card 8.",
+      "baseline_entry_sha256": "e287d5f9890ec630a09eb4ecbd3208ef27f534fb94562d2567f63d24faf6dfbc",
+      "source_contact": "../inventory/building__lab/page-001.png",
+      "source_card": 8,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_birch_crt_desk"
+      ]
+    },
+    {
+      "key": "g3q/2918-2918-6389-2923",
+      "group": "building__lab",
+      "label": "CRT desk wall projection right",
+      "family": "CRT computer desk",
+      "reason": "The CRT has a separate screen housing, horizontal worktop and open space under the desk. The upper source row is the rear wall/monitor continuation, checked with its matching lower desk halves. Inspected source/model card 9.",
+      "baseline_entry_sha256": "af211a3f29235b59a1fe9081f589eb9270480de158f1340ea067fef2a25596a7",
+      "source_contact": "../inventory/building__lab/page-001.png",
+      "source_card": 9,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_birch_crt_desk"
+      ]
+    },
+    {
+      "key": "g3q/6390-6391-6392-6393",
+      "group": "building__lab",
+      "label": "Round research machine rear left",
+      "family": "round research machine",
+      "reason": "The four source quadrants form one circular apparatus. Curved rear halves and lower front control sections retain a rounded top perimeter and a continuous base in the full source assembly. Inspected source/model card 10.",
+      "baseline_entry_sha256": "34d66685e912812a54ce850b3afee861c1f11b68126b26fde358603b3a9bb2b5",
+      "source_contact": "../inventory/building__lab/page-001.png",
+      "source_card": 10,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_birch_research_machine"
+      ]
+    },
+    {
+      "key": "g3q/6394-6395-6396-6397",
+      "group": "building__lab",
+      "label": "Round research machine rear right",
+      "family": "round research machine",
+      "reason": "The four source quadrants form one circular apparatus. Curved rear halves and lower front control sections retain a rounded top perimeter and a continuous base in the full source assembly. Inspected source/model card 11.",
+      "baseline_entry_sha256": "22132e84bff318bae5ab8344201a69977c3c69887010a385ede37c54110e0578",
+      "source_contact": "../inventory/building__lab/page-001.png",
+      "source_card": 11,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_birch_research_machine"
+      ]
+    },
+    {
+      "key": "g3q/6351-6352-6398-6399",
+      "group": "building__lab",
+      "label": "Two-cylinder equipment rack upper rim",
+      "family": "laboratory cylinder rack",
+      "reason": "Two tall parallel rails/cylinders remain separated by a recessed center. The thin upper cap is a true existing stack on the lower equipment body. Inspected source/model card 12.",
+      "baseline_entry_sha256": "5456b1f1e82f90ca23023a5c7335e9466786860ab28dfcdea24e0ba19a47d858",
+      "source_contact": "../inventory/building__lab/page-001.png",
+      "source_card": 12,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_birch_cylinder_rack"
+      ]
+    },
+    {
+      "key": "g3q/6404-6405-6406-6407",
+      "group": "building__lab",
+      "label": "Wall bookcase lower shelves left",
+      "family": "laboratory bookcases",
+      "reason": "Rebuild the complete shelf as a grounded frame with open shelf recesses, individual book spines and source-local front details; its actual adjoining source rows form one coherent stack. The wall shelf has two rows; the separate crate/floor below remain outside it.",
+      "baseline_entry_sha256": "9421c4f42bb87a641f865d23e04edf68227a485288a13c34107d4cbc0ce1fc57",
+      "source_contact": "../inventory/building__lab/page-001.png",
+      "source_card": 13,
+      "recipe": "shelf_wall_0_0",
+      "assemblies": [
+        "emerald_interior_birch_wall_bookcase"
+      ]
+    },
+    {
+      "key": "g3q/6408-6409-6410-6411",
+      "group": "building__lab",
+      "label": "Wall bookcase lower shelves right",
+      "family": "laboratory bookcases",
+      "reason": "Rebuild the complete shelf as a grounded frame with open shelf recesses, individual book spines and source-local front details; its actual adjoining source rows form one coherent stack. The wall shelf has two rows; the separate crate/floor below remain outside it.",
+      "baseline_entry_sha256": "2138733f49f50617c7af3e57e33b120182629589b30904cd93a0861cd29832ab",
+      "source_contact": "../inventory/building__lab/page-001.png",
+      "source_card": 14,
+      "recipe": "shelf_wall_1_0",
+      "assemblies": [
+        "emerald_interior_birch_wall_bookcase"
+      ]
+    },
+    {
+      "key": "g3q/6412-6413-6414-6415",
+      "group": "building__lab",
+      "label": "CRT computer desk tower half",
+      "family": "CRT computer desk",
+      "reason": "The CRT has a separate screen housing, horizontal worktop and open space under the desk. The upper source row is the rear wall/monitor continuation, checked with its matching lower desk halves. Inspected source/model card 15.",
+      "baseline_entry_sha256": "387d907d5587cb884c006f594cacbd4cc57aee19c18858b1a0f04d1b9209985f",
+      "source_contact": "../inventory/building__lab/page-001.png",
+      "source_card": 15,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_birch_crt_desk"
+      ]
+    },
+    {
+      "key": "g3q/6416-6417-6418-6419",
+      "group": "building__lab",
+      "label": "CRT computer desk monitor half",
+      "family": "CRT computer desk",
+      "reason": "The CRT has a separate screen housing, horizontal worktop and open space under the desk. The upper source row is the rear wall/monitor continuation, checked with its matching lower desk halves. Inspected source/model card 16.",
+      "baseline_entry_sha256": "488df5e2dded625b10b1008aa0e4da0f17683699324233b9d5c031d72debfca0",
+      "source_contact": "../inventory/building__lab/page-001.png",
+      "source_card": 16,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_birch_crt_desk"
+      ]
+    },
+    {
+      "key": "g3q/6420-6421-6422-6423",
+      "group": "building__lab",
+      "label": "Round research machine front left",
+      "family": "round research machine",
+      "reason": "The four source quadrants form one circular apparatus. Curved rear halves and lower front control sections retain a rounded top perimeter and a continuous base in the full source assembly. Inspected source/model card 17.",
+      "baseline_entry_sha256": "7fe9cc4cd915e120b6fef4772d0e69ffbaa11b3b94690dd3cc3d5c3794509f60",
+      "source_contact": "../inventory/building__lab/page-001.png",
+      "source_card": 17,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_birch_research_machine"
+      ]
+    },
+    {
+      "key": "g3q/6424-6425-6426-6427",
+      "group": "building__lab",
+      "label": "Round research machine front right",
+      "family": "round research machine",
+      "reason": "The four source quadrants form one circular apparatus. Curved rear halves and lower front control sections retain a rounded top perimeter and a continuous base in the full source assembly. Inspected source/model card 18.",
+      "baseline_entry_sha256": "01f3fdca862be15a7960fec668f13d8237a093300e90805fe4ac0037896c11cb",
+      "source_contact": "../inventory/building__lab/page-001.png",
+      "source_card": 18,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_birch_research_machine"
+      ]
+    },
+    {
+      "key": "g3q/6428-6429-6430-6431",
+      "group": "building__lab",
+      "label": "Two-cylinder equipment rack body",
+      "family": "laboratory cylinder rack",
+      "reason": "Two tall parallel rails/cylinders remain separated by a recessed center. The thin upper cap is a true existing stack on the lower equipment body. Inspected source/model card 19.",
+      "baseline_entry_sha256": "80dcc18aa6882218665b89a2007c66bea595ef246fbdfa3b4407f50a64fcded2",
+      "source_contact": "../inventory/building__lab/page-001.png",
+      "source_card": 19,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_birch_cylinder_rack"
+      ]
+    },
+    {
+      "key": "g3q/6436-6437-6438-6439",
+      "group": "building__lab",
+      "label": "Wall bookcase lower cabinet left",
+      "family": "laboratory bookcases",
+      "reason": "This is a separate yellow storage crate in front of the wall shelf; give it a bounded body, lid and binding strip without adjoining floor pixels.",
+      "baseline_entry_sha256": "b66a1a7673334b1ded18ed5685ac7486f5f5cc5a095312bb237b17e00144ab59",
+      "source_contact": "../inventory/building__lab/page-001.png",
+      "source_card": 20,
+      "recipe": "wall_crate",
+      "assemblies": []
+    },
+    {
+      "key": "g3q/6440-6441-6356-6356",
+      "group": "building__lab",
+      "label": "Wall bookcase lower cabinet right",
+      "family": "laboratory bookcases",
+      "reason": "The right cell below the wall shelf is walkable tiled floor in every occurrence, not another upright cabinet; flatten its source paint onto a one-voxel floor surface.",
+      "baseline_entry_sha256": "7088ac6745a0fc30fe2ca990d7b7734845c47ca7759ca3f12f17210e5393edd0",
+      "source_contact": "../inventory/building__lab/page-001.png",
+      "source_card": 21,
+      "recipe": "floor_projection",
+      "assemblies": []
+    },
+    {
+      "key": "g3q/6446-6447-6448-6449",
+      "group": "building__lab",
+      "label": "Free bookcase top with yellow box left",
+      "family": "laboratory bookcases",
+      "reason": "Rebuild the complete shelf as a grounded frame with open shelf recesses, individual book spines and source-local front details; its actual adjoining source rows form one coherent stack. The free shelf has a three-row cap/middle/base chain, supported by the chain-aware normal planner.",
+      "baseline_entry_sha256": "62f5f8a31653fba12a4ac49b1278ec08e32a6059475db6f5338b89dfde37f824",
+      "source_contact": "../inventory/building__lab/page-001.png",
+      "source_card": 22,
+      "recipe": "shelf_boxleft_0_2",
+      "assemblies": [
+        "emerald_interior_birch_free_bookcases"
+      ],
+      "added_on": "g3q/6384-6385-6404-6405"
+    },
+    {
+      "key": "g3q/6450-6451-6452-6453",
+      "group": "building__lab",
+      "label": "Free bookcase top right",
+      "family": "laboratory bookcases",
+      "reason": "Rebuild the complete shelf as a grounded frame with open shelf recesses, individual book spines and source-local front details; its actual adjoining source rows form one coherent stack. The free shelf has a three-row cap/middle/base chain, supported by the chain-aware normal planner.",
+      "baseline_entry_sha256": "b2d41b1666838aa29b03885e64443fcaa771697c49a076eaec75d2c74635b21b",
+      "source_contact": "../inventory/building__lab/page-001.png",
+      "source_card": 23,
+      "recipe": "shelf_free_1_2",
+      "assemblies": [
+        "emerald_interior_birch_free_bookcases"
+      ],
+      "added_on": "g3q/6385-6386-6408-6409"
+    },
+    {
+      "key": "g3q/6351-6352-6454-6455",
+      "group": "building__lab",
+      "label": "Potted plant crown tip on beige floor",
+      "family": "laboratory potted plants",
+      "reason": "One grounded terracotta pot, yellow rim and nine connected arching fronds are authored together, then split at the existing two-row stack seam. Exact native dark/light leaf pixels replace the earlier uniform green crown; floor and wall pixels stay outside the plant.",
+      "baseline_entry_sha256": "1a8d73d3f86227b6d82619f0e8c8cfe0ac0cebdb4d0d2139f5a758b34ed0e0a8",
+      "source_contact": "../inventory/building__lab/page-001.png",
+      "source_card": 24,
+      "recipe": "plant_cap",
+      "assemblies": [
+        "emerald_interior_birch_plant"
+      ]
+    },
+    {
+      "key": "g3q/6460-6461-6449-6462",
+      "group": "building__lab",
+      "label": "Yellow sealed crate lower body",
+      "family": "laboratory storage crates",
+      "reason": "The yellow crate or drawer face retains its dark perimeter and central seam. Its finite box depth and upper/lower stacked variants correspond to the storage objects shown beside the lab shelves. Inspected source/model card 25.",
+      "baseline_entry_sha256": "0bda53eb09bd2299eacf49894d8d773d84de8e2ed9748874d9e5ef83a0856f4f",
+      "source_contact": "../inventory/building__lab/page-001.png",
+      "source_card": 25,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_birch_crate"
+      ]
+    },
+    {
+      "key": "g3q/6351-6352-6463-6464",
+      "group": "building__lab",
+      "label": "Yellow sealed crate upper lid",
+      "family": "laboratory storage crates",
+      "reason": "The yellow crate or drawer face retains its dark perimeter and central seam. Its finite box depth and upper/lower stacked variants correspond to the storage objects shown beside the lab shelves. Inspected source/model card 26.",
+      "baseline_entry_sha256": "ec26244bbe1791e9b47689648af7a2e0779ab0273dfbadf7ec23622d1daa0d04",
+      "source_contact": "../inventory/building__lab/page-001.png",
+      "source_card": 26,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_birch_crate"
+      ]
+    },
+    {
+      "key": "g3q/6384-6385-6404-6405",
+      "group": "building__lab",
+      "label": "Free bookcase white top and books left",
+      "family": "laboratory bookcases",
+      "reason": "Rebuild the complete shelf as a grounded frame with open shelf recesses, individual book spines and source-local front details; its actual adjoining source rows form one coherent stack. The free shelf has a three-row cap/middle/base chain, supported by the chain-aware normal planner.",
+      "baseline_entry_sha256": "5eb203cd526d30b72540872385a9886ea403e8de5917866e1b477a4689d4fbec",
+      "source_contact": "../inventory/building__lab/page-001.png",
+      "source_card": 27,
+      "recipe": "shelf_free_0_1",
+      "assemblies": [
+        "emerald_interior_birch_free_bookcases"
+      ],
+      "added_on": "g3q/6406-6407-6436-6437"
+    },
+    {
+      "key": "g3q/6385-6386-6408-6409",
+      "group": "building__lab",
+      "label": "Free bookcase white top and books right",
+      "family": "laboratory bookcases",
+      "reason": "Rebuild the complete shelf as a grounded frame with open shelf recesses, individual book spines and source-local front details; its actual adjoining source rows form one coherent stack. The free shelf has a three-row cap/middle/base chain, supported by the chain-aware normal planner.",
+      "baseline_entry_sha256": "6f0973b479a7078de42c12adc77cdbe81377beb1d0026e6d2306f1326c2b1c47",
+      "source_contact": "../inventory/building__lab/page-001.png",
+      "source_card": 28,
+      "recipe": "shelf_free_1_1",
+      "assemblies": [
+        "emerald_interior_birch_free_bookcases"
+      ],
+      "added_on": "g3q/6410-6411-6440-6441"
+    },
+    {
+      "key": "g3q/6465-6466-6467-6468",
+      "group": "building__lab",
+      "label": "Potted plant beige-floor base",
+      "family": "laboratory potted plants",
+      "reason": "One grounded terracotta pot, yellow rim and nine connected arching fronds are authored together, then split at the existing two-row stack seam. Exact native dark/light leaf pixels replace the earlier uniform green crown; floor and wall pixels stay outside the plant.",
+      "baseline_entry_sha256": "d1de2defd1e276954395705104849ba1f5df422802dcc8e7f5a4f6d59e5308d9",
+      "source_contact": "../inventory/building__lab/page-001.png",
+      "source_card": 29,
+      "recipe": "plant_base",
+      "assemblies": [
+        "emerald_interior_birch_plant"
+      ]
+    },
+    {
+      "key": "g3q/6470-6471-6472-6473",
+      "group": "building__lab",
+      "label": "Long workstation north CRT section left",
+      "family": "laboratory workstations",
+      "reason": "This is a section of the source-connected workstation: the CRT rises above its horizontal wooden top, middle sections bridge between supported ends, and the leg sections leave open space below the bench. Inspected source/model card 30.",
+      "baseline_entry_sha256": "8def53ecf7aff8573f071333e0f4826b3c7c4cee396967b36773763cfee79ab8",
+      "source_contact": "../inventory/building__lab/page-001.png",
+      "source_card": 30,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_birch_left_workstation",
+        "emerald_interior_lanette_paired_short_workstations"
+      ]
+    },
+    {
+      "key": "g3q/6474-6475-6476-6433",
+      "group": "building__lab",
+      "label": "Upright blue book stack",
+      "family": "upright book stacks",
+      "reason": "The blue upper book and stepped colored lower spines remain upright; the finite depth and stepped side profile separate this stack from the surrounding floor. Inspected source/model card 31.",
+      "baseline_entry_sha256": "a6b7d1a501ecfa3456e8eb04072c441e8af248ed427fda6d3070833859e93405",
+      "source_contact": "../inventory/building__lab/page-001.png",
+      "source_card": 31,
+      "recipe": null,
+      "assemblies": []
+    },
+    {
+      "key": "g3q/6406-6407-6436-6437",
+      "group": "building__lab",
+      "label": "Free bookcase books and lower cabinet left",
+      "family": "laboratory bookcases",
+      "reason": "Rebuild the complete shelf as a grounded frame with open shelf recesses, individual book spines and source-local front details; its actual adjoining source rows form one coherent stack. The free shelf has a three-row cap/middle/base chain, supported by the chain-aware normal planner.",
+      "baseline_entry_sha256": "dc506d1d2bd7a275cd5654b6016f374bc1289634fdfed1e2446273d5abe4ee7c",
+      "source_contact": "../inventory/building__lab/page-001.png",
+      "source_card": 32,
+      "recipe": "shelf_free_0_0",
+      "assemblies": [
+        "emerald_interior_birch_free_bookcases"
+      ]
+    },
+    {
+      "key": "g3q/6410-6411-6440-6441",
+      "group": "building__lab",
+      "label": "Free bookcase books and lower cabinet right",
+      "family": "laboratory bookcases",
+      "reason": "Rebuild the complete shelf as a grounded frame with open shelf recesses, individual book spines and source-local front details; its actual adjoining source rows form one coherent stack. The free shelf has a three-row cap/middle/base chain, supported by the chain-aware normal planner.",
+      "baseline_entry_sha256": "84fe090aa5aed7cbc8d469b47a233c219c93d9121103f1709cd04268cf913334",
+      "source_contact": "../inventory/building__lab/page-002.png",
+      "source_card": 33,
+      "recipe": "shelf_free_1_0",
+      "assemblies": [
+        "emerald_interior_birch_free_bookcases"
+      ]
+    },
+    {
+      "key": "g3q/6477-6478-6448-6449",
+      "group": "building__lab",
+      "label": "Free bookcase top with centered box",
+      "family": "laboratory bookcases",
+      "reason": "Rebuild the complete shelf as a grounded frame with open shelf recesses, individual book spines and source-local front details; its actual adjoining source rows form one coherent stack. The free shelf has a three-row cap/middle/base chain, supported by the chain-aware normal planner.",
+      "baseline_entry_sha256": "c545a19fbedfe4e1ab7e41e141948304b0b3a9f7226590a0c925bc320e3765cd",
+      "source_contact": "../inventory/building__lab/page-002.png",
+      "source_card": 34,
+      "recipe": "shelf_boxcenter_0_2",
+      "assemblies": [
+        "emerald_interior_birch_free_bookcases"
+      ],
+      "added_on": "g3q/6384-6385-6404-6405"
+    },
+    {
+      "key": "g3q/6479-6480-6456-6457",
+      "group": "building__lab",
+      "label": "Long workstation middle connector left",
+      "family": "laboratory workstations",
+      "reason": "This is a section of the source-connected workstation: the CRT rises above its horizontal wooden top, middle sections bridge between supported ends, and the leg sections leave open space below the bench. Inspected source/model card 35.",
+      "baseline_entry_sha256": "614d764453d46f934a878261a47a2af5c7d02974f915710556a42b919cf43e4f",
+      "source_contact": "../inventory/building__lab/page-002.png",
+      "source_card": 35,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_birch_left_workstation"
+      ]
+    },
+    {
+      "key": "g3q/6481-6482-6483-6484",
+      "group": "building__lab",
+      "label": "North-backed green chair",
+      "family": "laboratory green chairs",
+      "reason": "Rebuilt the flattened green seat as a chair with four grounded legs, a raised seat, open space beneath it and an upright back facing north. Source green and frame pixels paint the named parts. Inspected source/model card 36.",
+      "baseline_entry_sha256": "feb753980c38412f1c7569acd89ff3c7a79a16c1287405c029a78d246eed37ac",
+      "source_contact": "../inventory/building__lab/page-002.png",
+      "source_card": 36,
+      "recipe": "chair_north",
+      "assemblies": []
+    },
+    {
+      "key": "g3q/6485-6486-6487-6488",
+      "group": "building__lab",
+      "label": "Yellow storage drawer upper box",
+      "family": "laboratory storage crates",
+      "reason": "The yellow crate or drawer face retains its dark perimeter and central seam. Its finite box depth and upper/lower stacked variants correspond to the storage objects shown beside the lab shelves. Inspected source/model card 37.",
+      "baseline_entry_sha256": "865e2aef872a2544710d778e96101cd1cba361f33ee459dadbcda0e4127c10c5",
+      "source_contact": "../inventory/building__lab/page-002.png",
+      "source_card": 37,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_birch_drawers"
+      ]
+    },
+    {
+      "key": "g3q/6489-6490-6491-6492",
+      "group": "building__lab",
+      "label": "Long workstation north CRT section right",
+      "family": "laboratory workstations",
+      "reason": "This is a section of the source-connected workstation: the CRT rises above its horizontal wooden top, middle sections bridge between supported ends, and the leg sections leave open space below the bench. Inspected source/model card 38.",
+      "baseline_entry_sha256": "3eaa33fcc8f11a703838cd5ea625c368ff488741ae5284874437f414eb2d3a9a",
+      "source_contact": "../inventory/building__lab/page-002.png",
+      "source_card": 38,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_birch_right_workstation",
+        "emerald_interior_lanette_paired_short_workstations"
+      ]
+    },
+    {
+      "key": "g3q/2923-2923-6493-6494",
+      "group": "building__lab",
+      "label": "Wall-backed plant crown tip",
+      "family": "laboratory potted plants",
+      "reason": "One grounded terracotta pot, yellow rim and nine connected arching fronds are authored together, then split at the existing two-row stack seam. Exact native dark/light leaf pixels replace the earlier uniform green crown; floor and wall pixels stay outside the plant.",
+      "baseline_entry_sha256": "09e88e64aa6becd67ddf68f64c1be232e2ea031fd1d19b963dcbfafd804d5d05",
+      "source_contact": "../inventory/building__lab/page-002.png",
+      "source_card": 39,
+      "recipe": "plant_cap",
+      "assemblies": [
+        "emerald_interior_birch_wall_plant"
+      ]
+    },
+    {
+      "key": "g3q/6458-6459-6442-6469",
+      "group": "building__lab",
+      "label": "Long workstation terminal controls left",
+      "family": "laboratory workstations",
+      "reason": "This is a section of the source-connected workstation: the CRT rises above its horizontal wooden top, middle sections bridge between supported ends, and the leg sections leave open space below the bench. Inspected source/model card 40.",
+      "baseline_entry_sha256": "3306fde173474f60ceb81a91de51e571e73f1c6a717d7ab8992dda241ea425ea",
+      "source_contact": "../inventory/building__lab/page-002.png",
+      "source_card": 40,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_birch_left_workstation"
+      ]
+    },
+    {
+      "key": "g3q/6495-6496-6497-6498",
+      "group": "building__lab",
+      "label": "East-backed green chair on beige floor",
+      "family": "laboratory green chairs",
+      "reason": "Rebuilt the flattened green seat as a chair with four grounded legs, a raised seat, open space beneath it and an upright back facing east. Source green and frame pixels paint the named parts. Inspected source/model card 41.",
+      "baseline_entry_sha256": "f364edf0dbdf34c580a196692f577fd074f28541b37d74e4fa8aa9221bc21e1c",
+      "source_contact": "../inventory/building__lab/page-002.png",
+      "source_card": 41,
+      "recipe": "chair_east",
+      "assemblies": []
+    },
+    {
+      "key": "g3q/6499-6500-6501-6502",
+      "group": "building__lab",
+      "label": "Yellow storage drawer lower body",
+      "family": "laboratory storage crates",
+      "reason": "The yellow crate or drawer face retains its dark perimeter and central seam. Its finite box depth and upper/lower stacked variants correspond to the storage objects shown beside the lab shelves. Inspected source/model card 42.",
+      "baseline_entry_sha256": "83af31aac996d8d1693313412365de712af5ad7dcb82e41ba08770b2353adfa3",
+      "source_contact": "../inventory/building__lab/page-002.png",
+      "source_card": 42,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_birch_drawers"
+      ]
+    },
+    {
+      "key": "g3q/6503-6504-6505-6506",
+      "group": "building__lab",
+      "label": "Long workstation middle connector right",
+      "family": "laboratory workstations",
+      "reason": "This is a section of the source-connected workstation: the CRT rises above its horizontal wooden top, middle sections bridge between supported ends, and the leg sections leave open space below the bench. Inspected source/model card 43.",
+      "baseline_entry_sha256": "ba7c12bdb67180fdb6dba4973949782f0c3e6cc68fd930048e0460872451b6e8",
+      "source_contact": "../inventory/building__lab/page-002.png",
+      "source_card": 43,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_birch_right_workstation"
+      ]
+    },
+    {
+      "key": "g3q/6507-6508-6509-6510",
+      "group": "building__lab",
+      "label": "Wall-backed potted plant body",
+      "family": "laboratory potted plants",
+      "reason": "One grounded terracotta pot, yellow rim and nine connected arching fronds are authored together, then split at the existing two-row stack seam. Exact native dark/light leaf pixels replace the earlier uniform green crown; floor and wall pixels stay outside the plant.",
+      "baseline_entry_sha256": "dd91adab62ece3771963b2bf607fd1cba6acc22d373aaa4c9c4ff33e48e9f99c",
+      "source_contact": "../inventory/building__lab/page-002.png",
+      "source_card": 44,
+      "recipe": "plant_base",
+      "assemblies": [
+        "emerald_interior_birch_wall_plant"
+      ]
+    },
+    {
+      "key": "g3q/6516-6475-6400-6517",
+      "group": "building__lab",
+      "label": "Blue book stack on beige floor",
+      "family": "upright book stacks",
+      "reason": "The blue upper book and stepped colored lower spines remain upright; the finite depth and stepped side profile separate this stack from the surrounding floor. Inspected source/model card 45.",
+      "baseline_entry_sha256": "2c60225a8a9d6cfebcf0e7a084b993086f42598909010aab66a802a8a6bb00e0",
+      "source_contact": "../inventory/building__lab/page-002.png",
+      "source_card": 45,
+      "recipe": null,
+      "assemblies": []
+    },
+    {
+      "key": "g3q/6518-6519-6520-6521",
+      "group": "building__lab",
+      "label": "East-backed green chair by workstation",
+      "family": "laboratory green chairs",
+      "reason": "Rebuilt the flattened green seat as a chair with four grounded legs, a raised seat, open space beneath it and an upright back facing east. Source green and frame pixels paint the named parts. Inspected source/model card 46.",
+      "baseline_entry_sha256": "dfd9c356c99adb2718b8a22f53284cd64293ec7c66d880cc39479c98a9770e91",
+      "source_contact": "../inventory/building__lab/page-002.png",
+      "source_card": 46,
+      "recipe": "chair_east",
+      "assemblies": []
+    },
+    {
+      "key": "g3q/6522-6523-6449-6462",
+      "group": "building__lab",
+      "label": "Single sealed yellow parcel",
+      "family": "laboratory storage crates",
+      "reason": "The yellow crate or drawer face retains its dark perimeter and central seam. Its finite box depth and upper/lower stacked variants correspond to the storage objects shown beside the lab shelves. Inspected source/model card 47.",
+      "baseline_entry_sha256": "db6927ada449956e7351b73571813c54fcab8ee24c0d87c58c1a9ce5a8115b86",
+      "source_contact": "../inventory/building__lab/page-002.png",
+      "source_card": 47,
+      "recipe": null,
+      "assemblies": []
+    },
+    {
+      "key": "g3q/6524-6525-6442-6469",
+      "group": "building__lab",
+      "label": "Long workstation terminal controls right",
+      "family": "laboratory workstations",
+      "reason": "This is a section of the source-connected workstation: the CRT rises above its horizontal wooden top, middle sections bridge between supported ends, and the leg sections leave open space below the bench. Inspected source/model card 48.",
+      "baseline_entry_sha256": "aadbaec36e21d0eb3359dec4a86e67f8cb55274ae2efa9d5a973dfa1c15c58fc",
+      "source_contact": "../inventory/building__lab/page-002.png",
+      "source_card": 48,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_birch_right_workstation"
+      ]
+    },
+    {
+      "key": "g3q/6526-6527-6528-6529",
+      "group": "building__lab",
+      "label": "Bench with open book and red accessory",
+      "family": "lab book bench",
+      "reason": "The bench has a horizontal top and separated legs with air beneath. Books/accessories rise separately above the surface, rather than lifting the floor into a solid pedestal. Inspected source/model card 49.",
+      "baseline_entry_sha256": "4f5eb62e6a643b2bca410c0a1feb31ec1bb452294ded47b5915e0269a047e5e5",
+      "source_contact": "../inventory/building__lab/page-002.png",
+      "source_card": 49,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_lanette_open_book_bench"
+      ]
+    },
+    {
+      "key": "g3q/6479-6480-6513-6514",
+      "group": "building__lab",
+      "label": "Paired workstation middle left",
+      "family": "laboratory workstations",
+      "reason": "This is a section of the source-connected workstation: the CRT rises above its horizontal wooden top, middle sections bridge between supported ends, and the leg sections leave open space below the bench. Inspected source/model card 50.",
+      "baseline_entry_sha256": "173b03a4acd68963abd76c4bd39a7b363e98ab081295567fff3000c7c12b7986",
+      "source_contact": "../inventory/building__lab/page-002.png",
+      "source_card": 50,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_weather_paired_workstation",
+        "emerald_interior_weather_upper_paired_workstation"
+      ]
+    },
+    {
+      "key": "g3q/6503-6504-6532-6533",
+      "group": "building__lab",
+      "label": "Paired workstation middle right",
+      "family": "laboratory workstations",
+      "reason": "This is a section of the source-connected workstation: the CRT rises above its horizontal wooden top, middle sections bridge between supported ends, and the leg sections leave open space below the bench. Inspected source/model card 51.",
+      "baseline_entry_sha256": "6941664d85faf0e5f4082a5c1ab4f0faa5808c62599f87eaac5aaec57d8a73f1",
+      "source_contact": "../inventory/building__lab/page-002.png",
+      "source_card": 51,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_weather_paired_workstation",
+        "emerald_interior_weather_upper_paired_workstation",
+        "emerald_interior_weather_single_workstation"
+      ]
+    },
+    {
+      "key": "g3q/6531-6531-6534-6535",
+      "group": "building__lab",
+      "label": "Potted plant crown tip on gray floor",
+      "family": "laboratory potted plants",
+      "reason": "One grounded terracotta pot, yellow rim and nine connected arching fronds are authored together, then split at the existing two-row stack seam. Exact native dark/light leaf pixels replace the earlier uniform green crown; floor and wall pixels stay outside the plant.",
+      "baseline_entry_sha256": "8fc94a2784b16066f3a23c3b41616c72176130b90864b5124405512c615f2df8",
+      "source_contact": "../inventory/building__lab/page-002.png",
+      "source_card": 52,
+      "recipe": "plant_cap",
+      "assemblies": [
+        "emerald_interior_weather_plant",
+        "emerald_interior_weather_edge_plant"
+      ]
+    },
+    {
+      "key": "g3q/6536-6537-6538-6539",
+      "group": "building__lab",
+      "label": "East-backed green chair on gray floor",
+      "family": "laboratory green chairs",
+      "reason": "Rebuilt the flattened green seat as a chair with four grounded legs, a raised seat, open space beneath it and an upright back facing east. Source green and frame pixels paint the named parts. Inspected source/model card 53.",
+      "baseline_entry_sha256": "f364edf0dbdf34c580a196692f577fd074f28541b37d74e4fa8aa9221bc21e1c",
+      "source_contact": "../inventory/building__lab/page-002.png",
+      "source_card": 53,
+      "recipe": "chair_east",
+      "assemblies": []
+    },
+    {
+      "key": "g3q/6540-6541-6542-6543",
+      "group": "building__lab",
+      "label": "West-backed green chair by single workstation",
+      "family": "laboratory green chairs",
+      "reason": "Rebuilt the flattened green seat as a chair with four grounded legs, a raised seat, open space beneath it and an upright back facing west. Source green and frame pixels paint the named parts. Inspected source/model card 54.",
+      "baseline_entry_sha256": "dfd9c356c99adb2718b8a22f53284cd64293ec7c66d880cc39479c98a9770e91",
+      "source_contact": "../inventory/building__lab/page-002.png",
+      "source_card": 54,
+      "recipe": "chair_west",
+      "assemblies": []
+    },
+    {
+      "key": "g3q/6503-6504-6442-6469",
+      "group": "building__lab",
+      "label": "Short workstation lower right",
+      "family": "laboratory workstations",
+      "reason": "This is a section of the source-connected workstation: the CRT rises above its horizontal wooden top, middle sections bridge between supported ends, and the leg sections leave open space below the bench. Inspected source/model card 55.",
+      "baseline_entry_sha256": "f4bc106679704cf5b79d1408b843933dcb33654d2135cc8b8eff2ef15a3c00de",
+      "source_contact": "../inventory/building__lab/page-002.png",
+      "source_card": 55,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_lanette_paired_short_workstations"
+      ]
+    },
+    {
+      "key": "g3q/6479-6480-6442-6469",
+      "group": "building__lab",
+      "label": "Short workstation lower left",
+      "family": "laboratory workstations",
+      "reason": "This is a section of the source-connected workstation: the CRT rises above its horizontal wooden top, middle sections bridge between supported ends, and the leg sections leave open space below the bench. Inspected source/model card 56.",
+      "baseline_entry_sha256": "6bd402f80f9ef10630d38eae18dacd68ed0956441b8d21c0de623d2e9b78d3dd",
+      "source_contact": "../inventory/building__lab/page-002.png",
+      "source_card": 56,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_lanette_paired_short_workstations"
+      ]
+    },
+    {
+      "key": "g3q/6545-6546-6547-6548",
+      "group": "building__lab",
+      "label": "Single workstation south leg section",
+      "family": "laboratory workstations",
+      "reason": "This is a section of the source-connected workstation: the CRT rises above its horizontal wooden top, middle sections bridge between supported ends, and the leg sections leave open space below the bench. Inspected source/model card 57.",
+      "baseline_entry_sha256": "71ee8a219ad5a7ce14b3db6cbda44ad7c2c306a8e0df60d75ef221697645181d",
+      "source_contact": "../inventory/building__lab/page-002.png",
+      "source_card": 57,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_weather_single_workstation"
+      ]
+    },
+    {
+      "key": "g3q/6549-6550-6551-6552",
+      "group": "building__lab",
+      "label": "Potted plant gray-floor base",
+      "family": "laboratory potted plants",
+      "reason": "One grounded terracotta pot, yellow rim and nine connected arching fronds are authored together, then split at the existing two-row stack seam. Exact native dark/light leaf pixels replace the earlier uniform green crown; floor and wall pixels stay outside the plant.",
+      "baseline_entry_sha256": "d1de2defd1e276954395705104849ba1f5df422802dcc8e7f5a4f6d59e5308d9",
+      "source_contact": "../inventory/building__lab/page-002.png",
+      "source_card": 58,
+      "recipe": "plant_base",
+      "assemblies": [
+        "emerald_interior_weather_plant"
+      ]
+    },
+    {
+      "key": "g3q/6553-6554-6555-6556",
+      "group": "building__lab",
+      "label": "West-backed green chair by paired workstation",
+      "family": "laboratory green chairs",
+      "reason": "Rebuilt the flattened green seat as a chair with four grounded legs, a raised seat, open space beneath it and an upright back facing west. Source green and frame pixels paint the named parts. Inspected source/model card 59.",
+      "baseline_entry_sha256": "dfd9c356c99adb2718b8a22f53284cd64293ec7c66d880cc39479c98a9770e91",
+      "source_contact": "../inventory/building__lab/page-002.png",
+      "source_card": 59,
+      "recipe": "chair_west",
+      "assemblies": []
+    },
+    {
+      "key": "g3q/6559-6560-6491-6492",
+      "group": "building__lab",
+      "label": "Paired workstation left-facing monitor",
+      "family": "laboratory workstations",
+      "reason": "This is a section of the source-connected workstation: the CRT rises above its horizontal wooden top, middle sections bridge between supported ends, and the leg sections leave open space below the bench. Inspected source/model card 60.",
+      "baseline_entry_sha256": "99ecf899f084449afd1843fb7aa05512e98d4fa58750098d15d31b1fa1500026",
+      "source_contact": "../inventory/building__lab/page-002.png",
+      "source_card": 60,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_weather_paired_workstation",
+        "emerald_interior_weather_single_workstation"
+      ]
+    },
+    {
+      "key": "g3q/6561-6562-6472-6473",
+      "group": "building__lab",
+      "label": "Paired workstation right-facing monitor",
+      "family": "laboratory workstations",
+      "reason": "This is a section of the source-connected workstation: the CRT rises above its horizontal wooden top, middle sections bridge between supported ends, and the leg sections leave open space below the bench. Inspected source/model card 61.",
+      "baseline_entry_sha256": "bb3d0d8d263bae5e81bfeb7d1f6d0c9fd44d7fce465a7beaacf6915d4e7d6822",
+      "source_contact": "../inventory/building__lab/page-002.png",
+      "source_card": 61,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_weather_paired_workstation"
+      ]
+    },
+    {
+      "key": "g3q/6569-6570-6491-6492",
+      "group": "building__lab",
+      "label": "Upper-floor workstation left-facing monitor",
+      "family": "laboratory workstations",
+      "reason": "This is a section of the source-connected workstation: the CRT rises above its horizontal wooden top, middle sections bridge between supported ends, and the leg sections leave open space below the bench. Inspected source/model card 62.",
+      "baseline_entry_sha256": "b2793b90e5955c8bf3d9d32ad273f7a27ab30e59421c08e302c143d3e907933f",
+      "source_contact": "../inventory/building__lab/page-002.png",
+      "source_card": 62,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_weather_upper_paired_workstation"
+      ]
+    },
+    {
+      "key": "g3q/6571-6572-6472-6473",
+      "group": "building__lab",
+      "label": "Upper-floor workstation right-facing monitor",
+      "family": "laboratory workstations",
+      "reason": "This is a section of the source-connected workstation: the CRT rises above its horizontal wooden top, middle sections bridge between supported ends, and the leg sections leave open space below the bench. Inspected source/model card 63.",
+      "baseline_entry_sha256": "ef13f86344b30c69df1a1afc26138835dfdc7f7ce5ad9e26d3ea74842016dc0e",
+      "source_contact": "../inventory/building__lab/page-002.png",
+      "source_card": 63,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_weather_upper_paired_workstation"
+      ]
+    },
+    {
+      "key": "g3q/6549-6550-6573-6574",
+      "group": "building__lab",
+      "label": "Gray-floor potted plant edge base",
+      "family": "laboratory potted plants",
+      "reason": "One grounded terracotta pot, yellow rim and nine connected arching fronds are authored together, then split at the existing two-row stack seam. Exact native dark/light leaf pixels replace the earlier uniform green crown; floor and wall pixels stay outside the plant.",
+      "baseline_entry_sha256": "0a839c509a14b4faeab38e84fb158ec16ccaf656d6f8762b4a6ce1855c872448",
+      "source_contact": "../inventory/building__lab/page-002.png",
+      "source_card": 64,
+      "recipe": "plant_base",
+      "assemblies": [
+        "emerald_interior_weather_edge_plant"
+      ]
+    },
+    {
+      "key": "g3q/6578-6579-6580-6581",
+      "group": "building__lab",
+      "label": "Weather Institute bed head left",
+      "family": "Weather Institute bed",
+      "reason": "Authored the complete 2-by-2 bed as a horizontal frame with four feet, a mattress, two pillows, low blanket and head/foot rails before slicing. This removes four upright extruded slabs while retaining the original source footprint. Inspected source/model card 65.",
+      "baseline_entry_sha256": "07e4cacd64df487a16b3bf62505e69c0fdaaa2744872344616c5bac239001e89",
+      "source_contact": "../inventory/building__lab/page-003.png",
+      "source_card": 65,
+      "recipe": "bed_0_0",
+      "assemblies": [
+        "emerald_interior_weather_bed"
+      ]
+    },
+    {
+      "key": "g3q/6582-6583-6584-6585",
+      "group": "building__lab",
+      "label": "Weather Institute bed head right",
+      "family": "Weather Institute bed",
+      "reason": "Authored the complete 2-by-2 bed as a horizontal frame with four feet, a mattress, two pillows, low blanket and head/foot rails before slicing. This removes four upright extruded slabs while retaining the original source footprint. Inspected source/model card 66.",
+      "baseline_entry_sha256": "8a5c6c70b64fe95f5696e0876a14e5c363404a929b2895b7b02fef11f0ea58bf",
+      "source_contact": "../inventory/building__lab/page-003.png",
+      "source_card": 66,
+      "recipe": "bed_1_0",
+      "assemblies": [
+        "emerald_interior_weather_bed"
+      ]
+    },
+    {
+      "key": "g3q/6557-6557-6586-6587",
+      "group": "building__lab",
+      "label": "Weather Institute tall terminal upper rim",
+      "family": "Weather Institute terminal",
+      "reason": "Minecraft QA exposed a detached room cornice at y11..15. Preserve only the connected native PC rim at y0..7 and explicitly stack it on the adjacent shared PC, as verified at Institute1F(2,0..1).",
+      "baseline_entry_sha256": "d18ee3dc2fbd702186dab912c6bb7c173c58f159867918f9a72164580aa109c6",
+      "source_contact": "../inventory/building__lab/page-003.png",
+      "source_card": 67,
+      "recipe": "weather_terminal_cap",
+      "added_on": "g3q/9-10-11-12",
+      "assemblies": ["emerald_weather_institute_tall_terminal"]
+    },
+    {
+      "key": "g3q/6591-6592-6593-6594",
+      "group": "building__lab",
+      "label": "Weather Institute bed foot left",
+      "family": "Weather Institute bed",
+      "reason": "Authored the complete 2-by-2 bed as a horizontal frame with four feet, a mattress, two pillows, low blanket and head/foot rails before slicing. This removes four upright extruded slabs while retaining the original source footprint. Inspected source/model card 68.",
+      "baseline_entry_sha256": "b669c883983dc4cf94767b60f80dac5cd793eec26710daa7fb091296c6e7e297",
+      "source_contact": "../inventory/building__lab/page-003.png",
+      "source_card": 68,
+      "recipe": "bed_0_1",
+      "assemblies": [
+        "emerald_interior_weather_bed"
+      ]
+    },
+    {
+      "key": "g3q/6595-6596-6597-6598",
+      "group": "building__lab",
+      "label": "Weather Institute bed foot right",
+      "family": "Weather Institute bed",
+      "reason": "Authored the complete 2-by-2 bed as a horizontal frame with four feet, a mattress, two pillows, low blanket and head/foot rails before slicing. This removes four upright extruded slabs while retaining the original source footprint. Inspected source/model card 69.",
+      "baseline_entry_sha256": "ff751a4fa86ebdd1bec3f82579dd8a8916e01b45bd613d9d66eb98fef3af6a4a",
+      "source_contact": "../inventory/building__lab/page-003.png",
+      "source_card": 69,
+      "recipe": "bed_1_1",
+      "assemblies": [
+        "emerald_interior_weather_bed"
+      ]
+    },
+    {
+      "key": "g3q/6599-6600-6588-6588",
+      "group": "building__lab",
+      "label": "Weather Institute terminal floor projection",
+      "family": "Weather Institute terminal",
+      "reason": "The single source occurrence is WALK0 below the PC at Institute1F(2,2). Its vent is projected from the machine above; use a one-voxel native-gray floor with walk:true and preserve the shared PC entry.",
+      "baseline_entry_sha256": "92466d9181c0e1bdcb3658f796821a0656a35877c76189043e5571fc13cbf28f",
+      "source_contact": "../inventory/building__lab/page-003.png",
+      "source_card": 70,
+      "recipe": "weather_terminal_floor",
+      "added_walk": true,
+      "assemblies": ["emerald_weather_institute_tall_terminal"]
+    },
+    {
+      "key": "g3q/6557-4680-6558-4660",
+      "group": "building__lab",
+      "label": "Stair portal upper left jamb",
+      "family": "Weather Institute stair portal",
+      "reason": "The full-depth jamb is structural wall geometry. Its alternating pale wall and blue-gray frame continue around the stair opening, with the correct left/right source identity. Inspected source/model card 71.",
+      "baseline_entry_sha256": "1033b110fd5b6e14c511194cd803ad6a8f5c86780ce4fe530c614a686be8896f",
+      "source_contact": "../inventory/building__lab/page-003.png",
+      "source_card": 71,
+      "recipe": null,
+      "assemblies": []
+    },
+    {
+      "key": "g3q/4681-6557-4661-6558",
+      "group": "building__lab",
+      "label": "Stair portal upper right jamb",
+      "family": "Weather Institute stair portal",
+      "reason": "The full-depth jamb is structural wall geometry. Its alternating pale wall and blue-gray frame continue around the stair opening, with the correct left/right source identity. Inspected source/model card 72.",
+      "baseline_entry_sha256": "405d83af7da07bc26a5cd9fa99125d321f00a47a50f64dc38af1694d36c752d4",
+      "source_contact": "../inventory/building__lab/page-003.png",
+      "source_card": 72,
+      "recipe": null,
+      "assemblies": []
+    },
+    {
+      "key": "g3q/6558-6558-6602-6603",
+      "group": "building__lab",
+      "label": "Wall-backed gray plant crown tip",
+      "family": "laboratory potted plants",
+      "reason": "One grounded terracotta pot, yellow rim and nine connected arching fronds are authored together, then split at the existing two-row stack seam. Exact native dark/light leaf pixels replace the earlier uniform green crown; floor and wall pixels stay outside the plant.",
+      "baseline_entry_sha256": "9ffe5165a375e236db1d5a0df63b617d61c3e893ed5ab6e5b94901c3fb01a68d",
+      "source_contact": "../inventory/building__lab/page-003.png",
+      "source_card": 73,
+      "recipe": "plant_cap",
+      "assemblies": [
+        "emerald_interior_weather_wall_plant"
+      ]
+    },
+    {
+      "key": "g3q/3656-3656-4938-4939",
+      "group": "building__lab",
+      "label": "Upper-floor dark stair landing",
+      "family": "Weather Institute stair landing",
+      "reason": "The shallow three-voxel-deep dark portal retains its stair-edge markings and warp metadata; it is the upper-floor opening in the reconstructed map, not a freestanding prop. Inspected source/model card 74.",
+      "baseline_entry_sha256": "f6dc9e3c249ba8776e310b3120b47cbb1c0931ea325fa4c7ee19b92bcffed9c0",
+      "source_contact": "../inventory/building__lab/page-003.png",
+      "source_card": 74,
+      "recipe": null,
+      "assemblies": []
+    },
+    {
+      "key": "g3q/6558-4702-6575-4702",
+      "group": "building__lab",
+      "label": "Stair portal lower left jamb",
+      "family": "Weather Institute stair portal",
+      "reason": "The full-depth jamb is structural wall geometry. Its alternating pale wall and blue-gray frame continue around the stair opening, with the correct left/right source identity. Inspected source/model card 75.",
+      "baseline_entry_sha256": "ecc19887690ac04e6bae9f50284e99a3b8405bd1a6aaf44ad390f8750731fad0",
+      "source_contact": "../inventory/building__lab/page-003.png",
+      "source_card": 75,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_weather_stair_lower"
+      ]
+    },
+    {
+      "key": "g3q/4930-6604-4931-6605",
+      "group": "building__lab",
+      "label": "Weather Institute ascending stair treads",
+      "family": "Weather Institute stairs",
+      "reason": "The side projection shows a stepped flight rather than a flat upright stair picture; the top retains the transverse pale tread bands inside its portal. Inspected source/model card 76.",
+      "baseline_entry_sha256": "a9d5db2a9b5906911a5a0768e5c593619b9255b73adba6a00d32dc77be37d4c0",
+      "source_contact": "../inventory/building__lab/page-003.png",
+      "source_card": 76,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_weather_stair_lower"
+      ]
+    },
+    {
+      "key": "g3q/4703-6558-4703-6575",
+      "group": "building__lab",
+      "label": "Stair portal lower right jamb",
+      "family": "Weather Institute stair portal",
+      "reason": "The full-depth jamb is structural wall geometry. Its alternating pale wall and blue-gray frame continue around the stair opening, with the correct left/right source identity. Inspected source/model card 77.",
+      "baseline_entry_sha256": "404ffeb9cdaf6d5cada86c02cbd11a6fe2686355c7bab50e5e606cdfe802b8a1",
+      "source_contact": "../inventory/building__lab/page-003.png",
+      "source_card": 77,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_weather_stair_lower"
+      ]
+    },
+    {
+      "key": "g3q/6606-6607-6608-6609",
+      "group": "building__lab",
+      "label": "Wall-backed gray-floor potted plant body",
+      "family": "laboratory potted plants",
+      "reason": "One grounded terracotta pot, yellow rim and nine connected arching fronds are authored together, then split at the existing two-row stack seam. Exact native dark/light leaf pixels replace the earlier uniform green crown; floor and wall pixels stay outside the plant.",
+      "baseline_entry_sha256": "30e18cf1a3c4f9c1bf750bb11ddc889880413561c6a0ec8bb3a4f1315cf007b7",
+      "source_contact": "../inventory/building__lab/page-003.png",
+      "source_card": 78,
+      "recipe": "plant_base",
+      "assemblies": [
+        "emerald_interior_weather_wall_plant"
+      ]
+    },
+    {
+      "key": "g3q/6557-6557-6610-6611",
+      "group": "building__lab",
+      "label": "Gray-wall CRT desk projection left",
+      "family": "CRT computer desk",
+      "reason": "The CRT has a separate screen housing, horizontal worktop and open space under the desk. The upper source row is the rear wall/monitor continuation, checked with its matching lower desk halves. Inspected source/model card 79.",
+      "baseline_entry_sha256": "fadb4183e3519f6b6ea07f0171ad5ea56b4b46bb3b8a72d8ab1d9cd72d4756c2",
+      "source_contact": "../inventory/building__lab/page-003.png",
+      "source_card": 79,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_weather_crt_desk"
+      ]
+    },
+    {
+      "key": "g3q/6557-6557-6612-6558",
+      "group": "building__lab",
+      "label": "Gray-wall CRT desk projection right",
+      "family": "CRT computer desk",
+      "reason": "The CRT has a separate screen housing, horizontal worktop and open space under the desk. The upper source row is the rear wall/monitor continuation, checked with its matching lower desk halves. Inspected source/model card 80.",
+      "baseline_entry_sha256": "766ef9a6ad6e27892b387511eaf80e8732be29e19fa1f041c6fe1b73ee47ca25",
+      "source_contact": "../inventory/building__lab/page-003.png",
+      "source_card": 80,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_weather_crt_desk"
+      ]
+    },
+    {
+      "key": "g3q/6368-6530-6613-6614",
+      "group": "building__lab",
+      "label": "Paired workstation south legs left",
+      "family": "laboratory workstations",
+      "reason": "This is a section of the source-connected workstation: the CRT rises above its horizontal wooden top, middle sections bridge between supported ends, and the leg sections leave open space below the bench. Inspected source/model card 81.",
+      "baseline_entry_sha256": "c0816344b5ee87b3407fd07b183e1059a9a393ea49ce71215fb42c471ef3dae3",
+      "source_contact": "../inventory/building__lab/page-003.png",
+      "source_card": 81,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_weather_paired_workstation",
+        "emerald_interior_weather_upper_paired_workstation"
+      ]
+    },
+    {
+      "key": "g3q/6545-6546-6615-6616",
+      "group": "building__lab",
+      "label": "Paired workstation south legs right",
+      "family": "laboratory workstations",
+      "reason": "This is a section of the source-connected workstation: the CRT rises above its horizontal wooden top, middle sections bridge between supported ends, and the leg sections leave open space below the bench. Inspected source/model card 82.",
+      "baseline_entry_sha256": "3c20e7141c7c7771f10571da7caf9c22beb7f0619beb3aa8db56bede6462c004",
+      "source_contact": "../inventory/building__lab/page-003.png",
+      "source_card": 82,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_weather_paired_workstation",
+        "emerald_interior_weather_upper_paired_workstation"
+      ]
+    },
+    {
+      "key": "g3q/6619-6413-6414-6415",
+      "group": "building__lab",
+      "label": "Weather Institute CRT desk tower half",
+      "family": "CRT computer desk",
+      "reason": "The CRT has a separate screen housing, horizontal worktop and open space under the desk. The upper source row is the rear wall/monitor continuation, checked with its matching lower desk halves. Inspected source/model card 83.",
+      "baseline_entry_sha256": "f2aaffb098d508c2a94ea6122b7d9356d07093f86446b9ba606987b6ff624232",
+      "source_contact": "../inventory/building__lab/page-003.png",
+      "source_card": 83,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_weather_crt_desk"
+      ]
+    },
+    {
+      "key": "g3q/6416-6620-6418-6419",
+      "group": "building__lab",
+      "label": "Weather Institute CRT desk monitor half",
+      "family": "CRT computer desk",
+      "reason": "The CRT has a separate screen housing, horizontal worktop and open space under the desk. The upper source row is the rear wall/monitor continuation, checked with its matching lower desk halves. Inspected source/model card 84.",
+      "baseline_entry_sha256": "e9ef5906a3cbf32fb16dfb3bb12a3df9e572d2b43f14761af755c7be4e6eb50f",
+      "source_contact": "../inventory/building__lab/page-003.png",
+      "source_card": 84,
+      "recipe": null,
+      "assemblies": [
+        "emerald_interior_weather_crt_desk"
+      ]
+    },
+    {
+      "key": "g3q/6516-6629-6476-6433",
+      "group": "building__lab",
+      "label": "Blue book stack by lab wall",
+      "family": "upright book stacks",
+      "reason": "The blue upper book and stepped colored lower spines remain upright; the finite depth and stepped side profile separate this stack from the surrounding floor. Inspected source/model card 85.",
+      "baseline_entry_sha256": "aa73384e6ebf3ce97d0c2453e33e874e702eda1d3f08c7895f6fadad3462aad1",
+      "source_contact": "../inventory/building__lab/page-003.png",
+      "source_card": 85,
+      "recipe": null,
+      "assemblies": []
+    }
+  ],
+  "assemblies": [
+    {
+      "id": "emerald_interior_birch_wall_bookcase",
+      "map": "EM_LITTLEROOT_TOWN_PROFESSOR_BIRCHS_LAB",
+      "rect": [
+        0,
+        0,
+        2,
+        2
+      ],
+      "kind": "stack (model as one)",
+      "note": "Complete two-row wall bookcase; the crate and walkable floor below are separate objects.",
+      "source_layout": [
+        [
+          "g3q/2918-2918-6384-6385",
+          "g3q/2918-2918-6385-6386"
+        ],
+        [
+          "g3q/6404-6405-6406-6407",
+          "g3q/6408-6409-6410-6411"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_interior_birch_crt_desk",
+      "map": "EM_LITTLEROOT_TOWN_PROFESSOR_BIRCHS_LAB",
+      "rect": [
+        3,
+        0,
+        2,
+        2
+      ],
+      "kind": "object (model as one)",
+      "note": "Birch complete CRT/tower desk and rear continuation",
+      "source_layout": [
+        [
+          "g3q/2918-2918-6387-6388",
+          "g3q/2918-2918-6389-2923"
+        ],
+        [
+          "g3q/6412-6413-6414-6415",
+          "g3q/6416-6417-6418-6419"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_interior_birch_book_bench",
+      "map": "EM_LITTLEROOT_TOWN_PROFESSOR_BIRCHS_LAB",
+      "rect": [
+        6,
+        1,
+        4,
+        1
+      ],
+      "kind": "object (model as one)",
+      "note": "Four-section bench with three red/blue book arrangements",
+      "source_layout": [
+        [
+          "g3q/6366-6367-6368-6369",
+          "g3q/6370-6371-6372-6373",
+          "g3q/6374-6375-6376-6377",
+          "g3q/6378-6379-6380-6381"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_interior_birch_free_bookcases",
+      "map": "EM_LITTLEROOT_TOWN_PROFESSOR_BIRCHS_LAB",
+      "rect": [
+        0,
+        5,
+        4,
+        3
+      ],
+      "kind": "stack (model as one)",
+      "note": "Two complete three-row bookcase chains from the actual Birch lab: cap/parcel, upper shelves, lower shelves and cabinet.",
+      "source_layout": [
+        [
+          "g3q/6446-6447-6448-6449",
+          "g3q/6450-6451-6452-6453",
+          "g3q/6477-6478-6448-6449",
+          "g3q/6450-6451-6452-6453"
+        ],
+        [
+          "g3q/6384-6385-6404-6405",
+          "g3q/6385-6386-6408-6409",
+          "g3q/6384-6385-6404-6405",
+          "g3q/6385-6386-6408-6409"
+        ],
+        [
+          "g3q/6406-6407-6436-6437",
+          "g3q/6410-6411-6440-6441",
+          "g3q/6406-6407-6436-6437",
+          "g3q/6410-6411-6440-6441"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_interior_birch_research_machine",
+      "map": "EM_LITTLEROOT_TOWN_PROFESSOR_BIRCHS_LAB",
+      "rect": [
+        10,
+        6,
+        2,
+        2
+      ],
+      "kind": "object (model as one)",
+      "note": "Complete round red-topped research machine",
+      "source_layout": [
+        [
+          "g3q/6390-6391-6392-6393",
+          "g3q/6394-6395-6396-6397"
+        ],
+        [
+          "g3q/6420-6421-6422-6423",
+          "g3q/6424-6425-6426-6427"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_interior_birch_cylinder_rack",
+      "map": "EM_LITTLEROOT_TOWN_PROFESSOR_BIRCHS_LAB",
+      "rect": [
+        12,
+        6,
+        1,
+        2
+      ],
+      "kind": "stack (model as one)",
+      "note": "Cylinder rack cap and body",
+      "source_layout": [
+        [
+          "g3q/6351-6352-6398-6399"
+        ],
+        [
+          "g3q/6428-6429-6430-6431"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_interior_birch_left_workstation",
+      "map": "EM_LITTLEROOT_TOWN_PROFESSOR_BIRCHS_LAB",
+      "rect": [
+        1,
+        9,
+        1,
+        3
+      ],
+      "kind": "object (model as one)",
+      "note": "Three-section workstation, CRT, connector and controls",
+      "source_layout": [
+        [
+          "g3q/6470-6471-6472-6473"
+        ],
+        [
+          "g3q/6479-6480-6456-6457"
+        ],
+        [
+          "g3q/6458-6459-6442-6469"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_interior_birch_right_workstation",
+      "map": "EM_LITTLEROOT_TOWN_PROFESSOR_BIRCHS_LAB",
+      "rect": [
+        11,
+        9,
+        1,
+        3
+      ],
+      "kind": "object (model as one)",
+      "note": "Mirrored three-section workstation",
+      "source_layout": [
+        [
+          "g3q/6489-6490-6491-6492"
+        ],
+        [
+          "g3q/6503-6504-6505-6506"
+        ],
+        [
+          "g3q/6524-6525-6442-6469"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_interior_birch_plant",
+      "map": "EM_LITTLEROOT_TOWN_PROFESSOR_BIRCHS_LAB",
+      "rect": [
+        3,
+        11,
+        1,
+        2
+      ],
+      "kind": "stack (model as one)",
+      "note": "Grounded pot with full lobed crown",
+      "source_layout": [
+        [
+          "g3q/6351-6352-6454-6455"
+        ],
+        [
+          "g3q/6465-6466-6467-6468"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_interior_birch_wall_plant",
+      "map": "EM_LITTLEROOT_TOWN_PROFESSOR_BIRCHS_LAB",
+      "rect": [
+        2,
+        1,
+        1,
+        2
+      ],
+      "kind": "stack (model as one)",
+      "note": "Wall-background plant and crown",
+      "source_layout": [
+        [
+          "g3q/2923-2923-6493-6494"
+        ],
+        [
+          "g3q/6507-6508-6509-6510"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_interior_birch_crate",
+      "map": "EM_LITTLEROOT_TOWN_PROFESSOR_BIRCHS_LAB",
+      "rect": [
+        9,
+        3,
+        1,
+        2
+      ],
+      "kind": "stack (model as one)",
+      "note": "Crate upper lid and lower sealed body",
+      "source_layout": [
+        [
+          "g3q/6351-6352-6463-6464"
+        ],
+        [
+          "g3q/6460-6461-6449-6462"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_interior_birch_drawers",
+      "map": "EM_LITTLEROOT_TOWN_PROFESSOR_BIRCHS_LAB",
+      "rect": [
+        10,
+        3,
+        1,
+        2
+      ],
+      "kind": "stack (model as one)",
+      "note": "Two-tier yellow storage drawer",
+      "source_layout": [
+        [
+          "g3q/6485-6486-6487-6488"
+        ],
+        [
+          "g3q/6499-6500-6501-6502"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_interior_lanette_open_book_bench",
+      "map": "EM_ROUTE114_LANETTES_HOUSE",
+      "rect": [
+        5,
+        1,
+        2,
+        1
+      ],
+      "kind": "object (model as one)",
+      "note": "Open book and upright red book on complete bench",
+      "source_layout": [
+        [
+          "g3q/6526-6527-6528-6529",
+          "g3q/6370-6371-6372-6373"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_interior_lanette_paired_short_workstations",
+      "map": "EM_ROUTE114_LANETTES_HOUSE",
+      "rect": [
+        6,
+        3,
+        2,
+        2
+      ],
+      "kind": "object (model as one)",
+      "note": "Opposing short workstations with south leg sections",
+      "source_layout": [
+        [
+          "g3q/6489-6490-6491-6492",
+          "g3q/6470-6471-6472-6473"
+        ],
+        [
+          "g3q/6503-6504-6442-6469",
+          "g3q/6479-6480-6442-6469"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_interior_weather_bed",
+      "map": "EM_ROUTE119_WEATHER_INSTITUTE_1F",
+      "rect": [
+        0,
+        2,
+        2,
+        2
+      ],
+      "kind": "object (model as one)",
+      "note": "Complete horizontal orange-blanket bed",
+      "source_layout": [
+        [
+          "g3q/6578-6579-6580-6581",
+          "g3q/6582-6583-6584-6585"
+        ],
+        [
+          "g3q/6591-6592-6593-6594",
+          "g3q/6595-6596-6597-6598"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_interior_weather_paired_workstation",
+      "map": "EM_ROUTE119_WEATHER_INSTITUTE_1F",
+      "rect": [
+        11,
+        4,
+        2,
+        3
+      ],
+      "kind": "object (model as one)",
+      "note": "Complete paired workstation with monitors, long top and south legs",
+      "source_layout": [
+        [
+          "g3q/6559-6560-6491-6492",
+          "g3q/6561-6562-6472-6473"
+        ],
+        [
+          "g3q/6479-6480-6513-6514",
+          "g3q/6503-6504-6532-6533"
+        ],
+        [
+          "g3q/6368-6530-6613-6614",
+          "g3q/6545-6546-6615-6616"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_interior_weather_upper_paired_workstation",
+      "map": "EM_ROUTE119_WEATHER_INSTITUTE_2F",
+      "rect": [
+        8,
+        3,
+        2,
+        3
+      ],
+      "kind": "object (model as one)",
+      "note": "Alternate upper-floor monitor source variants in full paired table",
+      "source_layout": [
+        [
+          "g3q/6569-6570-6491-6492",
+          "g3q/6571-6572-6472-6473"
+        ],
+        [
+          "g3q/6479-6480-6513-6514",
+          "g3q/6503-6504-6532-6533"
+        ],
+        [
+          "g3q/6368-6530-6613-6614",
+          "g3q/6545-6546-6615-6616"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_interior_weather_single_workstation",
+      "map": "EM_ROUTE119_WEATHER_INSTITUTE_2F",
+      "rect": [
+        1,
+        3,
+        1,
+        3
+      ],
+      "kind": "object (model as one)",
+      "note": "Single long monitor workstation with south legs",
+      "source_layout": [
+        [
+          "g3q/6559-6560-6491-6492"
+        ],
+        [
+          "g3q/6503-6504-6532-6533"
+        ],
+        [
+          "g3q/6545-6546-6547-6548"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_interior_weather_plant",
+      "map": "EM_ROUTE119_WEATHER_INSTITUTE_1F",
+      "rect": [
+        8,
+        11,
+        1,
+        2
+      ],
+      "kind": "stack (model as one)",
+      "note": "Gray-floor pot and crown",
+      "source_layout": [
+        [
+          "g3q/6531-6531-6534-6535"
+        ],
+        [
+          "g3q/6549-6550-6551-6552"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_interior_weather_edge_plant",
+      "map": "EM_ROUTE119_WEATHER_INSTITUTE_1F",
+      "rect": [
+        1,
+        6,
+        1,
+        2
+      ],
+      "kind": "stack (model as one)",
+      "note": "Gray-floor edge plant with shared crown",
+      "source_layout": [
+        [
+          "g3q/6531-6531-6534-6535"
+        ],
+        [
+          "g3q/6549-6550-6573-6574"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_interior_weather_wall_plant",
+      "map": "EM_ROUTE119_WEATHER_INSTITUTE_1F",
+      "rect": [
+        19,
+        1,
+        1,
+        2
+      ],
+      "kind": "stack (model as one)",
+      "note": "Gray-wall plant body and crown",
+      "source_layout": [
+        [
+          "g3q/6558-6558-6602-6603"
+        ],
+        [
+          "g3q/6606-6607-6608-6609"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_interior_weather_crt_desk",
+      "map": "EM_ROUTE119_WEATHER_INSTITUTE_1F",
+      "rect": [
+        13,
+        0,
+        2,
+        2
+      ],
+      "kind": "object (model as one)",
+      "note": "Complete gray-wall computer desk",
+      "source_layout": [
+        [
+          "g3q/6557-6557-6610-6611",
+          "g3q/6557-6557-6612-6558"
+        ],
+        [
+          "g3q/6619-6413-6414-6415",
+          "g3q/6416-6620-6418-6419"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_interior_weather_stair_lower",
+      "map": "EM_ROUTE119_WEATHER_INSTITUTE_1F",
+      "rect": [
+        16,
+        1,
+        3,
+        1
+      ],
+      "kind": "object (model as one)",
+      "note": "Ascending stair flight between matching lower portal jambs",
+      "source_layout": [
+        [
+          "g3q/6558-4702-6575-4702",
+          "g3q/4930-6604-4931-6605",
+          "g3q/4703-6558-4703-6575"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_weather_institute_tall_terminal",
+      "map": "EM_ROUTE119_WEATHER_INSTITUTE_1F",
+      "rect": [2, 0, 1, 3],
+      "kind": "object (model as one)",
+      "note": "Actual three-row terminal: native rim above the shared PC and native WALK floor below. The old rim and PC occupied separate floor cells; its unflagged WALK foot was absent.",
+      "source_layout": [["g3q/6557-6557-6586-6587"], ["g3q/9-10-11-12"], ["g3q/6599-6600-6588-6588"]],
+      "placements": [{"source": [0, 0], "offset": [0, 1, 1]}, {"source": [0, 1], "offset": [0, 0, 1]}, {"source": [0, 2], "offset": [0, 0, 2]}],
+      "baseline_layout": [["g3q/6557-6557-6586-6587"], ["g3q/9-10-11-12"], [null]],
+      "baseline_placements": [{"source": [0, 0], "offset": [0, 0, 0]}, {"source": [0, 1], "offset": [0, 0, 1]}]
+    }
+  ]
+}

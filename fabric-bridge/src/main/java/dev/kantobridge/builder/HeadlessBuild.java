@@ -30,6 +30,10 @@ import org.jetbrains.annotations.Nullable;
  * <li>{@code -Dkantobridge.build.region=<id> -Dkantobridge.build.slot=<n>} (both or neither): a region build
  * (docs/specs/MULTI_GAME_PLAN.md §4.6, MG3) of region {@code <id>} at slot {@code <n>} of the region table; without
  * them a legacy build. A malformed pair ends in a failed report ({@code build.region_option}).</li>
+ * <li>{@code -Dkantobridge.build.packDir=<dir>}: write the resource pack there instead of the game folder's
+ * {@code kantobridge/resourcepack} (a measurement or test build that must not touch the player's pack);</li>
+ * <li>{@code -Dkantobridge.build.shapeReport=false}: no shape report ({@link BuildOptions#shapeReport()}), as the
+ * client's own builds run.</li>
  * </ul>
  * Gradle passes them from {@code ./gradlew runServer -Pkb.build=... -Pkb.buildMaps=... -Pkb.buildReport=... -Pkb.buildExit=true
  * -Pkb.buildRegion=... -Pkb.buildSlot=...}.</li>
@@ -48,6 +52,9 @@ public final class HeadlessBuild {
 	/** WORLD_SESSIONS_PLAN WS6: {@code game=bundleDir,...} (slot order) and the start region: one build of several regions. */
 	public static final String PROPERTY_GAMES = "kantobridge.build.games";
 	public static final String PROPERTY_START = "kantobridge.build.start";
+	/** The resource pack's folder (default: the game folder's) and the shape report (default on). */
+	public static final String PROPERTY_PACK_DIR = "kantobridge.build.packDir";
+	public static final String PROPERTY_SHAPE_REPORT = "kantobridge.build.shapeReport";
 	public static final int EXIT_OK = 0;
 	public static final int EXIT_FAILED = 1;
 
@@ -92,7 +99,7 @@ public final class HeadlessBuild {
 		List<String> maps = BuildOptions.parseMaps(System.getProperty(PROPERTY_MAPS));
 		String reportPath = System.getProperty(PROPERTY_REPORT);
 		boolean exit = Boolean.parseBoolean(System.getProperty(PROPERTY_EXIT, "false"));
-		BuildOptions options = BuildOptions.defaults().withReportCopy(reportPath == null || reportPath.isBlank() ? null : Path.of(reportPath));
+		BuildOptions options = headless(BuildOptions.defaults().withReportCopy(reportPath == null || reportPath.isBlank() ? null : Path.of(reportPath)));
 		BuildListener listener = new BuildListener() {
 			@Override
 			public void onFinished(BuildReport report) {
@@ -140,8 +147,8 @@ public final class HeadlessBuild {
 				if (parts.length != 2 || region == null) {
 					throw new IllegalArgumentException("not game=bundle: " + parts[0]);
 				}
-				BuildOptions options = BuildOptions.defaults().withRegion(region, slot++)
-						.withReportCopy(reportPath == null || reportPath.isBlank() ? null : Path.of(reportPath));
+				BuildOptions options = headless(BuildOptions.defaults().withRegion(region, slot++)
+						.withReportCopy(reportPath == null || reportPath.isBlank() ? null : Path.of(reportPath)));
 				jobs.add(new BuildRequest.Job(Path.of(parts[1]), null, options));
 				listed.add(new dev.kantobridge.world.WorldRecord.Game(parts[0], region));
 			}
@@ -163,6 +170,15 @@ public final class HeadlessBuild {
 				finish(server, exit, status.state() == BuildStatus.State.DONE);
 			}
 		});
+	}
+
+	/** {@code options} with the headless pack folder and shape report settings ({@link #PROPERTY_PACK_DIR}, {@link #PROPERTY_SHAPE_REPORT}). */
+	static BuildOptions headless(BuildOptions options) {
+		String packDir = System.getProperty(PROPERTY_PACK_DIR);
+		if (packDir != null && !packDir.isBlank()) {
+			options = options.withPackDir(Path.of(packDir));
+		}
+		return options.withShapeReport(Boolean.parseBoolean(System.getProperty(PROPERTY_SHAPE_REPORT, "true")));
 	}
 
 	/** A failed report before any build ran (copied if asked) and {@code onFailed}, the way an unopenable bundle ends. */

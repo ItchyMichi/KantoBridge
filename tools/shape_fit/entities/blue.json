@@ -378,5 +378,707 @@
   ],
   "span": 16,
   "maps": 3
+ },
+ {
+  "id": "blue_compound_d9e4dc93877f",
+  "kind": "object (model as one)",
+  "note": "Facility bed",
+  "layout": [
+   [
+    "tilesets.facility/40-41-56-57"
+   ],
+   [
+    "tilesets.facility/56-57-25-26"
+   ]
+  ],
+  "replaces_stack": true
+ },
+ {
+  "id": "blue_compound_51a0e09a105a",
+  "kind": "object (model as one)",
+  "note": "Ship cabin bed",
+  "layout": [
+   [
+    "tilesets.ship/70-71-86-87"
+   ],
+   [
+    "tilesets.ship/86-87-59-60"
+   ]
+  ],
+  "replaces_stack": true
+ },
+ {
+  "id": "blue_SAFARI_ZONE_tree",
+  "kind": "object (model as one)",
+  "note": "Safari Zone broadleaf tree",
+  "layout": [
+   [
+    "tilesets.forest/4-5-35-21",
+    "tilesets.forest/6-7-22-23"
+   ],
+   [
+    "tilesets.forest/36-37-0-53",
+    "tilesets.forest/38-39-54-48"
+   ]
+  ],
+  "placements": [
+   [
+    "SAFARI_ZONE_CENTER",
+    10,
+    0
+   ]
+  ]
+ },
+ {
+  "id": "blue_POKEMON_FAN_CLUB_sofa",
+  "kind": "object (model as one)",
+  "note": "Pokemon Fan Club sofa",
+  "layout": [
+   [
+    "tilesets.interior/52-52-68-49",
+    "tilesets.interior/52-52-50-50",
+    "tilesets.interior/52-52-51-68"
+   ],
+   [
+    "tilesets.interior/31-65-31-31",
+    "tilesets.interior/66-66-31-31",
+    "tilesets.interior/67-31-31-31"
+   ]
+  ],
+  "placements": [
+   [
+    "POKEMON_FAN_CLUB",
+    2,
+    0
+   ]
+  ]
+ },
+ {
+  "id": "blue_BILLS_HOUSE_transporter",
+  "kind": "object (model as one)",
+  "note": "Bill transporter",
+  "layout": [
+   [
+    "tilesets.interior/32-23-48-39",
+    "tilesets.interior/24-25-40-41",
+    "tilesets.interior/26-37-42-53"
+   ],
+   [
+    "tilesets.interior/69-55-31-80",
+    "tilesets.interior/56-57-1-2",
+    "tilesets.interior/58-69-15-31"
+   ]
+  ],
+  "placements": [
+   [
+    "BILLS_HOUSE",
+    0,
+    1
+   ]
+  ]
+ },
+ {
+  "id": "blue_SS_ANNE_1F_bed",
+  "kind": "object (model as one)",
+  "note": "Ship cabin long bed",
+  "layout": [
+   [
+    "tilesets.ship/70-71-86-87"
+   ],
+   [
+    "tilesets.ship/86-87-86-87"
+   ]
+  ],
+  "placements": [
+   [
+    "SS_ANNE_1F_ROOMS",
+    3,
+    4
+   ]
+  ]
+ },
+ {
+  "id": "blue_compound_8e0ab81938e8",
+  "kind": "object (model as one)",
+  "note": "Pokemon Center patterned floor (corrected stack)",
+  "layout": [
+   [
+    "tilesets.pokecenter/57-11-60-27"
+   ],
+   [
+    "tilesets.pokecenter/54-11-26-27"
+   ]
+  ],
+  "replaces_stack": true
+ },
+ {
+  "id": "blue_REDS_HOUSE_bed",
+  "kind": "object (model as one)",
+  "note": "Bedroom bed",
+  "layout": [
+   [
+    "tilesets.reds_house/45-46-61-62"
+   ],
+   [
+    "tilesets.reds_house/61-62-63-47"
+   ]
+  ],
+  "placements": [
+   [
+    "REDS_HOUSE_2F",
+    0,
+    6
+   ]
+  ]
+ },
+ {
+  "id": "blue_MANSION_bed",
+  "kind": "object (model as one)",
+  "note": "Mansion bed",
+  "layout": [
+   [
+    "tilesets.mansion/45-46-61-62"
+   ],
+   [
+    "tilesets.mansion/61-62-63-47"
+   ]
+  ],
+  "placements": [
+   [
+    "CELADON_MANSION_2F",
+    0,
+    7
+   ]
+  ]
+ },
+ {
+  "id": "blue_BLUES_HOUSE_table",
+  "kind": "object (model as one)",
+  "note": "Blues house dining table",
+  "layout": [
+   [
+    "tilesets.house/38-39-54-47",
+    "tilesets.house/39-41-47-57"
+   ],
+   [
+    "tilesets.house/54-47-60-58",
+    "tilesets.house/47-57-58-59"
+   ]
+  ],
+  "placements": [
+   [
+    "BLUES_HOUSE",
+    3,
+    3
+   ]
+  ]
+ },
+ {
+  "id": "blue_DEVELOPER_ROOM_table",
+  "kind": "object (model as one)",
+  "note": "Developer room work table",
+  "layout": [
+   [
+    "tilesets.house/38-39-70-71",
+    "tilesets.house/39-41-47-57"
+   ],
+   [
+    "tilesets.house/86-87-60-58",
+    "tilesets.house/47-57-58-59"
+   ]
+  ],
+  "placements": [
+   [
+    "CELADON_MANSION_ROOF_HOUSE",
+    3,
+    3
+   ]
+  ]
+ },
+ {
+  "id": "blue_COPYCATS_HOUSE_table",
+  "kind": "object (model as one)",
+  "note": "Copycat house table",
+  "layout": [
+   [
+    "tilesets.reds_house/38-39-54-55",
+    "tilesets.reds_house/40-41-56-57"
+   ],
+   [
+    "tilesets.reds_house/44-42-60-58",
+    "tilesets.reds_house/42-43-58-59"
+   ]
+  ],
+  "placements": [
+   [
+    "COPYCATS_HOUSE_1F",
+    3,
+    4
+   ]
+  ]
+ },
+ {
+  "id": "blue_REDS_HOUSE_desk",
+  "kind": "object (model as one)",
+  "note": "Bedroom rear desk",
+  "layout": [
+   [
+    "tilesets.reds_house/0-0-38-39",
+    "tilesets.reds_house/0-0-39-41"
+   ],
+   [
+    "tilesets.reds_house/44-42-60-58",
+    "tilesets.reds_house/42-43-58-59"
+   ]
+  ],
+  "placements": [
+   [
+    "REDS_HOUSE_2F",
+    1,
+    0
+   ]
+  ]
+ },
+ {
+  "id": "blue_LAB_TRADE_table",
+  "kind": "object (model as one)",
+  "note": "Lab trading room table",
+  "layout": [
+   [
+    "tilesets.lab/64-65-80-81",
+    "tilesets.lab/65-65-81-81",
+    "tilesets.lab/65-66-81-82"
+   ],
+   [
+    "tilesets.lab/80-81-83-58",
+    "tilesets.lab/81-81-58-58",
+    "tilesets.lab/81-82-58-84"
+   ]
+  ],
+  "placements": [
+   [
+    "CINNABAR_LAB_TRADE_ROOM",
+    3,
+    3
+   ]
+  ]
+ },
+ {
+  "id": "blue_LAB_FOSSIL_table",
+  "kind": "object (model as one)",
+  "note": "Lab fossil room table",
+  "layout": [
+   [
+    "tilesets.lab/64-65-80-81",
+    "tilesets.lab/65-66-81-82"
+   ],
+   [
+    "tilesets.lab/80-72-83-58",
+    "tilesets.lab/73-82-58-84"
+   ]
+  ],
+  "placements": [
+   [
+    "CINNABAR_LAB_FOSSIL_ROOM",
+    6,
+    4
+   ]
+  ]
+ },
+ {
+  "id": "blue_WARDEN_table",
+  "kind": "object (model as one)",
+  "note": "Warden work table",
+  "layout": [
+   [
+    "tilesets.lab/87-88-28-71",
+    "tilesets.lab/88-89-71-29"
+   ],
+   [
+    "tilesets.lab/36-24-42-34",
+    "tilesets.lab/25-37-34-43"
+   ]
+  ],
+  "placements": [
+   [
+    "WARDENS_HOUSE",
+    4,
+    2
+   ]
+  ]
+ },
+ {
+  "id": "blue_FAN_CLUB_table",
+  "kind": "object (model as one)",
+  "note": "Fan Club octagonal table",
+  "layout": [
+   [
+    "tilesets.interior/31-72-72-64",
+    "tilesets.interior/74-74-64-17",
+    "tilesets.interior/74-74-18-64",
+    "tilesets.interior/73-31-64-73"
+   ],
+   [
+    "tilesets.interior/77-64-77-64",
+    "tilesets.interior/64-33-64-91",
+    "tilesets.interior/34-64-92-64",
+    "tilesets.interior/64-78-64-78"
+   ],
+   [
+    "tilesets.interior/63-64-79-63",
+    "tilesets.interior/64-64-64-64",
+    "tilesets.interior/64-64-64-64",
+    "tilesets.interior/64-81-81-82"
+   ]
+  ],
+  "placements": [
+   [
+    "POKEMON_FAN_CLUB",
+    2,
+    2
+   ]
+  ]
+ },
+ {
+  "id": "blue_FACILITY_table",
+  "kind": "object (model as one)",
+  "note": "Facility table",
+  "layout": [
+   [
+    "tilesets.facility/13-2-29-53",
+    "tilesets.facility/2-14-53-30"
+   ],
+   [
+    "tilesets.facility/29-53-68-69",
+    "tilesets.facility/53-30-69-68"
+   ]
+  ],
+  "placements": [
+   [
+    "POKEMON_MANSION_1F",
+    6,
+    4
+   ]
+  ]
+ },
+ {
+  "id": "blue_COLOSSEUM_terminals",
+  "kind": "object (model as one)",
+  "note": "Colosseum linked terminals",
+  "layout": [
+   [
+    "tilesets.club/59-60-55-56",
+    "tilesets.club/61-62-57-58"
+   ]
+  ],
+  "placements": [
+   [
+    "COLOSSEUM",
+    4,
+    4
+   ]
+  ]
+ },
+ {
+  "id": "blue_TRADE_CENTER_terminals",
+  "kind": "object (model as one)",
+  "note": "Trade Centre linked terminals",
+  "layout": [
+   [
+    "tilesets.club/71-72-23-24",
+    "tilesets.club/73-74-23-24"
+   ]
+  ],
+  "placements": [
+   [
+    "TRADE_CENTER",
+    4,
+    4
+   ]
+  ]
+ },
+ {
+  "id": "blue_MUSEUM_fossil_case",
+  "kind": "object (model as one)",
+  "note": "Museum fossil display",
+  "size": [
+   4,
+   2
+  ],
+  "layout": [
+   [
+    "tilesets.gate/39-40-48-70",
+    "tilesets.gate/40-40-71-58",
+    "tilesets.gate/40-40-58-70",
+    "tilesets.gate/40-25-71-44"
+   ],
+   [
+    "tilesets.gate/49-60-50-51",
+    "tilesets.gate/83-63-50-51",
+    "tilesets.gate/60-60-50-51",
+    "tilesets.gate/60-44-50-51"
+   ]
+  ],
+  "placements": [
+   [
+    "MUSEUM_1F",
+    1,
+    2
+   ]
+  ]
+ },
+ {
+  "id": "blue_MUSEUM_shuttle_case",
+  "kind": "object (model as one)",
+  "note": "Museum space shuttle display",
+  "size": [
+   3,
+   2
+  ],
+  "layout": [
+   [
+    "tilesets.gate/64-65-80-81",
+    "tilesets.gate/66-67-82-82",
+    "tilesets.gate/68-69-84-85"
+   ],
+   [
+    "tilesets.gate/86-87-50-51",
+    "tilesets.gate/88-89-50-51",
+    "tilesets.gate/90-91-50-51"
+   ]
+  ],
+  "placements": [
+   [
+    "MUSEUM_2F",
+    10,
+    1
+   ]
+  ]
+ },
+ {
+  "id": "blue_MUSEUM_mineral_case",
+  "kind": "object (model as one)",
+  "note": "Museum mineral display",
+  "size": [
+   4,
+   2
+  ],
+  "layout": [
+   [
+    "tilesets.gate/39-40-48-46",
+    "tilesets.gate/40-40-46-58",
+    "tilesets.gate/40-40-58-46",
+    "tilesets.gate/40-25-46-44"
+   ],
+   [
+    "tilesets.gate/49-60-50-51",
+    "tilesets.gate/83-63-50-51",
+    "tilesets.gate/60-60-50-51",
+    "tilesets.gate/60-44-50-51"
+   ]
+  ],
+  "placements": [
+   [
+    "MUSEUM_2F",
+    1,
+    4
+   ]
+  ]
+ },
+ {
+  "id": "blue_SS_ANNE_kitchen_dining_table",
+  "kind": "object (model as one)",
+  "note": "Ship kitchen dining table",
+  "size": [
+   2,
+   6
+  ],
+  "layout": [
+   [
+    "tilesets.ship/9-10-25-26",
+    "tilesets.ship/10-12-44-28"
+   ],
+   [
+    "tilesets.ship/25-64-25-80",
+    "tilesets.ship/65-28-81-28"
+   ],
+   [
+    "tilesets.ship/25-44-25-44",
+    "tilesets.ship/26-28-44-28"
+   ],
+   [
+    "tilesets.ship/25-64-25-80",
+    "tilesets.ship/65-28-81-28"
+   ],
+   [
+    "tilesets.ship/25-44-25-44",
+    "tilesets.ship/26-28-44-28"
+   ],
+   [
+    "tilesets.ship/25-44-11-59",
+    "tilesets.ship/44-28-60-11"
+   ]
+  ],
+  "placements": [
+   [
+    "SS_ANNE_KITCHEN",
+    2,
+    5
+   ]
+  ]
+ },
+ {
+  "id": "blue_SS_ANNE_captains_desk",
+  "kind": "object (model as one)",
+  "note": "Captain's desk",
+  "size": [
+   3,
+   2
+  ],
+  "layout": [
+   [
+    "tilesets.ship/9-10-25-44",
+    "tilesets.ship/10-10-68-69",
+    "tilesets.ship/10-12-44-28"
+   ],
+   [
+    "tilesets.ship/25-44-59-60",
+    "tilesets.ship/44-44-11-11",
+    "tilesets.ship/44-28-59-60"
+   ]
+  ],
+  "placements": [
+   [
+    "SS_ANNE_CAPTAINS_ROOM",
+    0,
+    2
+   ]
+  ]
+ },
+ {
+  "id": "blue_CELADON_DINER_octagonal_table",
+  "kind": "object (model as one)",
+  "note": "Celadon diner table",
+  "size": [
+   2,
+   2
+  ],
+  "layout": [
+   [
+    "tilesets.lobby/9-39-54-55",
+    "tilesets.lobby/39-25-55-57"
+   ],
+   [
+    "tilesets.lobby/70-55-85-86",
+    "tilesets.lobby/55-71-87-55"
+   ]
+  ],
+  "placements": [
+   [
+    "CELADON_DINER",
+    0,
+    2
+   ]
+  ]
+ },
+ {
+  "id": "blue_OAKS_LAB_computer_desk",
+  "kind": "object (model as one)",
+  "note": "Oak's computer desk",
+  "size": [
+   2,
+   2
+  ],
+  "layout": [
+   [
+    "tilesets.gym/91-92-54-55",
+    "tilesets.gym/93-94-85-95"
+   ],
+   [
+    "tilesets.gym/88-89-17-17",
+    "tilesets.gym/89-90-17-17"
+   ]
+  ],
+  "placements": [
+   [
+    "OAKS_LAB",
+    0,
+    1
+   ]
+  ]
+ },
+ {
+  "id": "blue_OAKS_LAB_blank_desk",
+  "kind": "object (model as one)",
+  "note": "Oak's laboratory desk",
+  "size": [
+   2,
+   2
+  ],
+  "layout": [
+   [
+    "tilesets.gym/41-59-78-57",
+    "tilesets.gym/59-42-57-79"
+   ],
+   [
+    "tilesets.gym/88-89-17-17",
+    "tilesets.gym/89-90-17-17"
+   ]
+  ],
+  "placements": [
+   [
+    "OAKS_LAB",
+    2,
+    1
+   ]
+  ]
+ },
+ {
+  "id": "blue_CELADON_MART_demo_computer",
+  "kind": "object (model as one)",
+  "note": "Celadon Mart demonstration computer",
+  "size": [
+   2,
+   1
+  ],
+  "layout": [
+   [
+    "tilesets.lobby/36-37-52-53",
+    "tilesets.lobby/14-15-30-31"
+   ]
+  ],
+  "placements": [
+   [
+    "CELADON_MART_3F",
+    2,
+    4
+   ]
+  ]
+ },
+ {
+  "id": "blue_CELADON_POKECENTER_healer",
+  "kind": "object (model as one)",
+  "note": "Pokemon Center healing machine",
+  "size": [
+   2,
+   2
+  ],
+  "layout": [
+   [
+    "tilesets.pokecenter/40-58-40-74",
+    "tilesets.pokecenter/59-40-75-40"
+   ],
+   [
+    "tilesets.pokecenter/72-76-72-6",
+    "tilesets.pokecenter/77-7-22-13"
+   ]
+  ],
+  "placements": [
+   [
+    "CELADON_POKECENTER",
+    1,
+    0
+   ]
+  ]
  }
 ]

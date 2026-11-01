@@ -1,0 +1,186 @@
+{
+  "g3q/4627-4628-4629-4630": {
+    "role": "bin",
+    "label": "Open cylindrical waste bin",
+    "family": "waste bin",
+    "reason": "Source shows a circular bin opening. Replace the pinched vertical relief with a grounded cylindrical body, raised rim and recessed dark opening; omit surrounding floor pixels.",
+    "baseline_entry_sha256": "55487a44632adf6827d07ced8bb1f9dfa319fbde24094813b4a82d328566825f",
+    "contact_page": "page-001.png"
+  },
+  "g3q/5016-5017-5018-5019": {
+    "role": "bin",
+    "label": "Open cylindrical waste bin",
+    "family": "waste bin",
+    "reason": "Source shows a circular bin opening. Replace the pinched vertical relief with a grounded cylindrical body, raised rim and recessed dark opening; omit surrounding floor pixels.",
+    "baseline_entry_sha256": "fa0b7084f95c2129acb7c373ce6483efcfd51ece943561e4327e383bf3d91fd5",
+    "contact_page": "page-013.png"
+  },
+  "g3q/5225-5226-5227-5228": {
+    "role": "bin",
+    "label": "Open cylindrical waste bin",
+    "family": "waste bin",
+    "reason": "Source shows a circular bin opening. Replace the pinched vertical relief with a grounded cylindrical body, raised rim and recessed dark opening; omit surrounding floor pixels.",
+    "baseline_entry_sha256": "95cbfcdba2c996465dace47876f6fa9e2557b8b61f73a3a36a9bd42c223e27a0",
+    "contact_page": "page-015.png"
+  },
+  "g3q/4692-4693-4694-4695": {
+    "role": "stool",
+    "label": "Round upholstered pedestal stool",
+    "family": "stool",
+    "reason": "The source and room context show a single round stool. Model a circular cushioned seat, narrow support and stable foot rather than the frontal extrusion; retain source red upholstery and gray metal.",
+    "baseline_entry_sha256": "6f8711bf311285a68f01b0e4fb433c3e807ddc7191218b1e850fb9aa08bd554c",
+    "contact_page": "page-003.png"
+  },
+  "g3q/4711-4712-4694-4695": {
+    "role": "stool",
+    "label": "Round upholstered pedestal stool",
+    "family": "stool",
+    "reason": "The source and room context show a single round stool. Model a circular cushioned seat, narrow support and stable foot rather than the frontal extrusion; retain source red upholstery and gray metal.",
+    "baseline_entry_sha256": "731d28d931b8fbd3ea7cf3df0660ae59c662a1f8ffa3af7868f9d06726a24cd9",
+    "contact_page": "page-003.png"
+  },
+  "g3q/4912-4913-4914-4915": {
+    "role": "stool",
+    "label": "Round upholstered pedestal stool",
+    "family": "stool",
+    "reason": "The source and room context show a single round stool. Model a circular cushioned seat, narrow support and stable foot rather than the frontal extrusion; retain source red upholstery and gray metal.",
+    "baseline_entry_sha256": "6f8711bf311285a68f01b0e4fb433c3e807ddc7191218b1e850fb9aa08bd554c",
+    "contact_page": "page-010.png"
+  },
+  "g3q/5100-5101-5102-5103": {
+    "role": "stool",
+    "label": "Round upholstered pedestal stool",
+    "family": "stool",
+    "reason": "The source and room context show a single round stool. Model a circular cushioned seat, narrow support and stable foot rather than the frontal extrusion; retain source red upholstery and gray metal.",
+    "baseline_entry_sha256": "97f2614f7b994f07bc6c4d3dd7b104e02f807ce54b6080d4f5d485a3086c9ca0",
+    "contact_page": "page-014.png"
+  },
+  "g3q/5156-5157-5158-5159": {
+    "role": "stool",
+    "label": "Round upholstered pedestal stool",
+    "family": "stool",
+    "reason": "The source and room context show a single round stool. Model a circular cushioned seat, narrow support and stable foot rather than the frontal extrusion; retain source red upholstery and gray metal.",
+    "baseline_entry_sha256": "6f8711bf311285a68f01b0e4fb433c3e807ddc7191218b1e850fb9aa08bd554c",
+    "contact_page": "page-014.png"
+  },
+  "g3q/5238-5239-5240-5241": {
+    "role": "stool",
+    "label": "Round upholstered pedestal stool",
+    "family": "stool",
+    "reason": "The source and room context show a single round stool. Model a circular cushioned seat, narrow support and stable foot rather than the frontal extrusion; retain source red upholstery and gray metal.",
+    "baseline_entry_sha256": "a660eefb02f680d69d580ec96185cc77df608346a6cc7e1a37dc31ac68db3086",
+    "contact_page": "page-016.png"
+  },
+  "g3q/1383-1384-1385-1386": {
+    "role": "plant_crown",
+    "label": "Indoor foliage crown",
+    "family": "potted plant",
+    "reason": "Crown and adjacent lower pot form one upright plant. Model connected stems and open overlapping leaf lobes in the upper cell, using green source pixels without blue carpet or wall material.",
+    "baseline_entry_sha256": "b44780c6385f92ab41caff7caa452b3bae5656e7e84ddf388e8e04eee6bd0ab1",
+    "contact_page": "page-007.png"
+  },
+  "g3q/1409-1384-1410-1386": {
+    "role": "plant_crown",
+    "label": "Indoor foliage crown",
+    "family": "potted plant",
+    "reason": "Crown and adjacent lower pot form one upright plant. Model connected stems and open overlapping leaf lobes in the upper cell, using green source pixels without blue carpet or wall material.",
+    "baseline_entry_sha256": "e6343258fe90934cf924d6e7c09c2cc80f3f83ab9946bbffd29a497b5f196f2e",
+    "contact_page": "page-008.png"
+  },
+  "g3q/1221-1222-1677-1678": {
+    "role": "plant_crown",
+    "label": "Indoor foliage crown",
+    "family": "potted plant",
+    "reason": "Crown and adjacent lower pot form one upright plant. Model connected stems and open overlapping leaf lobes in the upper cell, using green source pixels without blue carpet or wall material.",
+    "baseline_entry_sha256": "df4fa0e6da411aa2953885beaf55204f048ec83a0496f06c02d12a49e78796f3",
+    "contact_page": "page-016.png"
+  },
+  "g3q/1700-1701-1702-1703": {
+    "role": "plant_crown",
+    "label": "Indoor foliage crown",
+    "family": "potted plant",
+    "reason": "Crown and adjacent lower pot form one upright plant. Model connected stems and open overlapping leaf lobes in the upper cell, using green source pixels without blue carpet or wall material.",
+    "baseline_entry_sha256": "e6f9a41d9b8972179735ecd27ab97dab9cb954ae796b4e4f3fb44cf343a0f69d",
+    "contact_page": "page-017.png"
+  },
+  "g3q/1398-1399-1400-1401": {
+    "role": "plant_base",
+    "label": "Indoor cylindrical plant pot",
+    "family": "potted plant",
+    "reason": "Rebuild the lower plant cell as a tapered grounded pot, white rim, dark soil and stem reaching the paired crown. Exclude surrounding carpet pixels from pot sides.",
+    "baseline_entry_sha256": "63c800760aeae8c3d63f75f07d3319d088dcedabd5b56d665dcde704bc80f862",
+    "contact_page": "page-008.png"
+  },
+  "g3q/1421-1399-1422-1401": {
+    "role": "plant_base",
+    "label": "Indoor cylindrical plant pot",
+    "family": "potted plant",
+    "reason": "Rebuild the lower plant cell as a tapered grounded pot, white rim, dark soil and stem reaching the paired crown. Exclude surrounding carpet pixels from pot sides.",
+    "baseline_entry_sha256": "63c800760aeae8c3d63f75f07d3319d088dcedabd5b56d665dcde704bc80f862",
+    "contact_page": "page-009.png"
+  },
+  "g3q/1685-1686-1687-1688": {
+    "role": "plant_base",
+    "label": "Indoor cylindrical plant pot",
+    "family": "potted plant",
+    "reason": "Rebuild the lower plant cell as a tapered grounded pot, white rim, dark soil and stem reaching the paired crown. Exclude surrounding carpet pixels from pot sides.",
+    "baseline_entry_sha256": "eaaf7cabb493ba85705aaae2999183ef10c32dc54357eee91cd9af9357a2c8a7",
+    "contact_page": "page-016.png"
+  },
+  "g3q/1685-1686-1689-1690": {
+    "role": "plant_base",
+    "label": "Indoor cylindrical plant pot",
+    "family": "potted plant",
+    "reason": "Rebuild the lower plant cell as a tapered grounded pot, white rim, dark soil and stem reaching the paired crown. Exclude surrounding carpet pixels from pot sides.",
+    "baseline_entry_sha256": "316d0656fa0ef27eeb5952fcc5815318ee80f33d9ae6a753c9b6529219f69daa",
+    "contact_page": "page-016.png"
+  },
+  "g3q/1685-1686-1691-1690": {
+    "role": "plant_base",
+    "label": "Indoor cylindrical plant pot",
+    "family": "potted plant",
+    "reason": "Rebuild the lower plant cell as a tapered grounded pot, white rim, dark soil and stem reaching the paired crown. Exclude surrounding carpet pixels from pot sides.",
+    "baseline_entry_sha256": "4336e32d1ad9efe9b4e0c5356de366bd1a43c165fff49e7af39ba7057efb91c6",
+    "contact_page": "page-017.png"
+  },
+  "g3q/1708-1709-1689-1690": {
+    "role": "plant_base",
+    "label": "Indoor cylindrical plant pot",
+    "family": "potted plant",
+    "reason": "Rebuild the lower plant cell as a tapered grounded pot, white rim, dark soil and stem reaching the paired crown. Exclude surrounding carpet pixels from pot sides.",
+    "baseline_entry_sha256": "63c800760aeae8c3d63f75f07d3319d088dcedabd5b56d665dcde704bc80f862",
+    "contact_page": "page-017.png"
+  },
+  "g3q/3778-3779-3780-3781": {
+    "role": "pedestal_crown",
+    "label": "Contest Hall pedestal plant crown",
+    "family": "pedestal plant",
+    "reason": "Source/map pair shows the leaf crown above an ornamental pedestal. Model connected stems and open overlapping leaf lobes, keeping the existing upper-cell relationship.",
+    "baseline_entry_sha256": "af1a3c0377b2080b21ba0604eda3ab80a3a3634f428eb2ac3349d24ed69e97a0",
+    "contact_page": "page-006.png"
+  },
+  "g3q/3786-3787-3788-3789": {
+    "role": "pedestal_base",
+    "label": "Contest Hall plant pedestal",
+    "family": "pedestal plant",
+    "reason": "Map-adjacent lower cell is a round foot and slender pedestal supporting the plant bowl. Build those distinct volumes and a stem reaching the upper crown.",
+    "baseline_entry_sha256": "fbe2ca718ac2d5ae79c8fa672cdef05fdefcb2af4ae6f2b61293df454e87f561",
+    "contact_page": "page-006.png"
+  },
+  "g3q/1-2-3-4": {
+    "role": "television",
+    "label": "CRT television",
+    "family": "television",
+    "reason": "Retain recognizable native screen and controls on an explicit deep cabinet. Add the lower foot that rests on the paired stand, use cabinet source pixels on the rear and sides.",
+    "baseline_entry_sha256": "54ea981ede27974cf752d8b4e42d93c7deda076e86f074857cd590986092fc44",
+    "contact_page": "page-001.png"
+  },
+  "g3q/5844-5845-5474-5474": {
+    "role": "tv_cabinet",
+    "label": "Television support cabinet",
+    "family": "television stand",
+    "reason": "The source drawing projects the lower floor behind the cabinet. Its prior y=8 lower edge floated above the ground; add four narrow legs below the cabinet while retaining its glass-front source panels.",
+    "baseline_entry_sha256": "eea6852a70f496d0e68b224452e8a2aff5c960c3443115d1e9d85b1d0d5bf843",
+    "contact_page": "page-004.png"
+  }
+}

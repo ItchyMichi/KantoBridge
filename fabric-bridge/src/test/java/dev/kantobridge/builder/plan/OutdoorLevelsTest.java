@@ -23,6 +23,25 @@ class OutdoorLevelsTest {
 	}
 
 	@Test
+	void unsetItIsEveryOutdoorMapBlankOrNoneNone() {
+		String before = System.getProperty(OutdoorLevels.PROPERTY);
+		try {
+			System.clearProperty(OutdoorLevels.PROPERTY);
+			assertTrue(OutdoorLevels.covers(OutdoorLevels.fromProperty(), "EM_ROUTE119"), "every build's default since 2026-11-01");
+			System.setProperty(OutdoorLevels.PROPERTY, "");
+			assertEquals(Set.of(), OutdoorLevels.fromProperty(), "the JUnit runs' blank: flat");
+			System.setProperty(OutdoorLevels.PROPERTY, OutdoorLevels.NONE);
+			assertEquals(Set.of(), OutdoorLevels.fromProperty(), "the GameTests' none: flat");
+		} finally {
+			if (before == null) {
+				System.clearProperty(OutdoorLevels.PROPERTY);
+			} else {
+				System.setProperty(OutdoorLevels.PROPERTY, before);
+			}
+		}
+	}
+
+	@Test
 	void thePropertyNamesTheMaps() {
 		assertEquals(Set.of("EM_ROUTE119", "ROUTE_23"), OutdoorLevels.parse(" EM_ROUTE119,,ROUTE_23 "));
 		assertEquals(Set.of(), OutdoorLevels.parse(null));

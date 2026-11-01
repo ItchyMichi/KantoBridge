@@ -1,0 +1,818 @@
+{
+  "g3q/3221-3222-3223-3224": {
+    "role": "trade_chair",
+    "label": "Inward-facing wooden trade chair",
+    "family": "Inward-facing wooden trade chair",
+    "reason": "Four grounded legs, supported seat and inward back replace the flat source extrusion; preserve native seat interaction.",
+    "mirror": false,
+    "source_ordinal": 1,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "96544f1e261b03d45a4d9682f4c8653688ea4e55bd1218697adfc5c283a19f12"
+  },
+  "g3q/3225-3226-3227-3228": {
+    "role": "trade",
+    "label": "Twin trade machine body",
+    "family": "Twin trade machine body",
+    "reason": "The complete twin machine has connected foot housings, rounded tall shells, inset colored screens and control shelves. Projected WALK cap/foot artwork remains reference-only; all physical geometry is on its original SOLID source footprint.",
+    "x": 0,
+    "accent": [
+      85,
+      180,
+      115
+    ],
+    "source_ordinal": 2,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "e40c384c665c9fa1ba859f9ec0d03602d841e635d9526c970a9c9bcd69d18b88"
+  },
+  "g3q/3229-3230-3231-3232": {
+    "role": "trade",
+    "label": "Twin trade machine body",
+    "family": "Twin trade machine body",
+    "reason": "The complete twin machine has connected foot housings, rounded tall shells, inset colored screens and control shelves. Projected WALK cap/foot artwork remains reference-only; all physical geometry is on its original SOLID source footprint.",
+    "x": 1,
+    "accent": [
+      245,
+      135,
+      125
+    ],
+    "source_ordinal": 3,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "7f77876dc0c5900ac4dbdb67b7098045a8ab65b748217b54bf317d31e57e7ebf"
+  },
+  "g3q/3233-3234-3235-3236": {
+    "role": "trade_chair",
+    "label": "Inward-facing wooden trade chair",
+    "family": "Inward-facing wooden trade chair",
+    "reason": "Four grounded legs, supported seat and inward back replace the flat source extrusion; preserve native seat interaction.",
+    "mirror": true,
+    "source_ordinal": 4,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "2cbf845b0628683aed76b7a002aa76502b6da552fdd8f4ae9675d804e49358df"
+  },
+  "g3q/3251-3251-3252-3252": {
+    "role": "trade_wall",
+    "label": "Trade room green wall display upper panel",
+    "family": "Trade room green wall display upper panel",
+    "reason": "Join the exact SOLID upper/lower panel rows into one shallow wall display, preserving native screen/front detail.",
+    "layer": 1,
+    "metadata": {
+      "on": "g3q/3264-3264-3265-3265"
+    },
+    "source_ordinal": 5,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "e348166be580eeb40b41379b3cd81784034540aff59614dcedbf47682c170dfd"
+  },
+  "g3q/3253-3253-3254-3254": {
+    "label": "Link-room native warp threshold",
+    "family": "warp transition",
+    "reason": "All six occurrences are WARP114 exit cells. Preserve the original threshold geometry and native warp routing; no WALK opt-in or new blocking surface is appropriate.",
+    "source_ordinal": 6,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513"
+  },
+  "g3q/3264-3264-3265-3265": {
+    "role": "trade_wall",
+    "label": "Trade room green wall display lower surround",
+    "family": "Trade room green wall display lower surround",
+    "reason": "The lower surround supports the exact green display above it; a shallow continuous wall replaces staggered deep fragments.",
+    "source_ordinal": 7,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "a56d3cd6f70a214f1512537378fe25675bb92ff6232ebf0e6e59535c1c88f468"
+  },
+  "g3q/0-0-3325-0": {
+    "label": "Colosseum gold wall and mint cornice section",
+    "family": "Colosseum wall",
+    "reason": "Whole14-by-three source/front/side/angled review shows a continuous gold wall, native panel details, beveled end returns and mint cornice. Preserve existing deliberately stepped room boundary geometry and source collision, rather than treating black outside-map pixels as a prop.",
+    "source_ordinal": 8,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "0bf949114f96d68b44193569c896f152374182c0a7914266b3629825f7924547"
+  },
+  "g3q/3334-0-3335-0": {
+    "label": "Colosseum gold wall and mint cornice section",
+    "family": "Colosseum wall",
+    "reason": "Whole14-by-three source/front/side/angled review shows a continuous gold wall, native panel details, beveled end returns and mint cornice. Preserve existing deliberately stepped room boundary geometry and source collision, rather than treating black outside-map pixels as a prop.",
+    "source_ordinal": 9,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "d5ec436f6f61ddb05abf169547541ad8cc0f01e09006687ef8f327d0cd856dd3"
+  },
+  "g3q/3344-0-3345-0": {
+    "label": "Colosseum gold wall and mint cornice section",
+    "family": "Colosseum wall",
+    "reason": "Whole14-by-three source/front/side/angled review shows a continuous gold wall, native panel details, beveled end returns and mint cornice. Preserve existing deliberately stepped room boundary geometry and source collision, rather than treating black outside-map pixels as a prop.",
+    "source_ordinal": 10,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "df7c4cef3aae3e9b6918ef19bc06d60feb49359f57fb1a664c6960277f53499e"
+  },
+  "g3q/0-0-0-3368": {
+    "label": "Colosseum gold wall and mint cornice section",
+    "family": "Colosseum wall",
+    "reason": "Whole14-by-three source/front/side/angled review shows a continuous gold wall, native panel details, beveled end returns and mint cornice. Preserve existing deliberately stepped room boundary geometry and source collision, rather than treating black outside-map pixels as a prop.",
+    "source_ordinal": 11,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "68e4cf11dae1c810a28dbd17673a2b4fab1701d450af48b8713b0ae4b64ac70d"
+  },
+  "g3q/0-0-3369-3370": {
+    "label": "Colosseum gold wall and mint cornice section",
+    "family": "Colosseum wall",
+    "reason": "Whole14-by-three source/front/side/angled review shows a continuous gold wall, native panel details, beveled end returns and mint cornice. Preserve existing deliberately stepped room boundary geometry and source collision, rather than treating black outside-map pixels as a prop.",
+    "source_ordinal": 12,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "e21857873c3e2bb7de3d3dfcb7c0583b44de71a8d9eef6006f548fb734f95172"
+  },
+  "g3q/0-0-3370-3370": {
+    "label": "Colosseum gold wall and mint cornice section",
+    "family": "Colosseum wall",
+    "reason": "Whole14-by-three source/front/side/angled review shows a continuous gold wall, native panel details, beveled end returns and mint cornice. Preserve existing deliberately stepped room boundary geometry and source collision, rather than treating black outside-map pixels as a prop.",
+    "source_ordinal": 13,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "03499b34ba195073c556ce6fbe1f16e8b7b5b97a64defc9b1b13e1c400d1b4c6"
+  },
+  "g3q/0-0-3370-3371": {
+    "label": "Colosseum gold wall and mint cornice section",
+    "family": "Colosseum wall",
+    "reason": "Whole14-by-three source/front/side/angled review shows a continuous gold wall, native panel details, beveled end returns and mint cornice. Preserve existing deliberately stepped room boundary geometry and source collision, rather than treating black outside-map pixels as a prop.",
+    "source_ordinal": 14,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "f541ee990e8a5873b3c69c6554d7a8fb8371f6c90352bfc8dddad6598165fad9"
+  },
+  "g3q/0-0-3372-3372": {
+    "label": "Colosseum gold wall and mint cornice section",
+    "family": "Colosseum wall",
+    "reason": "Whole14-by-three source/front/side/angled review shows a continuous gold wall, native panel details, beveled end returns and mint cornice. Preserve existing deliberately stepped room boundary geometry and source collision, rather than treating black outside-map pixels as a prop.",
+    "source_ordinal": 15,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "559a7ea7eaa3b212b89ef62a1c6482388c13db808e79c341b9f67889b533608f"
+  },
+  "g3q/0-0-3373-3370": {
+    "label": "Colosseum gold wall and mint cornice section",
+    "family": "Colosseum wall",
+    "reason": "Whole14-by-three source/front/side/angled review shows a continuous gold wall, native panel details, beveled end returns and mint cornice. Preserve existing deliberately stepped room boundary geometry and source collision, rather than treating black outside-map pixels as a prop.",
+    "source_ordinal": 16,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "fb61fca0858587b6341811a1852dfed3add3e5439aaf35a9d60ce6f63e0101c8"
+  },
+  "g3q/0-0-3370-3374": {
+    "label": "Colosseum gold wall and mint cornice section",
+    "family": "Colosseum wall",
+    "reason": "Whole14-by-three source/front/side/angled review shows a continuous gold wall, native panel details, beveled end returns and mint cornice. Preserve existing deliberately stepped room boundary geometry and source collision, rather than treating black outside-map pixels as a prop.",
+    "source_ordinal": 17,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "b9c13dcca2a35c5087b9af07fb51bd9659c880f940f8a1e1de116d75fd58057d"
+  },
+  "g3q/0-3375-0-3376": {
+    "label": "Colosseum gold wall and mint cornice section",
+    "family": "Colosseum wall",
+    "reason": "Whole14-by-three source/front/side/angled review shows a continuous gold wall, native panel details, beveled end returns and mint cornice. Preserve existing deliberately stepped room boundary geometry and source collision, rather than treating black outside-map pixels as a prop.",
+    "source_ordinal": 18,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "67651dcab0368d0946470dc22238fc602824948a0cb59baedb4e1baef43159e7"
+  },
+  "g3q/3377-3378-3379-3380": {
+    "label": "Colosseum gold wall and mint cornice section",
+    "family": "Colosseum wall",
+    "reason": "Whole14-by-three source/front/side/angled review shows a continuous gold wall, native panel details, beveled end returns and mint cornice. Preserve existing deliberately stepped room boundary geometry and source collision, rather than treating black outside-map pixels as a prop.",
+    "source_ordinal": 19,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "9488758f4f789b08a2439318b64317cf7ecb9c942ba94f841bba56f0523e2328"
+  },
+  "g3q/3381-3378-3382-3380": {
+    "label": "Colosseum gold wall and mint cornice section",
+    "family": "Colosseum wall",
+    "reason": "Whole14-by-three source/front/side/angled review shows a continuous gold wall, native panel details, beveled end returns and mint cornice. Preserve existing deliberately stepped room boundary geometry and source collision, rather than treating black outside-map pixels as a prop.",
+    "source_ordinal": 20,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "350abb229a7f895f64d7911a82c24de32a2de5346a115dfa8f7da3e176987643"
+  },
+  "g3q/3381-3383-3382-3384": {
+    "label": "Colosseum gold wall and mint cornice section",
+    "family": "Colosseum wall",
+    "reason": "Whole14-by-three source/front/side/angled review shows a continuous gold wall, native panel details, beveled end returns and mint cornice. Preserve existing deliberately stepped room boundary geometry and source collision, rather than treating black outside-map pixels as a prop.",
+    "source_ordinal": 21,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "03ff8c0626a1416bb421ec10821b5b3d84658c4e759b322b478193d223bb2b6d"
+  },
+  "g3q/3385-3385-3386-3386": {
+    "label": "Colosseum gold wall and mint cornice section",
+    "family": "Colosseum wall",
+    "reason": "Whole14-by-three source/front/side/angled review shows a continuous gold wall, native panel details, beveled end returns and mint cornice. Preserve existing deliberately stepped room boundary geometry and source collision, rather than treating black outside-map pixels as a prop.",
+    "source_ordinal": 22,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "6332d0968b8831ca5889b9a653b9e9d3baff211243d8f8dc2bfb16fb35dedf16"
+  },
+  "g3q/3387-3378-3388-3380": {
+    "label": "Colosseum gold wall and mint cornice section",
+    "family": "Colosseum wall",
+    "reason": "Whole14-by-three source/front/side/angled review shows a continuous gold wall, native panel details, beveled end returns and mint cornice. Preserve existing deliberately stepped room boundary geometry and source collision, rather than treating black outside-map pixels as a prop.",
+    "source_ordinal": 23,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "e74b7c4e4753fb2809719185036570281e51549ca283aa261cb4363d0f7910c1"
+  },
+  "g3q/3381-3389-3382-3390": {
+    "label": "Colosseum gold wall and mint cornice section",
+    "family": "Colosseum wall",
+    "reason": "Whole14-by-three source/front/side/angled review shows a continuous gold wall, native panel details, beveled end returns and mint cornice. Preserve existing deliberately stepped room boundary geometry and source collision, rather than treating black outside-map pixels as a prop.",
+    "source_ordinal": 24,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "ec6902f4c53c5bc21210086e4397b57baac3e215f5560d559bbaab16b96129ef"
+  },
+  "g3q/0-3391-0-3392": {
+    "label": "Colosseum gold wall and mint cornice section",
+    "family": "Colosseum wall",
+    "reason": "Whole14-by-three source/front/side/angled review shows a continuous gold wall, native panel details, beveled end returns and mint cornice. Preserve existing deliberately stepped room boundary geometry and source collision, rather than treating black outside-map pixels as a prop.",
+    "source_ordinal": 25,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "246a5e91cec6bcd8d68aca92bca97a9c5d123f2d39bfaa9ed589dbbd5f3f149a"
+  },
+  "g3q/3393-3394-3395-3396": {
+    "label": "Colosseum gold wall and mint cornice section",
+    "family": "Colosseum wall",
+    "reason": "Whole14-by-three source/front/side/angled review shows a continuous gold wall, native panel details, beveled end returns and mint cornice. Preserve existing deliberately stepped room boundary geometry and source collision, rather than treating black outside-map pixels as a prop.",
+    "source_ordinal": 26,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "67de62ce8afdf6514a16b082fb2dbdd60cd577c747edac1aa445e913af9ec6eb"
+  },
+  "g3q/3397-3398-3399-3400": {
+    "label": "Colosseum gold wall and mint cornice section",
+    "family": "Colosseum wall",
+    "reason": "Whole14-by-three source/front/side/angled review shows a continuous gold wall, native panel details, beveled end returns and mint cornice. Preserve existing deliberately stepped room boundary geometry and source collision, rather than treating black outside-map pixels as a prop.",
+    "source_ordinal": 27,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "8532817f1d2c12417c1807bc91bb35c4be593c899450fd4a1d14fc6ccf9d096a"
+  },
+  "g3q/3397-3401-3399-3402": {
+    "label": "Colosseum gold wall and mint cornice section",
+    "family": "Colosseum wall",
+    "reason": "Whole14-by-three source/front/side/angled review shows a continuous gold wall, native panel details, beveled end returns and mint cornice. Preserve existing deliberately stepped room boundary geometry and source collision, rather than treating black outside-map pixels as a prop.",
+    "source_ordinal": 28,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "f6bac49c8a37a7c6cbebe4fe43d8c957935dcb1543ea147277c715d81e37df1e"
+  },
+  "g3q/3403-3403-3404-3404": {
+    "label": "Colosseum gold wall and mint cornice section",
+    "family": "Colosseum wall",
+    "reason": "Whole14-by-three source/front/side/angled review shows a continuous gold wall, native panel details, beveled end returns and mint cornice. Preserve existing deliberately stepped room boundary geometry and source collision, rather than treating black outside-map pixels as a prop.",
+    "source_ordinal": 29,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "01f18dc66c2a29a8df11219b83e63a82aaa6210cfa4a9371601832fe9abbdf2b"
+  },
+  "g3q/3405-3398-3406-3400": {
+    "label": "Colosseum gold wall and mint cornice section",
+    "family": "Colosseum wall",
+    "reason": "Whole14-by-three source/front/side/angled review shows a continuous gold wall, native panel details, beveled end returns and mint cornice. Preserve existing deliberately stepped room boundary geometry and source collision, rather than treating black outside-map pixels as a prop.",
+    "source_ordinal": 30,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "9e76f491620f9c939267222689ce28e3592c2bb23e88ec4fa286029c2ea10020"
+  },
+  "g3q/3407-3408-3396-3409": {
+    "label": "Colosseum gold wall and mint cornice section",
+    "family": "Colosseum wall",
+    "reason": "Whole14-by-three source/front/side/angled review shows a continuous gold wall, native panel details, beveled end returns and mint cornice. Preserve existing deliberately stepped room boundary geometry and source collision, rather than treating black outside-map pixels as a prop.",
+    "source_ordinal": 31,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "4658603e60d325b7086e04fe273536264cf08bad08262660516a34ea598481bd"
+  },
+  "g3q/3507-3508-3509-3510": {
+    "role": "pod",
+    "label": "Record Corner player terminal",
+    "family": "Record Corner player terminal",
+    "reason": "One rounded capsule, supported foot, inset upper display, lower controller and colored side bands is authored before its true two-cell stack; preserve all existing source links.",
+    "layer": 1,
+    "accent": [
+      230,
+      110,
+      115
+    ],
+    "source_ordinal": 32,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "46b00bafdbf1aa1ca8c444b8bd0c4daffeca12c2772e2e46ba31eb0e03d5fa0b"
+  },
+  "g3q/3511-3512-3513-3514": {
+    "role": "pod",
+    "label": "Record Corner player terminal",
+    "family": "Record Corner player terminal",
+    "reason": "One rounded capsule, supported foot, inset upper display, lower controller and colored side bands is authored before its true two-cell stack; preserve all existing source links.",
+    "layer": 1,
+    "accent": [
+      100,
+      190,
+      80
+    ],
+    "source_ordinal": 33,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "21742e3c3d4847949f568b92825cb5f982b2115ce1e98f4a1bdce2ebcbfa1ff1"
+  },
+  "g3q/3515-3516-3517-3518": {
+    "role": "pod",
+    "label": "Record Corner player terminal",
+    "family": "Record Corner player terminal",
+    "reason": "One rounded capsule, supported foot, inset upper display, lower controller and colored side bands is authored before its true two-cell stack; preserve all existing source links.",
+    "layer": 1,
+    "accent": [
+      245,
+      230,
+      70
+    ],
+    "source_ordinal": 34,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "25571fb6a0f6df1fd1884847b0ee1bb17ccbba835593b0082157ca0b07808ffe"
+  },
+  "g3q/3519-3520-3521-3522": {
+    "role": "pod",
+    "label": "Record Corner player terminal",
+    "family": "Record Corner player terminal",
+    "reason": "One rounded capsule, supported foot, inset upper display, lower controller and colored side bands is authored before its true two-cell stack; preserve all existing source links.",
+    "layer": 1,
+    "accent": [
+      115,
+      140,
+      220
+    ],
+    "source_ordinal": 35,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "39dff623811c9d9ca6c56f0c9909b696419db8621fb9fb7aa197be543a7a7ab6"
+  },
+  "g3q/3523-3524-3525-3526": {
+    "role": "record",
+    "label": "Record Corner central mixing console",
+    "family": "Record Corner central mixing console",
+    "reason": "One four-by-three console has a supported chamfered cabinet, continuous top, inset tray, rear housings and raised controls. Native source top pixels remain local. Exact raw144 counter cells opt in while retaining one collision block and talk-through behavior.",
+    "x": 0,
+    "z": 0,
+    "source_ordinal": 36,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "0cc01c49dcd51eecb73e2743c5f66a997351d7a1448ca92c43fc55a1eea3bc5e"
+  },
+  "g3q/3527-3528-3529-3530": {
+    "role": "record",
+    "label": "Record Corner central mixing console",
+    "family": "Record Corner central mixing console",
+    "reason": "One four-by-three console has a supported chamfered cabinet, continuous top, inset tray, rear housings and raised controls. Native source top pixels remain local. Exact raw144 counter cells opt in while retaining one collision block and talk-through behavior.",
+    "x": 1,
+    "z": 0,
+    "source_ordinal": 37,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "85fe44100fd91f8453454b1f617597d57b04edf5f65cb7e4738440e888f9456b"
+  },
+  "g3q/3531-3532-3533-3534": {
+    "role": "record",
+    "label": "Record Corner central mixing console",
+    "family": "Record Corner central mixing console",
+    "reason": "One four-by-three console has a supported chamfered cabinet, continuous top, inset tray, rear housings and raised controls. Native source top pixels remain local. Exact raw144 counter cells opt in while retaining one collision block and talk-through behavior.",
+    "x": 3,
+    "z": 0,
+    "source_ordinal": 38,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "961f534806ec23f0f12ad82949e24dac31b01453a176e90dca98b5983d0ca56f"
+  },
+  "g3q/3535-3536-3537-3538": {
+    "role": "pod",
+    "label": "Record Corner player terminal",
+    "family": "Record Corner player terminal",
+    "reason": "One rounded capsule, supported foot, inset upper display, lower controller and colored side bands is authored before its true two-cell stack; preserve all existing source links.",
+    "layer": 0,
+    "accent": [
+      230,
+      110,
+      115
+    ],
+    "source_ordinal": 39,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "cdbd446e620150a6e465f384e09fd4d34ffbf222dcf224752843de5012aed44b"
+  },
+  "g3q/3539-3536-3537-3538": {
+    "role": "pod",
+    "label": "Record Corner player terminal",
+    "family": "Record Corner player terminal",
+    "reason": "One rounded capsule, supported foot, inset upper display, lower controller and colored side bands is authored before its true two-cell stack; preserve all existing source links.",
+    "layer": 0,
+    "accent": [
+      100,
+      190,
+      80
+    ],
+    "source_ordinal": 40,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "fec6406ec853e63cc0a585157f15174bceeb98ed1601e54e6f30fbea527dd4a9"
+  },
+  "g3q/3540-3541-3542-3543": {
+    "role": "pod",
+    "label": "Record Corner player terminal",
+    "family": "Record Corner player terminal",
+    "reason": "One rounded capsule, supported foot, inset upper display, lower controller and colored side bands is authored before its true two-cell stack; preserve all existing source links.",
+    "layer": 0,
+    "accent": [
+      245,
+      230,
+      70
+    ],
+    "source_ordinal": 41,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "a12a807a72b5bd3b9f17b3807349997e737c877df9deb4546b921add7eff8e4f"
+  },
+  "g3q/3540-3544-3542-3543": {
+    "role": "pod",
+    "label": "Record Corner player terminal",
+    "family": "Record Corner player terminal",
+    "reason": "One rounded capsule, supported foot, inset upper display, lower controller and colored side bands is authored before its true two-cell stack; preserve all existing source links.",
+    "layer": 0,
+    "accent": [
+      115,
+      140,
+      220
+    ],
+    "source_ordinal": 42,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "c94c3677031a05798d69c4a429499ed8abf7b378b32b7c1ef1bb0d221c529a85"
+  },
+  "g3q/3545-3546-3547-3548": {
+    "role": "record",
+    "label": "Record Corner central mixing console",
+    "family": "Record Corner central mixing console",
+    "reason": "One four-by-three console has a supported chamfered cabinet, continuous top, inset tray, rear housings and raised controls. Native source top pixels remain local. Exact raw144 counter cells opt in while retaining one collision block and talk-through behavior.",
+    "x": 0,
+    "z": 1,
+    "metadata": {
+      "counter": true
+    },
+    "source_ordinal": 43,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "e6fa15fa0441e38c8e60da1c49bf727f2f9ad6027e0a93aa3b63422ace71e3fd"
+  },
+  "g3q/3549-3550-3551-3552": {
+    "role": "record",
+    "label": "Record Corner central mixing console",
+    "family": "Record Corner central mixing console",
+    "reason": "One four-by-three console has a supported chamfered cabinet, continuous top, inset tray, rear housings and raised controls. Native source top pixels remain local. Exact raw144 counter cells opt in while retaining one collision block and talk-through behavior.",
+    "x": 1,
+    "z": 1,
+    "source_ordinal": 44,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "ce74ddfe553aca22786e0523a5d0c821ead1330bae47b921d0c417f3af659820"
+  },
+  "g3q/3553-3554-3555-3556": {
+    "role": "record",
+    "label": "Record Corner central mixing console",
+    "family": "Record Corner central mixing console",
+    "reason": "One four-by-three console has a supported chamfered cabinet, continuous top, inset tray, rear housings and raised controls. Native source top pixels remain local. Exact raw144 counter cells opt in while retaining one collision block and talk-through behavior.",
+    "x": 3,
+    "z": 1,
+    "metadata": {
+      "counter": true
+    },
+    "source_ordinal": 45,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "0fa42d813cb45dd9002adcb0bbfbc6d08bdf2e53bd5ae100722ad0ec32018141"
+  },
+  "g3q/3565-3566-3567-3568": {
+    "role": "record",
+    "label": "Record Corner central mixing console",
+    "family": "Record Corner central mixing console",
+    "reason": "One four-by-three console has a supported chamfered cabinet, continuous top, inset tray, rear housings and raised controls. Native source top pixels remain local. Exact raw144 counter cells opt in while retaining one collision block and talk-through behavior.",
+    "x": 0,
+    "z": 2,
+    "source_ordinal": 46,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "d73e1ee9ebada316dc04bcd722906e00d6cba27b8d65042a18bfba784ce36843"
+  },
+  "g3q/3569-3570-3571-3571": {
+    "role": "record",
+    "label": "Record Corner central mixing console",
+    "family": "Record Corner central mixing console",
+    "reason": "One four-by-three console has a supported chamfered cabinet, continuous top, inset tray, rear housings and raised controls. Native source top pixels remain local. Exact raw144 counter cells opt in while retaining one collision block and talk-through behavior.",
+    "x": 1,
+    "z": 2,
+    "metadata": {
+      "counter": true
+    },
+    "source_ordinal": 47,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "35f6ddf384f29ce49496d95767ec11aa8f3966bbf30993fd8f69e9b5ec9d76cf"
+  },
+  "g3q/3572-3573-3574-3575": {
+    "role": "record",
+    "label": "Record Corner central mixing console",
+    "family": "Record Corner central mixing console",
+    "reason": "One four-by-three console has a supported chamfered cabinet, continuous top, inset tray, rear housings and raised controls. Native source top pixels remain local. Exact raw144 counter cells opt in while retaining one collision block and talk-through behavior.",
+    "x": 3,
+    "z": 2,
+    "source_ordinal": 48,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "569ae24aa4eea76b673654915aa164f1f2a256d843ebcccd146e039a66b34050"
+  },
+  "g3q/3578-3579-3580-3581": {
+    "label": "Hall of Fame violet wall, green display or lower trim",
+    "family": "Hall of Fame wall",
+    "reason": "The complete15-by-four wall context has consistent violet returns, recessed green displays and low perimeter trim. Preserve the existing source-matched stepped wall, native details and map boundary behavior after whole assembly review.",
+    "source_ordinal": 49,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "a3a93ac4902bb1cfae52c38e63de0d992268222946f3c71238586215f4754643"
+  },
+  "g3q/3590-3591-3592-3593": {
+    "label": "Hall of Fame violet wall, green display or lower trim",
+    "family": "Hall of Fame wall",
+    "reason": "The complete15-by-four wall context has consistent violet returns, recessed green displays and low perimeter trim. Preserve the existing source-matched stepped wall, native details and map boundary behavior after whole assembly review.",
+    "source_ordinal": 50,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "490e49be85e29f8484b5d96f7762fd72395c6b0bb649d83426fa06f1554a8576"
+  },
+  "g3q/3594-3600-3601-3602": {
+    "label": "Hall of Fame violet wall, green display or lower trim",
+    "family": "Hall of Fame wall",
+    "reason": "The complete15-by-four wall context has consistent violet returns, recessed green displays and low perimeter trim. Preserve the existing source-matched stepped wall, native details and map boundary behavior after whole assembly review.",
+    "source_ordinal": 51,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "c89ee8c4a9218e3752b432800c677d8788f02c0cc7014fc05ba72159fafcb60e"
+  },
+  "g3q/3603-3603-3604-3604": {
+    "label": "Hall of Fame violet wall, green display or lower trim",
+    "family": "Hall of Fame wall",
+    "reason": "The complete15-by-four wall context has consistent violet returns, recessed green displays and low perimeter trim. Preserve the existing source-matched stepped wall, native details and map boundary behavior after whole assembly review.",
+    "source_ordinal": 52,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "d9ba2d38c03743bf86742bcd4c8ffa16bba14ffe4391405acde7476634fa1d25"
+  },
+  "g3q/3605-3591-3606-3607": {
+    "label": "Hall of Fame violet wall, green display or lower trim",
+    "family": "Hall of Fame wall",
+    "reason": "The complete15-by-four wall context has consistent violet returns, recessed green displays and low perimeter trim. Preserve the existing source-matched stepped wall, native details and map boundary behavior after whole assembly review.",
+    "source_ordinal": 53,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "3a65ebdd5d3ce500084d3311cf8d72b6fd453c0a2c3d4b1203dd6bf8c4e240f0"
+  },
+  "g3q/3618-3619-3620-3621": {
+    "label": "Hall of Fame violet wall, green display or lower trim",
+    "family": "Hall of Fame wall",
+    "reason": "The complete15-by-four wall context has consistent violet returns, recessed green displays and low perimeter trim. Preserve the existing source-matched stepped wall, native details and map boundary behavior after whole assembly review.",
+    "source_ordinal": 54,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "39883b6200c24586dc25010379968ca324969043ea43e7ab1c24522714c7f9de"
+  },
+  "g3q/3622-3622-3623-3623": {
+    "label": "Hall of Fame violet wall, green display or lower trim",
+    "family": "Hall of Fame wall",
+    "reason": "The complete15-by-four wall context has consistent violet returns, recessed green displays and low perimeter trim. Preserve the existing source-matched stepped wall, native details and map boundary behavior after whole assembly review.",
+    "source_ordinal": 55,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "787c38d05cd580b0ec2cf6a6d68fcf0c91423eb71504bc0c626f2803fbd08836"
+  },
+  "g3q/3624-3625-3626-3627": {
+    "label": "Hall of Fame violet wall, green display or lower trim",
+    "family": "Hall of Fame wall",
+    "reason": "The complete15-by-four wall context has consistent violet returns, recessed green displays and low perimeter trim. Preserve the existing source-matched stepped wall, native details and map boundary behavior after whole assembly review.",
+    "source_ordinal": 56,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "3604f15e7153b06afe8d4fd4fe8a35413d07a6c086295cea9bab19190929ad1d"
+  },
+  "g3q/3635-3636-3637-3638": {
+    "label": "Hall of Fame violet wall, green display or lower trim",
+    "family": "Hall of Fame wall",
+    "reason": "The complete15-by-four wall context has consistent violet returns, recessed green displays and low perimeter trim. Preserve the existing source-matched stepped wall, native details and map boundary behavior after whole assembly review.",
+    "source_ordinal": 57,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "10bdf6a2edab41366f78cf87629bbde258a5106db1ab0e415b03cd00cafa5e09"
+  },
+  "g3q/3639-3640-3641-3642": {
+    "label": "Hall of Fame violet wall, green display or lower trim",
+    "family": "Hall of Fame wall",
+    "reason": "The complete15-by-four wall context has consistent violet returns, recessed green displays and low perimeter trim. Preserve the existing source-matched stepped wall, native details and map boundary behavior after whole assembly review.",
+    "source_ordinal": 58,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "ca256aedf5833e373aa29301a800b2725b5cc9e65f06b0fdde778ee971cfc787"
+  },
+  "g3q/3640-3640-3643-3643": {
+    "label": "Hall of Fame violet wall, green display or lower trim",
+    "family": "Hall of Fame wall",
+    "reason": "The complete15-by-four wall context has consistent violet returns, recessed green displays and low perimeter trim. Preserve the existing source-matched stepped wall, native details and map boundary behavior after whole assembly review.",
+    "source_ordinal": 59,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "c3270682a8e45248b974ac8681393fcc3a336a43f7fb8051f3bca7a109e80f14"
+  },
+  "g3q/3644-3645-3646-3647": {
+    "label": "Hall of Fame violet wall, green display or lower trim",
+    "family": "Hall of Fame wall",
+    "reason": "The complete15-by-four wall context has consistent violet returns, recessed green displays and low perimeter trim. Preserve the existing source-matched stepped wall, native details and map boundary behavior after whole assembly review.",
+    "source_ordinal": 60,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "d853e1245ba7aa695781947a628ca088fc10f44d9a2b051eb44028f0c0f5b41b"
+  },
+  "g3q/3640-3639-3652-3641": {
+    "label": "Hall of Fame violet wall, green display or lower trim",
+    "family": "Hall of Fame wall",
+    "reason": "The complete15-by-four wall context has consistent violet returns, recessed green displays and low perimeter trim. Preserve the existing source-matched stepped wall, native details and map boundary behavior after whole assembly review.",
+    "source_ordinal": 61,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "9f88ce8ba1b2d161eac6fa0a9a1b2ca8c485a49c1c5cb47c04dc8e5d46cfe1c5"
+  },
+  "g3q/3653-3654-3653-3655": {
+    "role": "hall_terminal",
+    "label": "Hall of Fame registration terminal",
+    "family": "Hall of Fame registration terminal",
+    "reason": "One three-cell console has a supported cream shell, recessed central display, raised controls and four attached side sockets; purple room floor is excluded from material selection.",
+    "x": 0,
+    "source_ordinal": 62,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "41b12713c8641e6e51f9a5c9d77d57f279219e4c50450ab73040dbfdf1c38db0"
+  },
+  "g3q/3656-3656-3657-3658": {
+    "role": "hall_terminal",
+    "label": "Hall of Fame registration terminal",
+    "family": "Hall of Fame registration terminal",
+    "reason": "One three-cell console has a supported cream shell, recessed central display, raised controls and four attached side sockets; purple room floor is excluded from material selection.",
+    "x": 1,
+    "source_ordinal": 63,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "32dbf3c14937b3edfa405113b1822591a2d96722355b4ea2d638557f6c9a2850"
+  },
+  "g3q/3659-3660-3661-3660": {
+    "role": "hall_terminal",
+    "label": "Hall of Fame registration terminal",
+    "family": "Hall of Fame registration terminal",
+    "reason": "One three-cell console has a supported cream shell, recessed central display, raised controls and four attached side sockets; purple room floor is excluded from material selection.",
+    "x": 2,
+    "source_ordinal": 64,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "f1498c6807ef9e22ec7840291af5d9545f0511db1d784fa78b675d84348663cb"
+  },
+  "g3q/3579-3579-3662-3662": {
+    "label": "Hall of Fame violet wall, green display or lower trim",
+    "family": "Hall of Fame wall",
+    "reason": "The complete15-by-four wall context has consistent violet returns, recessed green displays and low perimeter trim. Preserve the existing source-matched stepped wall, native details and map boundary behavior after whole assembly review.",
+    "source_ordinal": 65,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "c2464955f6d533d52182207cf831db47af31d0bf00b22402e8c62202a3cea1cb"
+  },
+  "g3q/3579-3579-3583-3581": {
+    "label": "Hall of Fame violet wall, green display or lower trim",
+    "family": "Hall of Fame wall",
+    "reason": "The complete15-by-four wall context has consistent violet returns, recessed green displays and low perimeter trim. Preserve the existing source-matched stepped wall, native details and map boundary behavior after whole assembly review.",
+    "source_ordinal": 66,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "60f05846577c5fe1246df7860b9e651a4c1ea40cd9a7f2cc54b17bd620b7a400"
+  },
+  "g3q/3631-3631-3665-3665": {
+    "role": "floor",
+    "label": "Hall of Fame exit threshold",
+    "family": "Hall of Fame exit threshold",
+    "reason": "All three source occurrences are WALK0. Keep the native threshold bands as one decorative floor voxel, avoiding the old unsupported blocking-height slab.",
+    "metadata": {
+      "walk": true
+    },
+    "source_ordinal": 67,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513"
+  },
+  "g3q/3669-3669-3670-3671": {
+    "label": "Hall of Fame violet wall, green display or lower trim",
+    "family": "Hall of Fame wall",
+    "reason": "The complete15-by-four wall context has consistent violet returns, recessed green displays and low perimeter trim. Preserve the existing source-matched stepped wall, native details and map boundary behavior after whole assembly review.",
+    "source_ordinal": 68,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "eaecc5ad0c49375d07cd3994648d3b354c0bd77e8728717ac86f3cc28a42e690"
+  },
+  "g3q/3594-3591-3672-3607": {
+    "label": "Hall of Fame violet wall, green display or lower trim",
+    "family": "Hall of Fame wall",
+    "reason": "The complete15-by-four wall context has consistent violet returns, recessed green displays and low perimeter trim. Preserve the existing source-matched stepped wall, native details and map boundary behavior after whole assembly review.",
+    "source_ordinal": 69,
+    "group": "building__cable_club",
+    "baseline_entry_sha256": "4daf3f33f92b5752847eb44e1083c36af2ea1c23bdc43a95d665f48041ed8466"
+  },
+  "g3q/1854-1886-1854-1887": {
+    "label": "Palace gold PC alcove surround",
+    "family": "PC alcove",
+    "reason": "Complete source/front/side/angled review shows coherent gold pillars, connected top surround and inset PC; preserve source wall/door behavior.",
+    "source_ordinal": "P1",
+    "group": "building__battle_palace",
+    "baseline_entry_sha256": "c9c7a644bdb40ba7189411cb7d67adbf0bca20faf1f2114be08fc7fe5eb888fa"
+  },
+  "g3q/1888-1888-1889-1890": {
+    "label": "Palace gold PC alcove surround",
+    "family": "PC alcove",
+    "reason": "Complete source/front/side/angled review shows coherent gold pillars, connected top surround and inset PC; preserve source wall/door behavior.",
+    "source_ordinal": "P2",
+    "group": "building__battle_palace",
+    "baseline_entry_sha256": "ae7c55125a016b97f6e1012dd2f81fd91f3076aa625d483a6d5ba1e8fcedaaf2"
+  },
+  "g3q/1891-1854-1892-1854": {
+    "label": "Palace gold PC alcove surround",
+    "family": "PC alcove",
+    "reason": "Complete source/front/side/angled review shows coherent gold pillars, connected top surround and inset PC; preserve source wall/door behavior.",
+    "source_ordinal": "P3",
+    "group": "building__battle_palace",
+    "baseline_entry_sha256": "19b6ffd5e503ff9c94999816db7577599f80610bc666d09dbd65c840b3c399b6"
+  },
+  "g3q/1862-1887-1863-1887": {
+    "label": "Palace gold PC alcove surround",
+    "family": "PC alcove",
+    "reason": "Complete source/front/side/angled review shows coherent gold pillars, connected top surround and inset PC; preserve source wall/door behavior.",
+    "source_ordinal": "P4",
+    "group": "building__battle_palace",
+    "baseline_entry_sha256": "3d7da8aacb16812e23b7b81323fc995f58d03070cbc60b8b1d1736666b50ffbe"
+  },
+  "g3q/1892-1862-1892-1863": {
+    "label": "Palace gold PC alcove surround",
+    "family": "PC alcove",
+    "reason": "Complete source/front/side/angled review shows coherent gold pillars, connected top surround and inset PC; preserve source wall/door behavior.",
+    "source_ordinal": "P5",
+    "group": "building__battle_palace",
+    "baseline_entry_sha256": "b7715c3b61b5d00dadc5203c07be6ef02c04cfe19b80ef1190edcfecf56e79d0"
+  },
+  "g3q/1909-1902-2035-2036": {
+    "label": "Palace table corner",
+    "family": "table",
+    "reason": "The white table corner already has a supported top, open underside and native mauve legs. Preserve it within both complete table contexts.",
+    "source_ordinal": "P6",
+    "group": "building__battle_palace",
+    "baseline_entry_sha256": "402e101ef5bf64d871c96f67ba98fa2099da442c8dbbc191b8c396f8626e90de"
+  },
+  "g3q/1862-2037-1863-2038": {
+    "role": "palace_panel",
+    "x": 0,
+    "label": "Palace wall communication panel",
+    "family": "wall equipment",
+    "reason": "Author one shallow three-cell wall panel with connected body, framed display and controls, preserving source wall bands around its outer edges; remove deep block extrusion.",
+    "source_ordinal": "P7",
+    "group": "building__battle_palace",
+    "baseline_entry_sha256": "b878b2679e7395ff363bff813017d51e5841a7de1de241b9d1470f040555ce95"
+  },
+  "g3q/2039-2040-203-204": {
+    "role": "palace_panel",
+    "x": 1,
+    "label": "Palace wall communication panel",
+    "family": "wall equipment",
+    "reason": "Author one shallow three-cell wall panel with connected body, framed display and controls, preserving source wall bands around its outer edges; remove deep block extrusion.",
+    "source_ordinal": "P8",
+    "group": "building__battle_palace",
+    "baseline_entry_sha256": "9d8fc336407ea0e752e58396d1da37e700eacd6eea4c9352a3f37739bda247ce"
+  },
+  "g3q/2041-1862-2042-1863": {
+    "role": "palace_panel",
+    "x": 2,
+    "label": "Palace wall communication panel",
+    "family": "wall equipment",
+    "reason": "Author one shallow three-cell wall panel with connected body, framed display and controls, preserving source wall bands around its outer edges; remove deep block extrusion.",
+    "source_ordinal": "P9",
+    "group": "building__battle_palace",
+    "baseline_entry_sha256": "9044620f172f80265654e72cdbff22934bb7140772d0259340dd41e582c496e7"
+  },
+  "g3q/43-44-2043-2044": {
+    "role": "palace_chair",
+    "label": "Palace cream chair with supported pedestal",
+    "family": "chair",
+    "reason": "The upper SOLID cell owns the complete chair: pedestal, seat, arms and back. Its previous link targeted an unrendered WALK carpet projection; remove that false link and keep original SOLID interaction.",
+    "metadata": {
+      "on": null
+    },
+    "source_ordinal": "P10",
+    "group": "building__battle_palace",
+    "baseline_entry_sha256": "b74e67021219241efaf79d43a98a9bc6dd32b1d3454f00403f8bbcc74e30df84"
+  },
+  "g3q/1840-2045-1853-1837": {
+    "role": "floor",
+    "label": "Palace carpet below projected object foot",
+    "family": "projected floor",
+    "reason": "Exact source is WALK0 beneath wall equipment or a complete chair. Preserve its native lower carpet as one decorative floor voxel; the object body stays on its original SOLID footprint.",
+    "metadata": {
+      "walk": true
+    },
+    "source_ordinal": "P11",
+    "group": "building__battle_palace",
+    "baseline_entry_sha256": "de827dbe0a3b4f5095c1e4297108ceb5b2265664368e7976e695f72778951f84"
+  },
+  "g3q/2046-2047-1836-1837": {
+    "role": "floor",
+    "label": "Palace carpet below projected object foot",
+    "family": "projected floor",
+    "reason": "Exact source is WALK0 beneath wall equipment or a complete chair. Preserve its native lower carpet as one decorative floor voxel; the object body stays on its original SOLID footprint.",
+    "metadata": {
+      "walk": true
+    },
+    "source_ordinal": "P12",
+    "group": "building__battle_palace",
+    "baseline_entry_sha256": "4bef059afb39bb62a5e5496f94fcab6854fb6240112edbfcd8a649aa06d06f9a"
+  },
+  "g3q/2048-1838-1836-1837": {
+    "role": "floor",
+    "label": "Palace carpet below projected object foot",
+    "family": "projected floor",
+    "reason": "Exact source is WALK0 beneath wall equipment or a complete chair. Preserve its native lower carpet as one decorative floor voxel; the object body stays on its original SOLID footprint.",
+    "metadata": {
+      "walk": true
+    },
+    "source_ordinal": "P13",
+    "group": "building__battle_palace",
+    "baseline_entry_sha256": "0b50ebf428862f9b4f681f1e63602a2f2c470ad7dfc594a01cbb236d9c8b25a0"
+  },
+  "g3q/2049-2050-1853-1839": {
+    "role": "floor",
+    "label": "Palace carpet below projected object foot",
+    "family": "projected floor",
+    "reason": "Exact source is WALK0 beneath wall equipment or a complete chair. Preserve its native lower carpet as one decorative floor voxel; the object body stays on its original SOLID footprint.",
+    "metadata": {
+      "walk": true
+    },
+    "source_ordinal": "P14",
+    "group": "building__battle_palace",
+    "baseline_entry_sha256": "2c072fa796bd346a8b5a419bcaeadbf5cdc0a95355be8b771c3c37c0386f4bd6"
+  }
+}

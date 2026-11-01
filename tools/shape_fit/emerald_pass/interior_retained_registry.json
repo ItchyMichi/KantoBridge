@@ -1,0 +1,2855 @@
+{
+  "g3q/2685-2686-2687-2688": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "e5046b8f00cb1a757850fdeb1221d1eb6a1c224556d35d5d3157eeca00737a6c",
+    "evidence": [
+      "inventory/shared-building/page-001.png"
+    ],
+    "contact_position": 3
+  },
+  "g3q/2689-2690-2691-2692": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "5bf96534af06299533fa901c919fb2ac04e4e614a8a94b0f60ff57a9949200ee",
+    "evidence": [
+      "inventory/shared-building/page-001.png"
+    ],
+    "contact_position": 5
+  },
+  "g3q/2695-2696-2697-2698": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "161c52bf47098a073497fafc3afae73b48e89bbc24fe73cf101ff3583d826bb4",
+    "evidence": [
+      "inventory/shared-building/page-001.png"
+    ],
+    "contact_position": 10
+  },
+  "g3q/2699-2700-2701-2702": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "c7935514a8949c0852a2d8145cef116a31c0a44394d6c5c6ff899e2a22a79940",
+    "evidence": [
+      "inventory/shared-building/page-001.png"
+    ],
+    "contact_position": 13
+  },
+  "g3q/2711-2712-2713-2714": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "c578090cf8057da5f7a9a7c6655fcc77500e8566fb2be8f5815a9154dd777cf6",
+    "evidence": [
+      "inventory/shared-building/page-001.png"
+    ],
+    "contact_position": 17
+  },
+  "g3q/2715-2716-2717-2718": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "215f483b132b3258ccbbad4465066a8b16944549c7d4411ee67a47aa617b0242",
+    "evidence": [
+      "inventory/shared-building/page-001.png"
+    ],
+    "contact_position": 18
+  },
+  "g3q/2719-2721-2720-2722": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "40d88a7a50e61584ce74e745ea9d67661168e7066cd1a01403e4a2ca7f2f2045",
+    "evidence": [
+      "inventory/shared-building/page-001.png"
+    ],
+    "contact_position": 29
+  },
+  "g3q/2723-2724-2725-2726": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "aaea4cac6cc58c141106cd3c83dc0214b7843862f46d9081bbff8876c8bb7041",
+    "evidence": [
+      "inventory/shared-building/page-002.png"
+    ],
+    "contact_position": 34
+  },
+  "g3q/2731-2732-2733-2732": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "f1d5b935ca51ac8332000fae8ac1dbdb9ec881ffb3cf19894bd30dfe32a131da",
+    "evidence": [
+      "inventory/shared-building/page-002.png"
+    ],
+    "contact_position": 44
+  },
+  "g3q/2744-2745-2744-2746": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "bf2c56605815cc3bd0bfc775034c7d61069c77b614609eecf2b493e352233cbe",
+    "evidence": [
+      "inventory/shared-building/page-002.png"
+    ],
+    "contact_position": 55
+  },
+  "g3q/2747-2732-2748-2732": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "5cfc507d5c266639b74edd13af2bd252e237080a7023ba887036cc5d1d473f6b",
+    "evidence": [
+      "inventory/shared-building/page-002.png"
+    ],
+    "contact_position": 61
+  },
+  "g3q/2744-2761-2744-2762": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "9662257c98292ff1bd97805eb9893b9e8bebcdc8b7ea9db24f82cd95137d8488",
+    "evidence": [
+      "inventory/shared-building/page-003.png"
+    ],
+    "contact_position": 75
+  },
+  "g3q/2763-2732-2764-2765": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "eb18ad90aed7cf7555ae5fd1c55ee1dd042312397dd41d84f69949d97a92606b",
+    "evidence": [
+      "inventory/shared-building/page-003.png"
+    ],
+    "contact_position": 81
+  },
+  "g3q/2744-2763-2777-2778": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "e4a0d28443dffd26167610ac8b99316aa5b8c10fe2b2a27e62e22e44fb55ea16",
+    "evidence": [
+      "inventory/shared-building/page-003.png"
+    ],
+    "contact_position": 90
+  },
+  "g3q/2729-2730-2783-2783": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "760b31ab69b5601f7eaa8b60168ed73b031f36a54a677eb0c392f2ed932693e8",
+    "evidence": [
+      "inventory/shared-building/page-004.png"
+    ],
+    "contact_position": 121
+  },
+  "g3q/2788-2789-2790-2791": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "840419504cfeafdd3d8eeba91c3852eadded3fcd39a4437fe7d30be2b682dec8",
+    "evidence": [
+      "inventory/shared-building/page-005.png"
+    ],
+    "contact_position": 153
+  },
+  "g3q/2792-2793-2794-2794": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "92bede5a3ce98e77c0d114ccaad01f6c250865df1af90198f15cf73ce8c792c8",
+    "evidence": [
+      "inventory/shared-building/page-005.png"
+    ],
+    "contact_position": 157
+  },
+  "g3q/2789-2795-2796-2797": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "172f9eced06851012e252cb009a12ca3d658ea04c4e04ee20b3e20a3f099b459",
+    "evidence": [
+      "inventory/shared-building/page-006.png"
+    ],
+    "contact_position": 162
+  },
+  "g3q/2798-2799-2800-2801": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "007562c5e0bc949b2ee7500032d1ff44fc2746cf37bdd6100a35de157ae25bc1",
+    "evidence": [
+      "inventory/shared-building/page-006.png"
+    ],
+    "contact_position": 174
+  },
+  "g3q/2802-2802-2803-2804": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "f17a7c1aaa9ab26a9133ada8e50f4778862bc04333c1d7108839a8478e78101c",
+    "evidence": [
+      "inventory/shared-building/page-006.png"
+    ],
+    "contact_position": 176
+  },
+  "g3q/2805-2806-2807-2808": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "d7c059df9d9cba5c8c25788c1d528db4d2d8943a2430ec323a229cc0d0718905",
+    "evidence": [
+      "inventory/shared-building/page-006.png"
+    ],
+    "contact_position": 179
+  },
+  "g3q/2693-2809-281-2810": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "3814d0f08c0237985cd70c9cc0e06460d50402108250423ac85dc7d912c22858",
+    "evidence": [
+      "inventory/shared-building/page-006.png"
+    ],
+    "contact_position": 187
+  },
+  "g3q/2812-2694-2813-282": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "9891d0a176ae9e93f1e55e85b6ce1ca1a74555b4554c3493d0c9039491503a84",
+    "evidence": [
+      "inventory/shared-building/page-006.png"
+    ],
+    "contact_position": 191
+  },
+  "g3q/2719-2814-2720-2815": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "840ea6590b1472dbc455703a1ed98b1484113398ffae0bc3ae6a40df4b267453",
+    "evidence": [
+      "inventory/shared-building/page-007.png"
+    ],
+    "contact_position": 199
+  },
+  "g3q/2816-2716-2817-2718": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "51787699f628dd20d22acff436ad5641021a798bdcd5f0309fa751d6da967535",
+    "evidence": [
+      "inventory/shared-building/page-007.png"
+    ],
+    "contact_position": 204
+  },
+  "g3q/2811-2811-2822-2823": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "3a3ed5fcfaa155133afb7e8e8f64a0af0f3f364909ab820b4b5d4c7f72f6ed5b",
+    "evidence": [
+      "inventory/shared-building/page-007.png"
+    ],
+    "contact_position": 218
+  },
+  "g3q/374-734-374-2824": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "7ca1415c485fdb79bd5ad4c25598d5b5e260bf74a45ef29f7b9f0fb638cdea6e",
+    "evidence": [
+      "inventory/shared-building/page-008.png"
+    ],
+    "contact_position": 231
+  },
+  "g3q/734-375-415-2825": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "7db39fac4c7ae3833b8e3c115bc6b3d3ddb043794cf312c4371cedbcce469a41",
+    "evidence": [
+      "inventory/shared-building/page-008.png"
+    ],
+    "contact_position": 237
+  },
+  "g3q/2826-2827-2828-2829": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "94811310ebaefc8792b818bc96bd8f0254954740e38834763af38300e6599071",
+    "evidence": [
+      "inventory/shared-building/page-008.png"
+    ],
+    "contact_position": 242
+  },
+  "g3q/374-375-374-375": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "0752d0400f56ff829e0de9c1bba6674a5f5d6867ba65370e8764ea13deec5106",
+    "evidence": [
+      "inventory/shared-building/page-008.png"
+    ],
+    "contact_position": 243
+  },
+  "g3q/374-734-2830-415": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "c750b94f762c43c6d72800613f61a9d5274aefba3fab28df379da66c3213fc35",
+    "evidence": [
+      "inventory/shared-building/page-008.png"
+    ],
+    "contact_position": 253
+  },
+  "g3q/734-375-2831-375": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "b978c90bf9d6dd498a17b6070c6432841b9c3441a70e537f9b5ab3cd131ba927",
+    "evidence": [
+      "inventory/shared-building/page-008.png"
+    ],
+    "contact_position": 255
+  },
+  "g3q/374-375-2832-382": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "60f955c9812a6375c07aaac81a8cdbe4a30a06c307e67adc65eaee19fcb6ff7f",
+    "evidence": [
+      "inventory/shared-building/page-009.png"
+    ],
+    "contact_position": 272
+  },
+  "g3q/2727-2728-2833-2784": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "fe0d06029e9bfe8e152f697435b65f7e2ee2b1b4c3a2541bb48f1dc3d4748623",
+    "evidence": [
+      "inventory/shared-building/page-009.png"
+    ],
+    "contact_position": 278
+  },
+  "g3q/2727-2728-2784-2834": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "c1b4d9b978604aa8043fe0f790c5bc37770b5624c3c4dd35c5dc5b0ca50edeb1",
+    "evidence": [
+      "inventory/shared-building/page-009.png"
+    ],
+    "contact_position": 283
+  },
+  "g3q/2727-2728-2835-2784": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "7cc93e5a44393792e75d54c14112e2f262db3a8380a3c45b86aeb0a81488ece5",
+    "evidence": [
+      "inventory/shared-building/page-009.png"
+    ],
+    "contact_position": 286
+  },
+  "g3q/2727-2728-2784-2836": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "083e5ce8a33096489be7d81c92da0700fec77d1f87bcc7f9ec22265ba7b27d5a",
+    "evidence": [
+      "inventory/shared-building/page-010.png"
+    ],
+    "contact_position": 291
+  },
+  "g3q/374-375-420-2837": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "26ca8208422e84798428d37ecd32fc7a993d6af256ec661ca194fca6d60fd906",
+    "evidence": [
+      "inventory/shared-building/page-010.png"
+    ],
+    "contact_position": 294
+  },
+  "g3q/2838-2839-2840-2841": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "6a42e3e9ed3c00a3275fc13483cbd403fc56044a8dd0ee75e6fc659599c5f884",
+    "evidence": [
+      "inventory/shared-building/page-010.png"
+    ],
+    "contact_position": 295
+  },
+  "g3q/374-734-2849-415": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "947719725f6d573902ecb335a13c4d1ff6ba46c426d3a26b1ce1bf8410c76ca3",
+    "evidence": [
+      "inventory/shared-building/page-010.png"
+    ],
+    "contact_position": 299
+  },
+  "g3q/734-734-415-415": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "ca79a16841cabe4d5060cbfd1abaf6aa3ec42b6956123028606dff2b1b481001",
+    "evidence": [
+      "inventory/shared-building/page-010.png"
+    ],
+    "contact_position": 303
+  },
+  "g3q/2850-2851-2852-2853": {
+    "label": "Battle Tent fabric wall section",
+    "family": "tent wall",
+    "reason": "Source/map placement is a connected tent enclosure or its door trim. The fitted section retains wall thickness, explicit edge/corner cuts and the fabric bands; its flat joining faces are appropriate to the contiguous wall.",
+    "baseline_entry_sha256": "19c99c83aca02a6d87ba66a275a06288888343d09605d4c70d38cc9678173c8c",
+    "evidence": [
+      "inventory/shared-building/page-010.png"
+    ],
+    "contact_position": 306
+  },
+  "g3q/5441-5441-2923-5475": {
+    "label": "Mossdeep staircase section",
+    "family": "staircase",
+    "reason": "The game-corner basement source has a broad yellow stairway. Existing geometry already has rising treads and substantial side stringers with the source stair bands; preserve its left/center/right joining profile.",
+    "baseline_entry_sha256": "8c098c64d452b96271a344ff81f81d7af1d37564f51208643c4fd4a5a307bfe4",
+    "evidence": [
+      "inventory/shared-building/page-001.png"
+    ],
+    "contact_position": 4
+  },
+  "g3q/5441-5441-5476-5476": {
+    "label": "Mossdeep staircase section",
+    "family": "staircase",
+    "reason": "The game-corner basement source has a broad yellow stairway. Existing geometry already has rising treads and substantial side stringers with the source stair bands; preserve its left/center/right joining profile.",
+    "baseline_entry_sha256": "7faf42bbfe0627293edc31fdfe892ff97173562092dd486130d269ee58ba8a0a",
+    "evidence": [
+      "inventory/shared-building/page-001.png"
+    ],
+    "contact_position": 6
+  },
+  "g3q/5441-5441-5477-2923": {
+    "label": "Mossdeep staircase section",
+    "family": "staircase",
+    "reason": "The game-corner basement source has a broad yellow stairway. Existing geometry already has rising treads and substantial side stringers with the source stair bands; preserve its left/center/right joining profile.",
+    "baseline_entry_sha256": "3efd1e207f9e9a1822fbeadcd2670e3fe50e716c0933b0ca45f32099be7b0772",
+    "evidence": [
+      "inventory/shared-building/page-001.png"
+    ],
+    "contact_position": 7
+  },
+  "g3q/3656-3656-5517-5518": {
+    "label": "Hotel stair section",
+    "family": "staircase",
+    "reason": "The hotel source shows stairs and their landing edge. Existing geometry keeps stepped tread heights and the open dark upper passage, without filling the passage with a new cube.",
+    "baseline_entry_sha256": "69ba079f06e433b036193a55acd4df2bc83476ea98572389e701a1b8af4f9dd8",
+    "evidence": [
+      "inventory/shared-building/page-001.png"
+    ],
+    "contact_position": 19
+  },
+  "g3q/5491-5492-5493-5494": {
+    "label": "Hotel stair section",
+    "family": "staircase",
+    "reason": "The hotel source shows stairs and their landing edge. Existing geometry keeps stepped tread heights and the open dark upper passage, without filling the passage with a new cube.",
+    "baseline_entry_sha256": "291f4bea0c1d680c3c6f9b13928e818aefdd30540b70855336a86d3a213745a5",
+    "evidence": [
+      "inventory/shared-building/page-001.png"
+    ],
+    "contact_position": 20
+  },
+  "g3q/4680-4682-4660-4927": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "4acf33196a7b0187c11cd3a1ef1d45c4ba94b34fbdd14154a45fe26c24dc84eb",
+    "evidence": [
+      "inventory/shared-building/page-001.png"
+    ],
+    "contact_position": 9
+  },
+  "g3q/4682-4682-4927-4927": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "faf312042956b2e4901c9ca73020084febc1dc98218dd6e263db2a56f2c8cc24",
+    "evidence": [
+      "inventory/shared-building/page-001.png"
+    ],
+    "contact_position": 11
+  },
+  "g3q/4682-4681-4927-4661": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "1548170a21cdd26f95d4fc54ece1682f20fc913b3969111d1d1d3078aee737d2",
+    "evidence": [
+      "inventory/shared-building/page-001.png"
+    ],
+    "contact_position": 14
+  },
+  "g3q/4680-4681-4660-4661": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "2eaa1b232618713117e726c8f9d8b91ca3cd3eca8ea513522e5a1612b397c0b1",
+    "evidence": [
+      "inventory/shared-building/page-001.png"
+    ],
+    "contact_position": 15
+  },
+  "g3q/4702-3656-4702-4937": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "f7ad123861feb8d8deede090c4ed97f32d6996c24cefc5c2ef98964e05167f7e",
+    "evidence": [
+      "inventory/shared-building/page-001.png"
+    ],
+    "contact_position": 28
+  },
+  "g3q/3656-3656-4938-4938": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "75780a75c90a1fcd9f8b0b3ac36d2f8f18b24b87078fcbf0054eaf6a3958e506",
+    "evidence": [
+      "inventory/shared-building/page-001.png"
+    ],
+    "contact_position": 30
+  },
+  "g3q/3656-4703-4939-4703": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "4014243d16aa819fdf2f96f8191dbe971dd29bf6bce2d1fe251e0b6911c02b0b",
+    "evidence": [
+      "inventory/shared-building/page-002.png"
+    ],
+    "contact_position": 35
+  },
+  "g3q/4658-4659-4660-4661": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "16e4db30fffac73056b084d3158a5511c19b171a1e154334f0a3062621cc4ad3",
+    "evidence": [
+      "inventory/shared-building/page-002.png"
+    ],
+    "contact_position": 39
+  },
+  "g3q/4702-4703-4702-4703": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "a33bdbad8db5070b524c5c722d8e15473d0bc1ebeaf56d63df38e35876815f73",
+    "evidence": [
+      "inventory/shared-building/page-002.png"
+    ],
+    "contact_position": 40
+  },
+  "g3q/4717-4717-4683-4718": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "3800a04e18ccbe4e1fa163b248e6e14e373ad344e9406e4a5d6c75c1fdf58290",
+    "evidence": [
+      "inventory/shared-building/page-003.png"
+    ],
+    "contact_position": 96
+  },
+  "g3q/4717-4717-4719-4720": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "370939ce88c77afad5c7aec729a0422bb0325855561aaec297c86f1275b62983",
+    "evidence": [
+      "inventory/shared-building/page-004.png"
+    ],
+    "contact_position": 97
+  },
+  "g3q/4717-4717-4721-4722": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "1a57fa18ae0d6041ad4c9730f3ce2bc70c7d4ddb53e2a9b39f4c92ff6c634332",
+    "evidence": [
+      "inventory/shared-building/page-004.png"
+    ],
+    "contact_position": 98
+  },
+  "g3q/4717-4717-4723-4683": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "f2fdc4e2e73a74add44f88a623b4dffc576cf8163983a31ed9d0edb0545fdaf8",
+    "evidence": [
+      "inventory/shared-building/page-004.png"
+    ],
+    "contact_position": 100
+  },
+  "g3q/901-840-902-903": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "13523f71d8f64f4f7613ee6dfc3a172d6f4817c583bb31075288f22efc02926f",
+    "evidence": [
+      "inventory/shared-building/page-004.png"
+    ],
+    "contact_position": 107
+  },
+  "g3q/4653-4737-4738-4739": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "8cf94a267514f46ce187cc92ae6d8f98c981b7c40068651bec2838b5553f2a87",
+    "evidence": [
+      "inventory/shared-building/page-004.png"
+    ],
+    "contact_position": 110
+  },
+  "g3q/4740-4741-4740-4742": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "d1913c9e091ec04ad64d814e79f6573cdfa75ffe8746e4507ca3afe7092e4d66",
+    "evidence": [
+      "inventory/shared-building/page-004.png"
+    ],
+    "contact_position": 113
+  },
+  "g3q/840-901-842-902": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "7851d2340e93366791524bd603328402e5dec9956abd48cc56bb44b23e8547fc",
+    "evidence": [
+      "inventory/shared-building/page-004.png"
+    ],
+    "contact_position": 114
+  },
+  "g3q/4743-4744-4745-4744": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "9b78d0a3041a4627fc81069599ffb3d132810fdeaaf148c6be29177d036b96ea",
+    "evidence": [
+      "inventory/shared-building/page-004.png"
+    ],
+    "contact_position": 116
+  },
+  "g3q/4746-4653-4747-4748": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "23ae8bebf7c4d4e0171878614e247dcf6f788cc6e25b7e8fdd9d1512ca7ded9e",
+    "evidence": [
+      "inventory/shared-building/page-004.png"
+    ],
+    "contact_position": 117
+  },
+  "g3q/4724-4724-4724-4724": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "f7b6cdd0e533fa13ae1c6b56457ec15b98d0bd251c8d36725af36e5462962c12",
+    "evidence": [
+      "inventory/shared-building/page-004.png"
+    ],
+    "contact_position": 118
+  },
+  "g3q/4755-4739-4756-4757": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "1d43fbbd391627f88bebffe42a70f85102474575214180f69b85eed5cdcbfb21",
+    "evidence": [
+      "inventory/shared-building/page-005.png"
+    ],
+    "contact_position": 130
+  },
+  "g3q/4740-4758-4759-4760": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "8e8505a84e2442ba01898090ed83611a6b9138b164e86ac27d0382b1afed675b",
+    "evidence": [
+      "inventory/shared-building/page-005.png"
+    ],
+    "contact_position": 133
+  },
+  "g3q/4761-4744-4762-4763": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "e023233eec291a6a5c2e7fe6553f523efce01f37dca6c864742bb5eee99f0bf7",
+    "evidence": [
+      "inventory/shared-building/page-005.png"
+    ],
+    "contact_position": 135
+  },
+  "g3q/4747-4764-4765-4766": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "52500063383abf40b821c5e70fa953eefb0786c5c4bcb9b28cd8da0b89ea4e16",
+    "evidence": [
+      "inventory/shared-building/page-005.png"
+    ],
+    "contact_position": 138
+  },
+  "g3q/4756-4777-4778-4779": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "89b9ff7821cea0920fe68cf57403d3f9a5d117741c5423fd128be3e5dd25bc14",
+    "evidence": [
+      "inventory/shared-building/page-005.png"
+    ],
+    "contact_position": 150
+  },
+  "g3q/4780-4781-4782-4783": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "ce044038ea20d5f09fbf5fda62f1789bdff2bd21162716019d5775ba9743766c",
+    "evidence": [
+      "inventory/shared-building/page-005.png"
+    ],
+    "contact_position": 152
+  },
+  "g3q/4784-4785-4786-4787": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "9a9d086579c2850cd8edfecdb30b196879a5f3dd643ac2794f2ce84a25fe0067",
+    "evidence": [
+      "inventory/shared-building/page-005.png"
+    ],
+    "contact_position": 155
+  },
+  "g3q/4788-4766-4789-4790": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "a444dddb182a62379698169dc712f34ef2fbb6815f7086b4c959f0375725c878",
+    "evidence": [
+      "inventory/shared-building/page-005.png"
+    ],
+    "contact_position": 159
+  },
+  "g3q/4799-4800-4801-4798": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "1e03d100caf700c15cc36782bce5a5f2d62cd1e81df4c508ace326a4e88c484d",
+    "evidence": [
+      "inventory/shared-building/page-006.png"
+    ],
+    "contact_position": 168
+  },
+  "g3q/4796-4802-4803-4804": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "0d3295bbecc346102f8de5351f08839d854f05bb995c74fdd529b9ec0bd1bac9",
+    "evidence": [
+      "inventory/shared-building/page-006.png"
+    ],
+    "contact_position": 171
+  },
+  "g3q/4805-4806-4668-4669": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "b17e1eba42d7dbde616f3a6f380656babdd4026b2b5b6ac8260033a0eaabbac1",
+    "evidence": [
+      "inventory/shared-building/page-006.png"
+    ],
+    "contact_position": 172
+  },
+  "g3q/4807-4808-4809-4810": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "0e223b7c40b20a3f93d5991e79e2170d22b1876af3d2ededb82e8ff47bced86a",
+    "evidence": [
+      "inventory/shared-building/page-006.png"
+    ],
+    "contact_position": 173
+  },
+  "g3q/4811-4812-4813-4814": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "a5f6e68e0bcf6722f361ad3b5b5817d99279c940974e40f19c5ae534694467d9",
+    "evidence": [
+      "inventory/shared-building/page-006.png"
+    ],
+    "contact_position": 175
+  },
+  "g3q/4815-4816-4668-4669": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "6c305a9ddfd737040b2f60b681863bf79a8d55e27f5f337d9f31ce7c24ce93f1",
+    "evidence": [
+      "inventory/shared-building/page-006.png"
+    ],
+    "contact_position": 177
+  },
+  "g3q/4821-4822-4823-4824": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "609444bd10022abf1766d66e00f599a0e6af18db57441bffa2d89471027de940",
+    "evidence": [
+      "inventory/shared-building/page-006.png"
+    ],
+    "contact_position": 183
+  },
+  "g3q/4825-4822-4824-4824": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "2c7d28be04939c3e8528e3b164a19a93d0a8c3372b63abf4e6658245714d47c9",
+    "evidence": [
+      "inventory/shared-building/page-006.png"
+    ],
+    "contact_position": 185
+  },
+  "g3q/4825-4826-4824-4827": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "2f7dc19244dc1f1136664cfff81800214224d9849857a9aa2208e0dd685e013f",
+    "evidence": [
+      "inventory/shared-building/page-006.png"
+    ],
+    "contact_position": 189
+  },
+  "g3q/4682-4682-4683-4828": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "68955d03f400795275990434ceeed58f0533514141e889699ec22482605891af",
+    "evidence": [
+      "inventory/shared-building/page-006.png"
+    ],
+    "contact_position": 190
+  },
+  "g3q/4682-4682-4829-4683": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "fd8961328c0a5557932cd26dcac9d84be7102a385b6f4ebfef692992866038a7",
+    "evidence": [
+      "inventory/shared-building/page-007.png"
+    ],
+    "contact_position": 193
+  },
+  "g3q/4830-4831-4832-4833": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "2d0eef702fe26254b8a4bbe4cf64bc72a0739b925cd231a9faf106703aa39886",
+    "evidence": [
+      "inventory/shared-building/page-007.png"
+    ],
+    "contact_position": 194
+  },
+  "g3q/4834-4835-4836-4837": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "3b29a863ed36c88556b685e5ae2f2badfe355cc3b2867d0d2ff3eeb98770f1ab",
+    "evidence": [
+      "inventory/shared-building/page-007.png"
+    ],
+    "contact_position": 195
+  },
+  "g3q/4845-4846-4847-4848": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "8f0720610af3f03e3e68e89ce55867b5052a22974666af84627ff39a2a574729",
+    "evidence": [
+      "inventory/shared-building/page-007.png"
+    ],
+    "contact_position": 202
+  },
+  "g3q/4849-4850-4851-4852": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "5132a2b5b4c90b7e59a17333a08ada8bdfef483a4a51f251b22ada878f2d8fbf",
+    "evidence": [
+      "inventory/shared-building/page-007.png"
+    ],
+    "contact_position": 206
+  },
+  "g3q/4853-4854-4823-4824": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "30bb3d9e59b9ec974ae50a8c667cc43badddd1844ed5fa0289728d30c7aa303a",
+    "evidence": [
+      "inventory/shared-building/page-007.png"
+    ],
+    "contact_position": 208
+  },
+  "g3q/4696-4842-4715-4842": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "136ce02e1685de3e093ff5273a2f7edf9e00c27416eb5dda92e2a22d4df4d09a",
+    "evidence": [
+      "inventory/shared-building/page-007.png"
+    ],
+    "contact_position": 216
+  },
+  "g3q/4861-4862-4863-4864": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "2c7dce2bcf7d717b885aa353bee352db5cf059f8ade31c91ec6f8d9a72eb5e46",
+    "evidence": [
+      "inventory/shared-building/page-007.png"
+    ],
+    "contact_position": 220
+  },
+  "g3q/4865-4866-4867-4868": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "ef73f8b33283bb1aa5f66dead07bbb8553cebceaf247764355b519e8bdfe0dd6",
+    "evidence": [
+      "inventory/shared-building/page-007.png"
+    ],
+    "contact_position": 223
+  },
+  "g3q/4853-4854-4869-4824": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "76bb14ffc5289449b5f70415c07517e579de78b7f87a9e2adb208ec7a5372981",
+    "evidence": [
+      "inventory/shared-building/page-008.png"
+    ],
+    "contact_position": 226
+  },
+  "g3q/4855-4856-4824-4870": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "aebe685d437f5fc51003900e6807a40da9e9aacab33cf78613ae10321ccf9464",
+    "evidence": [
+      "inventory/shared-building/page-008.png"
+    ],
+    "contact_position": 228
+  },
+  "g3q/4874-4875-4824-4876": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "e25761c4b6fdffacb364e43141bbb5cd8522c09b878b86c79f42d0d180c50494",
+    "evidence": [
+      "inventory/shared-building/page-008.png"
+    ],
+    "contact_position": 240
+  },
+  "g3q/4871-4897-4873-4824": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "59a30eeda123ef985b95f681221af7cd0a96d146b06d7920e8b16a997bab61cb",
+    "evidence": [
+      "inventory/shared-building/page-009.png"
+    ],
+    "contact_position": 274
+  },
+  "g3q/4853-4875-4824-4876": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "07319268072bdb37dcef96278f783b3660991e79ed3ba77f3613005d03616354",
+    "evidence": [
+      "inventory/shared-building/page-009.png"
+    ],
+    "contact_position": 280
+  },
+  "g3q/4643-4842-4668-4842": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "2f28331c20dff3e338a48268ac3f2c95c225849166634aa369e28dc44855c315",
+    "evidence": [
+      "inventory/shared-building/page-010.png"
+    ],
+    "contact_position": 314
+  },
+  "g3q/4853-4856-4869-4827": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "54d430289ba7da417de3ba19b66c74daec1ab75b455012c7196481f80b2f2b22",
+    "evidence": [
+      "inventory/shared-building/page-011.png"
+    ],
+    "contact_position": 323
+  },
+  "g3q/4853-4856-4823-4870": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "f106e48bb8922982286cf9a7c1b9904beb9a922463e527eb4f5b30ee1e05b6a0",
+    "evidence": [
+      "inventory/shared-building/page-011.png"
+    ],
+    "contact_position": 325
+  },
+  "g3q/4874-4872-4824-4824": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "1aeaa27374acf22bbeccb805f2bd34280f6d7d411bac4d2b587e34e7ff8650f8",
+    "evidence": [
+      "inventory/shared-building/page-011.png"
+    ],
+    "contact_position": 326
+  },
+  "g3q/4997-4997-5040-5041": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "9f080f699d84a7819796129a2fa8743f38e345368189c12a23a3b3fb339b72c8",
+    "evidence": [
+      "inventory/shared-building/page-013.png"
+    ],
+    "contact_position": 401
+  },
+  "g3q/4997-4997-5043-5041": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "06469ca23a4f57dce90aeedb6d62bbad24a9a018d25be7c268972a3ed272f8e9",
+    "evidence": [
+      "inventory/shared-building/page-013.png"
+    ],
+    "contact_position": 404
+  },
+  "g3q/4824-4824-3656-3656": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "971408395237c9ac270f72c5f356c94f8126f3a2fecaf72df3c7fbaa3899b3d9",
+    "evidence": [
+      "inventory/shared-building/page-013.png"
+    ],
+    "contact_position": 407
+  },
+  "g3q/4824-4827-3656-4842": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "99c7e5c240977e42c01bf4732dfacbd007604f382a7aef77987c95a7a78cf073",
+    "evidence": [
+      "inventory/shared-building/page-013.png"
+    ],
+    "contact_position": 409
+  },
+  "g3q/4823-4824-4842-3656": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "58bcfe6edb6c968a2c7e851a9c5998a3c7a046d047fb1c8b2332326956f1b028",
+    "evidence": [
+      "inventory/shared-building/page-013.png"
+    ],
+    "contact_position": 411
+  },
+  "g3q/3656-3656-5061-5061": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "63ff8b728c14060e0621036a9d9e997c554d7bbc9e2eca2bc9a1f36f7a4eeb7d",
+    "evidence": [
+      "inventory/shared-building/page-013.png"
+    ],
+    "contact_position": 414
+  },
+  "g3q/3656-4842-5061-4875": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "2abf392a234363caf46b1822c861a6c9c20285e5c4e6a2d85fdb1d7f157b8a6f",
+    "evidence": [
+      "inventory/shared-building/page-013.png"
+    ],
+    "contact_position": 415
+  },
+  "g3q/4842-3656-4871-5061": {
+    "label": "Ship railing or bulkhead section",
+    "family": "ship architecture",
+    "reason": "The ship/hideout source and map neighbors identify structural rail, wall or equipment-bay pieces. Existing geometry keeps the source opening, inset panel and supporting edge profile visible from front and side; preserve the authored profile and matching links.",
+    "baseline_entry_sha256": "51e130ea78ea3f8cc7aafe3c351bb93d7bcbfdaae218a9d3986f911be958933d",
+    "evidence": [
+      "inventory/shared-building/page-013.png"
+    ],
+    "contact_position": 416
+  },
+  "g3q/808-808-809-810": {
+    "label": "Battle Tower door or wall section",
+    "family": "facility wall",
+    "reason": "The source is a facility wall/door bay, with green door glazing or orange wall panels. Existing full-depth backing and inset/open border match the architectural role and join neighboring wall sections without a free-standing prop silhouette.",
+    "baseline_entry_sha256": "ca0a23ae4157f15416b57134102d2a3b8b26c4fd6fd482cf6aff12b9aec6833b",
+    "evidence": [
+      "inventory/shared-building/page-001.png"
+    ],
+    "contact_position": 12
+  },
+  "g3q/836-837-838-839": {
+    "label": "Battle Tower door or wall section",
+    "family": "facility wall",
+    "reason": "The source is a facility wall/door bay, with green door glazing or orange wall panels. Existing full-depth backing and inset/open border match the architectural role and join neighboring wall sections without a free-standing prop silhouette.",
+    "baseline_entry_sha256": "43c570d1d628838aaa1eeb98236620798661ac04d735eb1154c54cb3b181e73d",
+    "evidence": [
+      "inventory/shared-building/page-002.png"
+    ],
+    "contact_position": 33
+  },
+  "g3q/341-1296-1268-1297": {
+    "label": "Battle Tower door or wall section",
+    "family": "facility wall",
+    "reason": "The source is a facility wall/door bay, with green door glazing or orange wall panels. Existing full-depth backing and inset/open border match the architectural role and join neighboring wall sections without a free-standing prop silhouette.",
+    "baseline_entry_sha256": "f9a79e8c7c74f95afa73d3950b629c26540642d4ec05bda1f1ed25a0a4588708",
+    "evidence": [
+      "inventory/shared-building/page-003.png"
+    ],
+    "contact_position": 72
+  },
+  "g3q/1298-341-1299-1267": {
+    "label": "Battle Tower door or wall section",
+    "family": "facility wall",
+    "reason": "The source is a facility wall/door bay, with green door glazing or orange wall panels. Existing full-depth backing and inset/open border match the architectural role and join neighboring wall sections without a free-standing prop silhouette.",
+    "baseline_entry_sha256": "9ceacbe61764ceb9d0b9fc3a8df986d9443d5273b9d9e1fc01065c7fdc8c1133",
+    "evidence": [
+      "inventory/shared-building/page-003.png"
+    ],
+    "contact_position": 74
+  },
+  "g3q/1264-1310-290-1311": {
+    "label": "Battle Tower door or wall section",
+    "family": "facility wall",
+    "reason": "The source is a facility wall/door bay, with green door glazing or orange wall panels. Existing full-depth backing and inset/open border match the architectural role and join neighboring wall sections without a free-standing prop silhouette.",
+    "baseline_entry_sha256": "3feef4a1a271f5cdb994501e01be12b6fe58c3c8b2cd6ed913a82bab04ded78a",
+    "evidence": [
+      "inventory/shared-building/page-003.png"
+    ],
+    "contact_position": 87
+  },
+  "g3q/1312-1279-1313-290": {
+    "label": "Battle Tower door or wall section",
+    "family": "facility wall",
+    "reason": "The source is a facility wall/door bay, with green door glazing or orange wall panels. Existing full-depth backing and inset/open border match the architectural role and join neighboring wall sections without a free-standing prop silhouette.",
+    "baseline_entry_sha256": "983738868fce503fbeff2e28a4007d1ad369695231b5e4048aa37db294a6932b",
+    "evidence": [
+      "inventory/shared-building/page-003.png"
+    ],
+    "contact_position": 89
+  },
+  "g3q/1264-1310-1326-1327": {
+    "label": "Battle Tower door or wall section",
+    "family": "facility wall",
+    "reason": "The source is a facility wall/door bay, with green door glazing or orange wall panels. Existing full-depth backing and inset/open border match the architectural role and join neighboring wall sections without a free-standing prop silhouette.",
+    "baseline_entry_sha256": "1dac154815c5c17b49e1e2e53498656ded737dcdaf85437a78f074fb7c62c3af",
+    "evidence": [
+      "inventory/shared-building/page-004.png"
+    ],
+    "contact_position": 108
+  },
+  "g3q/1312-1279-1328-1326": {
+    "label": "Battle Tower door or wall section",
+    "family": "facility wall",
+    "reason": "The source is a facility wall/door bay, with green door glazing or orange wall panels. Existing full-depth backing and inset/open border match the architectural role and join neighboring wall sections without a free-standing prop silhouette.",
+    "baseline_entry_sha256": "b111d61e03a9bcd4efd700aefe887c72f1ffa571153ee5bc858375e4ffa425f5",
+    "evidence": [
+      "inventory/shared-building/page-004.png"
+    ],
+    "contact_position": 112
+  },
+  "g3q/808-808-1481-1482": {
+    "label": "Battle Tower door or wall section",
+    "family": "facility wall",
+    "reason": "The source is a facility wall/door bay, with green door glazing or orange wall panels. Existing full-depth backing and inset/open border match the architectural role and join neighboring wall sections without a free-standing prop silhouette.",
+    "baseline_entry_sha256": "6732a3282f4aa424ca693b781010162d260be1a6cc2f70c3caa17af0bce550da",
+    "evidence": [
+      "inventory/shared-building/page-011.png"
+    ],
+    "contact_position": 335
+  },
+  "g3q/808-808-1483-1484": {
+    "label": "Battle Tower door or wall section",
+    "family": "facility wall",
+    "reason": "The source is a facility wall/door bay, with green door glazing or orange wall panels. Existing full-depth backing and inset/open border match the architectural role and join neighboring wall sections without a free-standing prop silhouette.",
+    "baseline_entry_sha256": "58179686958faea2518185fbed5d5e302bf4c5b4fd848b7a2208ca1fafe7a31f",
+    "evidence": [
+      "inventory/shared-building/page-011.png"
+    ],
+    "contact_position": 338
+  },
+  "g3q/341-341-1268-1499": {
+    "label": "Battle Tower door or wall section",
+    "family": "facility wall",
+    "reason": "The source is a facility wall/door bay, with green door glazing or orange wall panels. Existing full-depth backing and inset/open border match the architectural role and join neighboring wall sections without a free-standing prop silhouette.",
+    "baseline_entry_sha256": "951edd5bb8df6072d7080f0fa87a6420f355977f08525da268fc96127dc92bf6",
+    "evidence": [
+      "inventory/shared-building/page-011.png"
+    ],
+    "contact_position": 346
+  },
+  "g3q/341-341-1500-1267": {
+    "label": "Battle Tower door or wall section",
+    "family": "facility wall",
+    "reason": "The source is a facility wall/door bay, with green door glazing or orange wall panels. Existing full-depth backing and inset/open border match the architectural role and join neighboring wall sections without a free-standing prop silhouette.",
+    "baseline_entry_sha256": "34e6a5f483933ef8d53670578b629b3c4a17c8c24534b5e74785c26d7f8386b7",
+    "evidence": [
+      "inventory/shared-building/page-011.png"
+    ],
+    "contact_position": 347
+  },
+  "g3q/341-341-887-840": {
+    "label": "Battle Tower door or wall section",
+    "family": "facility wall",
+    "reason": "The source is a facility wall/door bay, with green door glazing or orange wall panels. Existing full-depth backing and inset/open border match the architectural role and join neighboring wall sections without a free-standing prop silhouette.",
+    "baseline_entry_sha256": "dff6a9854fba18bb60a18d86b6a074c16a007df3ae64f9ec01aaefb057a390d3",
+    "evidence": [
+      "inventory/shared-building/page-011.png"
+    ],
+    "contact_position": 348
+  },
+  "g3q/341-341-840-840": {
+    "label": "Battle Tower door or wall section",
+    "family": "facility wall",
+    "reason": "The source is a facility wall/door bay, with green door glazing or orange wall panels. Existing full-depth backing and inset/open border match the architectural role and join neighboring wall sections without a free-standing prop silhouette.",
+    "baseline_entry_sha256": "d174f1094f06b0e8cc2309c7796968f1db7814dfa00e45e8e3605bab06f542c6",
+    "evidence": [
+      "inventory/shared-building/page-011.png"
+    ],
+    "contact_position": 350
+  },
+  "g3q/341-341-840-887": {
+    "label": "Battle Tower door or wall section",
+    "family": "facility wall",
+    "reason": "The source is a facility wall/door bay, with green door glazing or orange wall panels. Existing full-depth backing and inset/open border match the architectural role and join neighboring wall sections without a free-standing prop silhouette.",
+    "baseline_entry_sha256": "eb4457f4c124678b5b0d10027c1c80484bbdd27d81866d6f33745c6260523baa",
+    "evidence": [
+      "inventory/shared-building/page-011.png"
+    ],
+    "contact_position": 352
+  },
+  "g3q/129-129-129-129": {
+    "label": "White interior wall section",
+    "family": "interior wall",
+    "reason": "The white cell is a repeated interior wall/backing section, including ship corridors. Preserve its authored solid backing and top margin rather than interpreting a blank source as an empty model.",
+    "baseline_entry_sha256": "02d125a4791468cdcb3de433c4c3bd8dab7d3154008035bed699fec32ad0a6b5",
+    "evidence": [
+      "inventory/shared-building/page-001.png"
+    ],
+    "contact_position": 16
+  },
+  "g3q/1858-1859-1860-1861": {
+    "label": "Battle Palace panel or column section",
+    "family": "palace architecture",
+    "reason": "Palace map context places the gold/red carved panel in a continuous wall or supported column. Existing geometry retains its panel thickness and sculpted edge/capital recesses; the joining face is appropriate to the neighboring palace sections.",
+    "baseline_entry_sha256": "e99a844f2b72cb9f7ef7cb152399846d02de39b477c046f1e1210feaafd3fe2d",
+    "evidence": [
+      "inventory/shared-building/page-001.png"
+    ],
+    "contact_position": 21
+  },
+  "g3q/1860-1861-1860-1861": {
+    "label": "Battle Palace panel or column section",
+    "family": "palace architecture",
+    "reason": "Palace map context places the gold/red carved panel in a continuous wall or supported column. Existing geometry retains its panel thickness and sculpted edge/capital recesses; the joining face is appropriate to the neighboring palace sections.",
+    "baseline_entry_sha256": "62c5ee576615a60df90323041e1e400d17de585447063744cd6f5a8ff2ae869e",
+    "evidence": [
+      "inventory/shared-building/page-001.png"
+    ],
+    "contact_position": 25
+  },
+  "g3q/1854-1864-1854-1865": {
+    "label": "Battle Palace panel or column section",
+    "family": "palace architecture",
+    "reason": "Palace map context places the gold/red carved panel in a continuous wall or supported column. Existing geometry retains its panel thickness and sculpted edge/capital recesses; the joining face is appropriate to the neighboring palace sections.",
+    "baseline_entry_sha256": "2a1df6ae90cc73cf97281466440d7937fd232db3ea40a72466ffaa56f12c50d9",
+    "evidence": [
+      "inventory/shared-building/page-002.png"
+    ],
+    "contact_position": 38
+  },
+  "g3q/1866-1867-1868-1869": {
+    "label": "Battle Palace panel or column section",
+    "family": "palace architecture",
+    "reason": "Palace map context places the gold/red carved panel in a continuous wall or supported column. Existing geometry retains its panel thickness and sculpted edge/capital recesses; the joining face is appropriate to the neighboring palace sections.",
+    "baseline_entry_sha256": "93d0149c90c2903d780e7afb9a7da3d9bb1f4f0ad20753041659a4fc72abdec8",
+    "evidence": [
+      "inventory/shared-building/page-002.png"
+    ],
+    "contact_position": 41
+  },
+  "g3q/1870-1854-1871-1854": {
+    "label": "Battle Palace panel or column section",
+    "family": "palace architecture",
+    "reason": "Palace map context places the gold/red carved panel in a continuous wall or supported column. Existing geometry retains its panel thickness and sculpted edge/capital recesses; the joining face is appropriate to the neighboring palace sections.",
+    "baseline_entry_sha256": "af19f0f6785ed1136fb18cd9aae3afd53751dbc82cd26f12bfea62509f5e7eb1",
+    "evidence": [
+      "inventory/shared-building/page-002.png"
+    ],
+    "contact_position": 43
+  },
+  "g3q/1854-1872-1854-1873": {
+    "label": "Battle Palace panel or column section",
+    "family": "palace architecture",
+    "reason": "Palace map context places the gold/red carved panel in a continuous wall or supported column. Existing geometry retains its panel thickness and sculpted edge/capital recesses; the joining face is appropriate to the neighboring palace sections.",
+    "baseline_entry_sha256": "9ce28938846dc13ff4c9bd6cce816ba48c65b6b3ee72b65fed913330fabe66d7",
+    "evidence": [
+      "inventory/shared-building/page-002.png"
+    ],
+    "contact_position": 45
+  },
+  "g3q/1874-1875-1876-1877": {
+    "label": "Battle Palace panel or column section",
+    "family": "palace architecture",
+    "reason": "Palace map context places the gold/red carved panel in a continuous wall or supported column. Existing geometry retains its panel thickness and sculpted edge/capital recesses; the joining face is appropriate to the neighboring palace sections.",
+    "baseline_entry_sha256": "95b0dd8c8d9856574b6be85aea3dc86ff07404a2329073160a27933e96b70a71",
+    "evidence": [
+      "inventory/shared-building/page-002.png"
+    ],
+    "contact_position": 47
+  },
+  "g3q/1878-1854-1879-1854": {
+    "label": "Battle Palace panel or column section",
+    "family": "palace architecture",
+    "reason": "Palace map context places the gold/red carved panel in a continuous wall or supported column. Existing geometry retains its panel thickness and sculpted edge/capital recesses; the joining face is appropriate to the neighboring palace sections.",
+    "baseline_entry_sha256": "b0184dd487c46a7ddeb6fc0b5d3607ab1be3d07b3202dd54d3a19215918e4c62",
+    "evidence": [
+      "inventory/shared-building/page-002.png"
+    ],
+    "contact_position": 51
+  },
+  "g3q/1862-1880-1863-1880": {
+    "label": "Battle Palace panel or column section",
+    "family": "palace architecture",
+    "reason": "Palace map context places the gold/red carved panel in a continuous wall or supported column. Existing geometry retains its panel thickness and sculpted edge/capital recesses; the joining face is appropriate to the neighboring palace sections.",
+    "baseline_entry_sha256": "bb82daa180ad9614bf485e36fc87741b1536a9e2c7849239cd62093ead40b07b",
+    "evidence": [
+      "inventory/shared-building/page-002.png"
+    ],
+    "contact_position": 57
+  },
+  "g3q/1885-1862-1885-1863": {
+    "label": "Battle Palace panel or column section",
+    "family": "palace architecture",
+    "reason": "Palace map context places the gold/red carved panel in a continuous wall or supported column. Existing geometry retains its panel thickness and sculpted edge/capital recesses; the joining face is appropriate to the neighboring palace sections.",
+    "baseline_entry_sha256": "669c30a93867a57e401ea8abf03a1a64ef29dd2ef7961663997e194789494973",
+    "evidence": [
+      "inventory/shared-building/page-002.png"
+    ],
+    "contact_position": 60
+  },
+  "g3q/1944-1947-1944-1865": {
+    "label": "Battle Palace panel or column section",
+    "family": "palace architecture",
+    "reason": "Palace map context places the gold/red carved panel in a continuous wall or supported column. Existing geometry retains its panel thickness and sculpted edge/capital recesses; the joining face is appropriate to the neighboring palace sections.",
+    "baseline_entry_sha256": "1b6cf3fce8d2f03c5876848f5796b4161c398bd5eee23e4dfd738e6f30ce662a",
+    "evidence": [
+      "inventory/shared-building/page-006.png"
+    ],
+    "contact_position": 164
+  },
+  "g3q/1950-1944-1871-1944": {
+    "label": "Battle Palace panel or column section",
+    "family": "palace architecture",
+    "reason": "Palace map context places the gold/red carved panel in a continuous wall or supported column. Existing geometry retains its panel thickness and sculpted edge/capital recesses; the joining face is appropriate to the neighboring palace sections.",
+    "baseline_entry_sha256": "e795c3c110c9e5e47bd94762dc4947deeeebbc405e500f9954151b1b2145373b",
+    "evidence": [
+      "inventory/shared-building/page-006.png"
+    ],
+    "contact_position": 169
+  },
+  "g3q/1944-1880-1863-1880": {
+    "label": "Battle Palace panel or column section",
+    "family": "palace architecture",
+    "reason": "Palace map context places the gold/red carved panel in a continuous wall or supported column. Existing geometry retains its panel thickness and sculpted edge/capital recesses; the joining face is appropriate to the neighboring palace sections.",
+    "baseline_entry_sha256": "209123bdea0bf8b69bb675e624e39a2d5ee965d16da4cb77fcceb556b1bafb8d",
+    "evidence": [
+      "inventory/shared-building/page-006.png"
+    ],
+    "contact_position": 181
+  },
+  "g3q/1885-1944-1885-1863": {
+    "label": "Battle Palace panel or column section",
+    "family": "palace architecture",
+    "reason": "Palace map context places the gold/red carved panel in a continuous wall or supported column. Existing geometry retains its panel thickness and sculpted edge/capital recesses; the joining face is appropriate to the neighboring palace sections.",
+    "baseline_entry_sha256": "0906d6d3cdc546cf577bb46b7f19666ecc6599c590329a5caae27d6f1cc540bc",
+    "evidence": [
+      "inventory/shared-building/page-006.png"
+    ],
+    "contact_position": 186
+  },
+  "g3q/3686-3687-3688-3689": {
+    "label": "Contest stage border section",
+    "family": "stage border",
+    "reason": "Source and Contest Hall map show the edge or corner of the raised stage. Existing geometry already separates the low rim, underside and open floor, with matching end/corner profiles; retain the hand-built shape.",
+    "baseline_entry_sha256": "8bc82de8d80ca89a1ee38c206204ab40c9baf35282640224c59dda2402a82258",
+    "evidence": [
+      "inventory/shared-building/page-001.png"
+    ],
+    "contact_position": 22
+  },
+  "g3q/3687-3687-3690-3690": {
+    "label": "Contest stage border section",
+    "family": "stage border",
+    "reason": "Source and Contest Hall map show the edge or corner of the raised stage. Existing geometry already separates the low rim, underside and open floor, with matching end/corner profiles; retain the hand-built shape.",
+    "baseline_entry_sha256": "cb5450cf7514362a433300031a6059ba322f0aa0d0a1a4c40ad4506c0003465c",
+    "evidence": [
+      "inventory/shared-building/page-001.png"
+    ],
+    "contact_position": 26
+  },
+  "g3q/3687-3691-3692-3693": {
+    "label": "Contest stage border section",
+    "family": "stage border",
+    "reason": "Source and Contest Hall map show the edge or corner of the raised stage. Existing geometry already separates the low rim, underside and open floor, with matching end/corner profiles; retain the hand-built shape.",
+    "baseline_entry_sha256": "d6e2c10020a687931fe759cc7da77e6c12a6cceb982ab16a763cc4662c5e10b4",
+    "evidence": [
+      "inventory/shared-building/page-001.png"
+    ],
+    "contact_position": 31
+  },
+  "g3q/3688-3701-3688-3702": {
+    "label": "Contest stage border section",
+    "family": "stage border",
+    "reason": "Source and Contest Hall map show the edge or corner of the raised stage. Existing geometry already separates the low rim, underside and open floor, with matching end/corner profiles; retain the hand-built shape.",
+    "baseline_entry_sha256": "70f81fdf52fef5277cf6c33781310c3fbe8d0187860bdba493860ace2252a371",
+    "evidence": [
+      "inventory/shared-building/page-002.png"
+    ],
+    "contact_position": 48
+  },
+  "g3q/3705-3693-3706-3693": {
+    "label": "Contest stage border section",
+    "family": "stage border",
+    "reason": "Source and Contest Hall map show the edge or corner of the raised stage. Existing geometry already separates the low rim, underside and open floor, with matching end/corner profiles; retain the hand-built shape.",
+    "baseline_entry_sha256": "643dc286a23907d31de5879ac1d787637bee8bc726d08f63695ede97cab275ec",
+    "evidence": [
+      "inventory/shared-building/page-002.png"
+    ],
+    "contact_position": 53
+  },
+  "g3q/3707-3708-3709-3710": {
+    "label": "Contest stage border section",
+    "family": "stage border",
+    "reason": "Source and Contest Hall map show the edge or corner of the raised stage. Existing geometry already separates the low rim, underside and open floor, with matching end/corner profiles; retain the hand-built shape.",
+    "baseline_entry_sha256": "acc00d37eb2c6cc49bb9f4b078abdca692464310e96294bf6536dad1eb8bdc83",
+    "evidence": [
+      "inventory/shared-building/page-002.png"
+    ],
+    "contact_position": 59
+  },
+  "g3q/3713-3714-3715-3716": {
+    "label": "Contest stage border section",
+    "family": "stage border",
+    "reason": "Source and Contest Hall map show the edge or corner of the raised stage. Existing geometry already separates the low rim, underside and open floor, with matching end/corner profiles; retain the hand-built shape.",
+    "baseline_entry_sha256": "0b9cd83458642d970c12e9271c01c19b9ae3d0e1800c73743ce1c5eaf17cba61",
+    "evidence": [
+      "inventory/shared-building/page-003.png"
+    ],
+    "contact_position": 65
+  },
+  "g3q/3714-3714-3716-3716": {
+    "label": "Contest stage border section",
+    "family": "stage border",
+    "reason": "Source and Contest Hall map show the edge or corner of the raised stage. Existing geometry already separates the low rim, underside and open floor, with matching end/corner profiles; retain the hand-built shape.",
+    "baseline_entry_sha256": "81259aaa5ec43b431278969532150d54bcbcd21fdf60bb044e6bb010b75f4038",
+    "evidence": [
+      "inventory/shared-building/page-003.png"
+    ],
+    "contact_position": 69
+  },
+  "g3q/3714-3717-3716-3718": {
+    "label": "Contest stage border section",
+    "family": "stage border",
+    "reason": "Source and Contest Hall map show the edge or corner of the raised stage. Existing geometry already separates the low rim, underside and open floor, with matching end/corner profiles; retain the hand-built shape.",
+    "baseline_entry_sha256": "c232f0d526f4737c71004dd4ce74b2c83e039406f2c84af8d7a2a21a7fe906d6",
+    "evidence": [
+      "inventory/shared-building/page-003.png"
+    ],
+    "contact_position": 73
+  },
+  "g3q/3688-3701-3688-3701": {
+    "label": "Contest stage border section",
+    "family": "stage border",
+    "reason": "Source and Contest Hall map show the edge or corner of the raised stage. Existing geometry already separates the low rim, underside and open floor, with matching end/corner profiles; retain the hand-built shape.",
+    "baseline_entry_sha256": "268d31f87a3109e30a8b726980ac012a8f287163b2c5c8e65119031a65f85cc4",
+    "evidence": [
+      "inventory/shared-building/page-003.png"
+    ],
+    "contact_position": 84
+  },
+  "g3q/3705-3693-3705-3693": {
+    "label": "Contest stage border section",
+    "family": "stage border",
+    "reason": "Source and Contest Hall map show the edge or corner of the raised stage. Existing geometry already separates the low rim, underside and open floor, with matching end/corner profiles; retain the hand-built shape.",
+    "baseline_entry_sha256": "5658e7fecab96ae8dbd26f21459e3ae20a0e7f56197c3f808cad09a058705b44",
+    "evidence": [
+      "inventory/shared-building/page-003.png"
+    ],
+    "contact_position": 88
+  },
+  "g3q/3807-3808-3809-3810": {
+    "label": "Contest stage border section",
+    "family": "stage border",
+    "reason": "Source and Contest Hall map show the edge or corner of the raised stage. Existing geometry already separates the low rim, underside and open floor, with matching end/corner profiles; retain the hand-built shape.",
+    "baseline_entry_sha256": "c4ec20721e513e89de5b3900a3761c2d62bb92dfb5e9c049c90015413d567a02",
+    "evidence": [
+      "inventory/shared-building/page-008.png"
+    ],
+    "contact_position": 232
+  },
+  "g3q/3807-3808-3810-3810": {
+    "label": "Contest stage border section",
+    "family": "stage border",
+    "reason": "Source and Contest Hall map show the edge or corner of the raised stage. Existing geometry already separates the low rim, underside and open floor, with matching end/corner profiles; retain the hand-built shape.",
+    "baseline_entry_sha256": "b811aef9b2d071b38f7aa6a5f3c524e947eb102a07f1de91396bbb8814780bb4",
+    "evidence": [
+      "inventory/shared-building/page-008.png"
+    ],
+    "contact_position": 235
+  },
+  "g3q/3807-3808-3810-3809": {
+    "label": "Contest stage border section",
+    "family": "stage border",
+    "reason": "Source and Contest Hall map show the edge or corner of the raised stage. Existing geometry already separates the low rim, underside and open floor, with matching end/corner profiles; retain the hand-built shape.",
+    "baseline_entry_sha256": "34d396c937b9e9f99751e920ea85358fc4617045360e66a433842255c20a33ef",
+    "evidence": [
+      "inventory/shared-building/page-008.png"
+    ],
+    "contact_position": 239
+  },
+  "g3q/3818-3810-3809-3810": {
+    "label": "Contest stage border section",
+    "family": "stage border",
+    "reason": "Source and Contest Hall map show the edge or corner of the raised stage. Existing geometry already separates the low rim, underside and open floor, with matching end/corner profiles; retain the hand-built shape.",
+    "baseline_entry_sha256": "e50fab35a1ff90c3291d8ce2a2ae57a895a80c88e344806ffdfb0daa92340307",
+    "evidence": [
+      "inventory/shared-building/page-009.png"
+    ],
+    "contact_position": 257
+  },
+  "g3q/3810-3818-3810-3809": {
+    "label": "Contest stage border section",
+    "family": "stage border",
+    "reason": "Source and Contest Hall map show the edge or corner of the raised stage. Existing geometry already separates the low rim, underside and open floor, with matching end/corner profiles; retain the hand-built shape.",
+    "baseline_entry_sha256": "ddb3de42f99a4c7958dc373592b4c498044e7065c784f6bcd7c6b2fedabaa78a",
+    "evidence": [
+      "inventory/shared-building/page-009.png"
+    ],
+    "contact_position": 260
+  },
+  "g3q/3818-3810-3807-3808": {
+    "label": "Contest stage border section",
+    "family": "stage border",
+    "reason": "Source and Contest Hall map show the edge or corner of the raised stage. Existing geometry already separates the low rim, underside and open floor, with matching end/corner profiles; retain the hand-built shape.",
+    "baseline_entry_sha256": "c7f24708c56a280c74f6b0de4ec6904b622bcb0661a9652122e16901b42001f7",
+    "evidence": [
+      "inventory/shared-building/page-009.png"
+    ],
+    "contact_position": 273
+  },
+  "g3q/3810-3810-3807-3808": {
+    "label": "Contest stage border section",
+    "family": "stage border",
+    "reason": "Source and Contest Hall map show the edge or corner of the raised stage. Existing geometry already separates the low rim, underside and open floor, with matching end/corner profiles; retain the hand-built shape.",
+    "baseline_entry_sha256": "aebe8b7a6f7bf774d863573ba28592299a472e72b2b29c50c66a49766a510691",
+    "evidence": [
+      "inventory/shared-building/page-009.png"
+    ],
+    "contact_position": 279
+  },
+  "g3q/3810-3818-3807-3808": {
+    "label": "Contest stage border section",
+    "family": "stage border",
+    "reason": "Source and Contest Hall map show the edge or corner of the raised stage. Existing geometry already separates the low rim, underside and open floor, with matching end/corner profiles; retain the hand-built shape.",
+    "baseline_entry_sha256": "460b6e5f0c564d80cbc3dfa84485b270a6edac283f12efec634dd7c8439ecf57",
+    "evidence": [
+      "inventory/shared-building/page-009.png"
+    ],
+    "contact_position": 281
+  },
+  "g3q/4647-4648-4649-4587": {
+    "label": "Ship office map table quarter",
+    "family": "map table",
+    "reason": "The paper-covered tabletop joins adjacent quarters into a complete desk. Existing top paint follows the map/paper drawing, the tabletop is thin, and outer legs leave open space beneath; retain these useful volumes.",
+    "baseline_entry_sha256": "709abce0d84e2323c226a892487e0f1bc48a98695c07078c454668d633bc0cf8",
+    "evidence": [
+      "inventory/shared-building/page-001.png"
+    ],
+    "contact_position": 23
+  },
+  "g3q/4650-4651-4652-4588": {
+    "label": "Ship office map table quarter",
+    "family": "map table",
+    "reason": "The paper-covered tabletop joins adjacent quarters into a complete desk. Existing top paint follows the map/paper drawing, the tabletop is thin, and outer legs leave open space beneath; retain these useful volumes.",
+    "baseline_entry_sha256": "3741d86c56c695866681a3f58499fc3eb21cad6486c3150fd4f53589ec67118e",
+    "evidence": [
+      "inventory/shared-building/page-001.png"
+    ],
+    "contact_position": 27
+  },
+  "g3q/4670-4608-4606-4607": {
+    "label": "Ship office map table quarter",
+    "family": "map table",
+    "reason": "The paper-covered tabletop joins adjacent quarters into a complete desk. Existing top paint follows the map/paper drawing, the tabletop is thin, and outer legs leave open space beneath; retain these useful volumes.",
+    "baseline_entry_sha256": "5e50e40204c16b1b21a910ea17a8803673c62c6fd76951ae84755f7a08b5bf63",
+    "evidence": [
+      "inventory/shared-building/page-002.png"
+    ],
+    "contact_position": 49
+  },
+  "g3q/4671-4609-4610-4611": {
+    "label": "Ship office map table quarter",
+    "family": "map table",
+    "reason": "The paper-covered tabletop joins adjacent quarters into a complete desk. Existing top paint follows the map/paper drawing, the tabletop is thin, and outer legs leave open space beneath; retain these useful volumes.",
+    "baseline_entry_sha256": "3c968bc4ff621eb931c1a0ab3e3602b1aecaf516671cbcdd1ec25de9f1dcc9e1",
+    "evidence": [
+      "inventory/shared-building/page-002.png"
+    ],
+    "contact_position": 52
+  },
+  "g3q/4581-4582-4583-4584": {
+    "label": "Ship office map table quarter",
+    "family": "map table",
+    "reason": "The paper-covered tabletop joins adjacent quarters into a complete desk. Existing top paint follows the map/paper drawing, the tabletop is thin, and outer legs leave open space beneath; retain these useful volumes.",
+    "baseline_entry_sha256": "179a2b62edd6235c4b38221423df81bb84ad7e423e755f62c05dc95ea162a11e",
+    "evidence": [
+      "inventory/shared-building/page-017.png"
+    ],
+    "contact_position": 534
+  },
+  "g3q/4585-4586-4587-4588": {
+    "label": "Ship office map table quarter",
+    "family": "map table",
+    "reason": "The paper-covered tabletop joins adjacent quarters into a complete desk. Existing top paint follows the map/paper drawing, the tabletop is thin, and outer legs leave open space beneath; retain these useful volumes.",
+    "baseline_entry_sha256": "6696f9fc5d09666db07e8b476672432932c30c10b8d084c13ccadd9c7c68e278",
+    "evidence": [
+      "inventory/shared-building/page-017.png"
+    ],
+    "contact_position": 536
+  },
+  "g3q/4604-4605-4606-4607": {
+    "label": "Ship office map table quarter",
+    "family": "map table",
+    "reason": "The paper-covered tabletop joins adjacent quarters into a complete desk. Existing top paint follows the map/paper drawing, the tabletop is thin, and outer legs leave open space beneath; retain these useful volumes.",
+    "baseline_entry_sha256": "19492077dab240da3dab0ef5ded2e1f59135e67ecb7c46826bbc17980ed22323",
+    "evidence": [
+      "inventory/shared-building/page-017.png"
+    ],
+    "contact_position": 543
+  },
+  "g3q/4608-4609-4610-4611": {
+    "label": "Ship office map table quarter",
+    "family": "map table",
+    "reason": "The paper-covered tabletop joins adjacent quarters into a complete desk. Existing top paint follows the map/paper drawing, the tabletop is thin, and outer legs leave open space beneath; retain these useful volumes.",
+    "baseline_entry_sha256": "28830865dbb4614de166cbbfb9c66b9b344dd23a80be97d5c89fb346799e58f7",
+    "evidence": [
+      "inventory/shared-building/page-017.png"
+    ],
+    "contact_position": 544
+  },
+  "g3q/4653-4653-4654-4655": {
+    "label": "Ship office workbench equipment",
+    "family": "workbench",
+    "reason": "The office source shows connected worktop equipment. Existing geometry separates the counter, lower cabinet or legs and raised controls, leaving the intended open undersides and preserving the native front details.",
+    "baseline_entry_sha256": "c9cc73b2ca55c816749dbcfae697d33d3a29fe5e03306dfbe89fdf04cbae6c38",
+    "evidence": [
+      "inventory/shared-building/page-001.png"
+    ],
+    "contact_position": 32
+  },
+  "g3q/4653-4653-4656-4657": {
+    "label": "Ship office workbench equipment",
+    "family": "workbench",
+    "reason": "The office source shows connected worktop equipment. Existing geometry separates the counter, lower cabinet or legs and raised controls, leaving the intended open undersides and preserving the native front details.",
+    "baseline_entry_sha256": "12bb992b1b4a2de3561ba2205f5ac1c79060f7d4b1a64ae77996a90f5a1d7d99",
+    "evidence": [
+      "inventory/shared-building/page-002.png"
+    ],
+    "contact_position": 36
+  },
+  "g3q/4672-4673-4674-4675": {
+    "label": "Ship office workbench equipment",
+    "family": "workbench",
+    "reason": "The office source shows connected worktop equipment. Existing geometry separates the counter, lower cabinet or legs and raised controls, leaving the intended open undersides and preserving the native front details.",
+    "baseline_entry_sha256": "15fb8e451cab2c105abfc3a8ed7bb4fea930af8fa38b7fa7710e74b5b6b68816",
+    "evidence": [
+      "inventory/shared-building/page-002.png"
+    ],
+    "contact_position": 54
+  },
+  "g3q/4676-4677-4678-4679": {
+    "label": "Ship office workbench equipment",
+    "family": "workbench",
+    "reason": "The office source shows connected worktop equipment. Existing geometry separates the counter, lower cabinet or legs and raised controls, leaving the intended open undersides and preserving the native front details.",
+    "baseline_entry_sha256": "3b95dde4c46ed410eaedad837e2e7e44503c1f85f6eadca0c4aeccc31772cc7d",
+    "evidence": [
+      "inventory/shared-building/page-002.png"
+    ],
+    "contact_position": 56
+  },
+  "g3q/1277-1278-1277-1278": {
+    "label": "Facility reception counter section",
+    "family": "reception counter",
+    "reason": "The gold source surface is a counter top, not a floor marking. The model has a low solid support under a horizontal top, with shaped corner/end pieces that join the adjacent reception desk.",
+    "baseline_entry_sha256": "1c90ebb838f17599ad056f426a1a1ae9a823ab7af8d1908a6b20f6a213888680",
+    "evidence": [
+      "inventory/shared-building/page-002.png"
+    ],
+    "contact_position": 37
+  },
+  "g3q/1280-1281-1243-848": {
+    "label": "Facility reception counter section",
+    "family": "reception counter",
+    "reason": "The gold source surface is a counter top, not a floor marking. The model has a low solid support under a horizontal top, with shaped corner/end pieces that join the adjacent reception desk.",
+    "baseline_entry_sha256": "6525c1dc80d13e0b431794f543c675708fbfebca09723cff3548ea5b2ee07e4e",
+    "evidence": [
+      "inventory/shared-building/page-002.png"
+    ],
+    "contact_position": 42
+  },
+  "g3q/1281-1282-848-1232": {
+    "label": "Facility reception counter section",
+    "family": "reception counter",
+    "reason": "The gold source surface is a counter top, not a floor marking. The model has a low solid support under a horizontal top, with shaped corner/end pieces that join the adjacent reception desk.",
+    "baseline_entry_sha256": "e0387b5b49a713593adb61124692e6d6d0e164cde72eea8cea7b8bd6433dff12",
+    "evidence": [
+      "inventory/shared-building/page-002.png"
+    ],
+    "contact_position": 46
+  },
+  "g3q/1277-1278-1289-1278": {
+    "label": "Facility reception counter section",
+    "family": "reception counter",
+    "reason": "The gold source surface is a counter top, not a floor marking. The model has a low solid support under a horizontal top, with shaped corner/end pieces that join the adjacent reception desk.",
+    "baseline_entry_sha256": "b92771a07be8996e03dfa71aa65b78fe0f827e31e54543f6869b217c39dd202a",
+    "evidence": [
+      "inventory/shared-building/page-002.png"
+    ],
+    "contact_position": 58
+  },
+  "g3q/1300-1301-848-1232": {
+    "label": "Facility reception counter section",
+    "family": "reception counter",
+    "reason": "The gold source surface is a counter top, not a floor marking. The model has a low solid support under a horizontal top, with shaped corner/end pieces that join the adjacent reception desk.",
+    "baseline_entry_sha256": "e0586f69318f7b75ba19e33dc251faba266f111c6bb3115c1154ae4477cc2a2d",
+    "evidence": [
+      "inventory/shared-building/page-003.png"
+    ],
+    "contact_position": 79
+  },
+  "g3q/1569-1278-1277-1278": {
+    "label": "Facility reception counter section",
+    "family": "reception counter",
+    "reason": "The gold source surface is a counter top, not a floor marking. The model has a low solid support under a horizontal top, with shaped corner/end pieces that join the adjacent reception desk.",
+    "baseline_entry_sha256": "cc7c1a6f370346af2e8386f2cb9a59d6c4da9be1f3d9d7ec898b56c411aac86d",
+    "evidence": [
+      "inventory/shared-building/page-014.png"
+    ],
+    "contact_position": 441
+  },
+  "g3q/1277-1570-1277-1278": {
+    "label": "Facility reception counter section",
+    "family": "reception counter",
+    "reason": "The gold source surface is a counter top, not a floor marking. The model has a low solid support under a horizontal top, with shaped corner/end pieces that join the adjacent reception desk.",
+    "baseline_entry_sha256": "439176a945c1b6f407b6ff5171517c367b7862bd0e76e8acf273a019a18d38be",
+    "evidence": [
+      "inventory/shared-building/page-014.png"
+    ],
+    "contact_position": 442
+  },
+  "g3q/1277-1278-1578-1278": {
+    "label": "Facility reception counter section",
+    "family": "reception counter",
+    "reason": "The gold source surface is a counter top, not a floor marking. The model has a low solid support under a horizontal top, with shaped corner/end pieces that join the adjacent reception desk.",
+    "baseline_entry_sha256": "a78cb8eedfc10f1db99c57913bdea60911a4685167d787c3559437378affcef5",
+    "evidence": [
+      "inventory/shared-building/page-014.png"
+    ],
+    "contact_position": 448
+  },
+  "g3q/1277-1278-1277-1579": {
+    "label": "Facility reception counter section",
+    "family": "reception counter",
+    "reason": "The gold source surface is a counter top, not a floor marking. The model has a low solid support under a horizontal top, with shaped corner/end pieces that join the adjacent reception desk.",
+    "baseline_entry_sha256": "c9fa36971ebec9de74a7d1734170558081ce8741a07bd13e05f11c6e513ca0e6",
+    "evidence": [
+      "inventory/shared-building/page-015.png"
+    ],
+    "contact_position": 450
+  },
+  "g3q/5762-5763-5419-5420": {
+    "label": "Glass-front wall display cabinet",
+    "family": "display cabinet",
+    "reason": "Source/context show a glazed wood display cabinet against a wall. Existing substantial box, glazed front and upper cap provide a coherent cabinet, so the source reflection remains painted detail rather than separate floating geometry.",
+    "baseline_entry_sha256": "bc82474c33f287a89c468c4a3752463fe7dd92d1a8e5924fb86890917a419cdc",
+    "evidence": [
+      "inventory/shared-building/page-003.png"
+    ],
+    "contact_position": 67
+  },
+  "g3q/5764-5765-5423-5424": {
+    "label": "Glass-front wall display cabinet",
+    "family": "display cabinet",
+    "reason": "Source/context show a glazed wood display cabinet against a wall. Existing substantial box, glazed front and upper cap provide a coherent cabinet, so the source reflection remains painted detail rather than separate floating geometry.",
+    "baseline_entry_sha256": "fdfd943bab57aaf4c25ddf508d36a4a8b2c8d6d30661fbaa5e0815208c6fc5dd",
+    "evidence": [
+      "inventory/shared-building/page-003.png"
+    ],
+    "contact_position": 71
+  },
+  "g3q/811-812-1292-1293": {
+    "label": "Mounted corridor plaque",
+    "family": "wall plaque",
+    "reason": "The small orange plaque is mounted in the corridor wall. Its existing shallow framed panel and tiny bracket preserve the intended thin wall-mounted object.",
+    "baseline_entry_sha256": "12d6681f94ae54f5c7229f25709068b865f8b29d2fc94f1e34cfea702aa5effc",
+    "evidence": [
+      "inventory/shared-building/page-003.png"
+    ],
+    "contact_position": 68
+  },
+  "g3q/1901-1902-1903-129": {
+    "label": "Palace white bench section",
+    "family": "upholstered bench",
+    "reason": "Palace lobby context shows a white bench assembled along the room edge. The hand-built sections have thin seat/back panels and slender supporting legs with open air below, including matching corners.",
+    "baseline_entry_sha256": "75bedad9ff930152ad734b7b8d4bff7bcebaa43c630949871671738411282c55",
+    "evidence": [
+      "inventory/shared-building/page-003.png"
+    ],
+    "contact_position": 78
+  },
+  "g3q/1904-1838-1905-1839": {
+    "label": "Palace white bench section",
+    "family": "upholstered bench",
+    "reason": "Palace lobby context shows a white bench assembled along the room edge. The hand-built sections have thin seat/back panels and slender supporting legs with open air below, including matching corners.",
+    "baseline_entry_sha256": "f6e869908116d3a72a87ac668937f68e5709328dc33ba41b8608097fd460b6d6",
+    "evidence": [
+      "inventory/shared-building/page-003.png"
+    ],
+    "contact_position": 80
+  },
+  "g3q/1909-1902-1903-129": {
+    "label": "Palace white bench section",
+    "family": "upholstered bench",
+    "reason": "Palace lobby context shows a white bench assembled along the room edge. The hand-built sections have thin seat/back panels and slender supporting legs with open air below, including matching corners.",
+    "baseline_entry_sha256": "9e6320a7442dbf1652005739d77b4ba68ab2e956b7e6891c85c66101ad474a3e",
+    "evidence": [
+      "inventory/shared-building/page-003.png"
+    ],
+    "contact_position": 93
+  },
+  "g3q/1910-1911-1905-1903": {
+    "label": "Palace white bench section",
+    "family": "upholstered bench",
+    "reason": "Palace lobby context shows a white bench assembled along the room edge. The hand-built sections have thin seat/back panels and slender supporting legs with open air below, including matching corners.",
+    "baseline_entry_sha256": "3c3552c6c7264fe2f6f8c077849af4e1575a8707aac5d657c2cd1b9e1c6be29e",
+    "evidence": [
+      "inventory/shared-building/page-003.png"
+    ],
+    "contact_position": 94
+  },
+  "g3q/1902-1912-129-1905": {
+    "label": "Palace white bench section",
+    "family": "upholstered bench",
+    "reason": "Palace lobby context shows a white bench assembled along the room edge. The hand-built sections have thin seat/back panels and slender supporting legs with open air below, including matching corners.",
+    "baseline_entry_sha256": "70706b90a24532d462812481689792d087d0d975ef7432362793b920c2028bc3",
+    "evidence": [
+      "inventory/shared-building/page-003.png"
+    ],
+    "contact_position": 95
+  },
+  "g3q/1840-1938-1836-1939": {
+    "label": "Palace white bench section",
+    "family": "upholstered bench",
+    "reason": "Palace lobby context shows a white bench assembled along the room edge. The hand-built sections have thin seat/back panels and slender supporting legs with open air below, including matching corners.",
+    "baseline_entry_sha256": "14aa0f440d12a7b83d7d8c07c993ba57dcf80a73f9365fb5900474d710618e08",
+    "evidence": [
+      "inventory/shared-building/page-005.png"
+    ],
+    "contact_position": 142
+  },
+  "g3q/1902-1940-1941-1942": {
+    "label": "Palace white bench section",
+    "family": "upholstered bench",
+    "reason": "Palace lobby context shows a white bench assembled along the room edge. The hand-built sections have thin seat/back panels and slender supporting legs with open air below, including matching corners.",
+    "baseline_entry_sha256": "e866ef24a56cab1e5639c0f1cdb21689f1133e4d7f52dc19c83da5ad7ab1e513",
+    "evidence": [
+      "inventory/shared-building/page-005.png"
+    ],
+    "contact_position": 145
+  },
+  "g3q/3742-3742-3796-3797": {
+    "label": "Contest wall or framed sign section",
+    "family": "contest architecture",
+    "reason": "Contest map context identifies the section as a wall, curtain panel or framed sign. Its occupied backing and edge profile fit a connected architectural surface; retain the source-native sign/fabric details and neighbor alignment.",
+    "baseline_entry_sha256": "c96815e4198a4face6c66e0fd8b683d23b5a49e8846c8973c4ba07986f353426",
+    "evidence": [
+      "inventory/shared-building/page-007.png"
+    ],
+    "contact_position": 201
+  },
+  "g3q/3742-3742-3798-3798": {
+    "label": "Contest wall or framed sign section",
+    "family": "contest architecture",
+    "reason": "Contest map context identifies the section as a wall, curtain panel or framed sign. Its occupied backing and edge profile fit a connected architectural surface; retain the source-native sign/fabric details and neighbor alignment.",
+    "baseline_entry_sha256": "6357b17e1137c2d6c86c08db9b92a5c922766fcd6c57fecd6a41d966f8c0d24d",
+    "evidence": [
+      "inventory/shared-building/page-007.png"
+    ],
+    "contact_position": 205
+  },
+  "g3q/3742-3742-3799-3800": {
+    "label": "Contest wall or framed sign section",
+    "family": "contest architecture",
+    "reason": "Contest map context identifies the section as a wall, curtain panel or framed sign. Its occupied backing and edge profile fit a connected architectural surface; retain the source-native sign/fabric details and neighbor alignment.",
+    "baseline_entry_sha256": "ae4d5bd8b070880d37644cc2c9e97541a729344b4935cf7ee8464bc0448d1ed8",
+    "evidence": [
+      "inventory/shared-building/page-007.png"
+    ],
+    "contact_position": 207
+  },
+  "g3q/3700-3801-3733-3802": {
+    "label": "Contest wall or framed sign section",
+    "family": "contest architecture",
+    "reason": "Contest map context identifies the section as a wall, curtain panel or framed sign. Its occupied backing and edge profile fit a connected architectural surface; retain the source-native sign/fabric details and neighbor alignment.",
+    "baseline_entry_sha256": "e4f2e4b3d32a45ae6d0e848d3894e74de572a2fa4ee200e6f2c9b7414ba54442",
+    "evidence": [
+      "inventory/shared-building/page-007.png"
+    ],
+    "contact_position": 219
+  },
+  "g3q/3804-3696-3805-3806": {
+    "label": "Contest wall or framed sign section",
+    "family": "contest architecture",
+    "reason": "Contest map context identifies the section as a wall, curtain panel or framed sign. Its occupied backing and edge profile fit a connected architectural surface; retain the source-native sign/fabric details and neighbor alignment.",
+    "baseline_entry_sha256": "7913738d9892ea0f7cd7cf6222aa943c357af46422523283b219c3c37ee0c0f8",
+    "evidence": [
+      "inventory/shared-building/page-008.png"
+    ],
+    "contact_position": 225
+  },
+  "g3q/3843-3877-3845-3878": {
+    "label": "Contest Lobby reception counter section",
+    "family": "reception counter",
+    "reason": "Contest lobby context shows a continuous green counter. The existing lower cabinet, raised green top and end profiles form a coherent desk with native source material and matching neighboring sections.",
+    "baseline_entry_sha256": "7737b4803953266e9271d3c13f691033171a5d5871378f212609e8108195f283",
+    "evidence": [
+      "inventory/shared-building/page-011.png"
+    ],
+    "contact_position": 336
+  },
+  "g3q/3877-3892-3878-3893": {
+    "label": "Contest Lobby reception counter section",
+    "family": "reception counter",
+    "reason": "Contest lobby context shows a continuous green counter. The existing lower cabinet, raised green top and end profiles form a coherent desk with native source material and matching neighboring sections.",
+    "baseline_entry_sha256": "e0432adb2a17c2fea10bd3f9da2be5b235ae7f71a0e99dade26bc99872132be0",
+    "evidence": [
+      "inventory/shared-building/page-012.png"
+    ],
+    "contact_position": 354
+  },
+  "g3q/3834-3835-3834-3894": {
+    "label": "Contest Lobby reception counter section",
+    "family": "reception counter",
+    "reason": "Contest lobby context shows a continuous green counter. The existing lower cabinet, raised green top and end profiles form a coherent desk with native source material and matching neighboring sections.",
+    "baseline_entry_sha256": "050d13ab9700da3581b9499b02a0d5f990ee49d2fee393620f758fb4cea53e6d",
+    "evidence": [
+      "inventory/shared-building/page-012.png"
+    ],
+    "contact_position": 355
+  },
+  "g3q/3900-3892-3901-3893": {
+    "label": "Contest Lobby reception counter section",
+    "family": "reception counter",
+    "reason": "Contest lobby context shows a continuous green counter. The existing lower cabinet, raised green top and end profiles form a coherent desk with native source material and matching neighboring sections.",
+    "baseline_entry_sha256": "848cbafe36910b6a19ff1fe0ea65562b2860d496898e9ad7d7bf037110c1dbea",
+    "evidence": [
+      "inventory/shared-building/page-012.png"
+    ],
+    "contact_position": 363
+  },
+  "g3q/3697-3697-3902-3903": {
+    "label": "Contest Lobby reception counter section",
+    "family": "reception counter",
+    "reason": "Contest lobby context shows a continuous green counter. The existing lower cabinet, raised green top and end profiles form a coherent desk with native source material and matching neighboring sections.",
+    "baseline_entry_sha256": "d66ad2a7e1b23a32fed596af4b06ace0e5a78e7e121da8cde15a0e8f021e0f33",
+    "evidence": [
+      "inventory/shared-building/page-012.png"
+    ],
+    "contact_position": 369
+  },
+  "g3q/3910-3911-3878-3878": {
+    "label": "Contest Lobby reception counter section",
+    "family": "reception counter",
+    "reason": "Contest lobby context shows a continuous green counter. The existing lower cabinet, raised green top and end profiles form a coherent desk with native source material and matching neighboring sections.",
+    "baseline_entry_sha256": "2c3ee06dc166d88099df103839d81bea29ff91b208d9abb2c699e70b8734edde",
+    "evidence": [
+      "inventory/shared-building/page-012.png"
+    ],
+    "contact_position": 371
+  },
+  "g3q/3918-3918-3723-3722": {
+    "label": "Contest Lobby reception counter section",
+    "family": "reception counter",
+    "reason": "Contest lobby context shows a continuous green counter. The existing lower cabinet, raised green top and end profiles form a coherent desk with native source material and matching neighboring sections.",
+    "baseline_entry_sha256": "c3616b19dbab9d41bbe93744062e2f91bcf38fc8ecb490c8ddd2569a1e3d3de0",
+    "evidence": [
+      "inventory/shared-building/page-012.png"
+    ],
+    "contact_position": 376
+  },
+  "g3q/3834-3835-3925-3926": {
+    "label": "Contest Lobby reception counter section",
+    "family": "reception counter",
+    "reason": "Contest lobby context shows a continuous green counter. The existing lower cabinet, raised green top and end profiles form a coherent desk with native source material and matching neighboring sections.",
+    "baseline_entry_sha256": "621cdcbb57df868300e77925b781f910dcbceba871410b38ad4dec9e9f4222dc",
+    "evidence": [
+      "inventory/shared-building/page-012.png"
+    ],
+    "contact_position": 379
+  },
+  "g3q/3927-3928-3845-3920": {
+    "label": "Contest Lobby reception counter section",
+    "family": "reception counter",
+    "reason": "Contest lobby context shows a continuous green counter. The existing lower cabinet, raised green top and end profiles form a coherent desk with native source material and matching neighboring sections.",
+    "baseline_entry_sha256": "40b5c902002ab07704609aca643ecaec25dfcbd076cdb9d3a8351d94961a2f8e",
+    "evidence": [
+      "inventory/shared-building/page-012.png"
+    ],
+    "contact_position": 380
+  },
+  "g3q/4947-4947-4948-4948": {
+    "label": "Harbor bulkhead vent",
+    "family": "harbor bulkhead vent",
+    "reason": "The source neighborhood places this riveted band within a continuous harbor bulkhead. Its full joining section and recessed horizontal bands are appropriate wall geometry.",
+    "baseline_entry_sha256": "08fc1746d56bf5202fd4a9f3ebc905fca962518b9af805731b8ca2ff693e2a95",
+    "contact_position": 24,
+    "evidence": [
+      "inventory/shared-building/page-001.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/840-840-842-842": {
+    "label": "Transition opening",
+    "family": "transition opening",
+    "reason": "This source is an active doorway or stair transition. Preserve its established fitted opening/profile and all warp metadata; adjoining room frames remain separate pieces.",
+    "baseline_entry_sha256": "f6dc9e3c249ba8776e310b3120b47cbb1c0931ea325fa4c7ee19b92bcffed9c0",
+    "contact_position": 111,
+    "evidence": [
+      "inventory/shared-building/page-004.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/3656-3656-3803-3803": {
+    "label": "Transition opening",
+    "family": "transition opening",
+    "reason": "This source is an active doorway or stair transition. Preserve its established fitted opening/profile and all warp metadata; adjoining room frames remain separate pieces.",
+    "baseline_entry_sha256": "f6dc9e3c249ba8776e310b3120b47cbb1c0931ea325fa4c7ee19b92bcffed9c0",
+    "contact_position": 222,
+    "evidence": [
+      "inventory/shared-building/page-007.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/1489-1489-1490-1491": {
+    "label": "Transition opening",
+    "family": "transition opening",
+    "reason": "This source is an active doorway or stair transition. Preserve its established fitted opening/profile and all warp metadata; adjoining room frames remain separate pieces.",
+    "baseline_entry_sha256": "501b3339158b60a98df7359040978a453281a230af03e85a06541837ae14f2ed",
+    "contact_position": 343,
+    "evidence": [
+      "inventory/shared-building/page-011.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/1492-1492-1493-1494": {
+    "label": "Transition opening",
+    "family": "transition opening",
+    "reason": "This source is an active doorway or stair transition. Preserve its established fitted opening/profile and all warp metadata; adjoining room frames remain separate pieces.",
+    "baseline_entry_sha256": "f6dc9e3c249ba8776e310b3120b47cbb1c0931ea325fa4c7ee19b92bcffed9c0",
+    "contact_position": 345,
+    "evidence": [
+      "inventory/shared-building/page-011.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/4930-4932-4931-4933": {
+    "label": "Transition opening",
+    "family": "transition opening",
+    "reason": "This source is an active doorway or stair transition. Preserve its established fitted opening/profile and all warp metadata; adjoining room frames remain separate pieces.",
+    "baseline_entry_sha256": "a9d5db2a9b5906911a5a0768e5c593619b9255b73adba6a00d32dc77be37d4c0",
+    "contact_position": 418,
+    "evidence": [
+      "inventory/shared-building/page-014.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/840-840-840-840": {
+    "label": "Dark inset panel",
+    "family": "dark inset panel",
+    "reason": "The unpatterned source fills a rectangular dark inset. Its closed joining faces are appropriate to the contiguous panel; no decorative relief is needed.",
+    "baseline_entry_sha256": "b193b38458d857a4e10cf0082145d6a37c7dfa973fdfa604ecf49f74a5b23c58",
+    "contact_position": 275,
+    "evidence": [
+      "inventory/shared-building/page-009.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/1426-1426-1429-1428": {
+    "label": "Elevator enclosure",
+    "family": "elevator enclosure",
+    "reason": "The source forms the elevator frame, dark back wall and handrail corners. The existing solid wall sections, narrow rail protrusions and corner clearances join the complete enclosure.",
+    "baseline_entry_sha256": "1809547b4091ec2ec91dc853a0a985502ce503f941bbeb2f0cfb84fe6a8eeb3f",
+    "contact_position": 276,
+    "evidence": [
+      "inventory/shared-building/page-009.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/1302-1548-1302-1548": {
+    "label": "Elevator enclosure",
+    "family": "elevator enclosure",
+    "reason": "The source forms the elevator frame, dark back wall and handrail corners. The existing solid wall sections, narrow rail protrusions and corner clearances join the complete enclosure.",
+    "baseline_entry_sha256": "3f3f462c01ad14d074f5418ac705186cd518c5b871da86f7af71c605ea36029d",
+    "contact_position": 419,
+    "evidence": [
+      "inventory/shared-building/page-014.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/1418-1416-840-840": {
+    "label": "Elevator enclosure",
+    "family": "elevator enclosure",
+    "reason": "The source forms the elevator frame, dark back wall and handrail corners. The existing solid wall sections, narrow rail protrusions and corner clearances join the complete enclosure.",
+    "baseline_entry_sha256": "39bbf7f7ad1837eb8a071be360095f0f941c04209b32afc61f2f1eb223004022",
+    "contact_position": 420,
+    "evidence": [
+      "inventory/shared-building/page-014.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/1549-1308-1549-1308": {
+    "label": "Elevator enclosure",
+    "family": "elevator enclosure",
+    "reason": "The source forms the elevator frame, dark back wall and handrail corners. The existing solid wall sections, narrow rail protrusions and corner clearances join the complete enclosure.",
+    "baseline_entry_sha256": "e7d0203aa8167ee6517e256b5680bcc83ec23fb021e9373250bd46e0e34d23f7",
+    "contact_position": 421,
+    "evidence": [
+      "inventory/shared-building/page-014.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/1302-1425-1326-1434": {
+    "label": "Elevator enclosure",
+    "family": "elevator enclosure",
+    "reason": "The source forms the elevator frame, dark back wall and handrail corners. The existing solid wall sections, narrow rail protrusions and corner clearances join the complete enclosure.",
+    "baseline_entry_sha256": "e6966625eb1c8f4aaad87e86a4c1b6534bffd912c5788e6748da1de5ed2ccfde",
+    "contact_position": 424,
+    "evidence": [
+      "inventory/shared-building/page-014.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/1430-1308-1438-1326": {
+    "label": "Elevator enclosure",
+    "family": "elevator enclosure",
+    "reason": "The source forms the elevator frame, dark back wall and handrail corners. The existing solid wall sections, narrow rail protrusions and corner clearances join the complete enclosure.",
+    "baseline_entry_sha256": "9a44d6a463a2f25f601c722532758e8779703d8748360e5a58d73d63a17bae4b",
+    "contact_position": 425,
+    "evidence": [
+      "inventory/shared-building/page-014.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/4702-4930-4702-4931": {
+    "label": "Industrial staircase",
+    "family": "industrial staircase",
+    "reason": "The source/map shows a three-cell staircase with side stringers. The middle has ascending treads; narrow side pieces form continuous stair edging rather than a textured prism.",
+    "baseline_entry_sha256": "c505cefaf534ccf2ebfa3eae833192583864c27b1e4111beef1512064a3be248",
+    "contact_position": 358,
+    "evidence": [
+      "inventory/shared-building/page-012.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/4932-4932-4933-4933": {
+    "label": "Industrial staircase",
+    "family": "industrial staircase",
+    "reason": "The source/map shows a three-cell staircase with side stringers. The middle has ascending treads; narrow side pieces form continuous stair edging rather than a textured prism.",
+    "baseline_entry_sha256": "575d00dd4662389602b82163da00f194ddc3c83366e776f0a23cc732f6d0e2a8",
+    "contact_position": 360,
+    "evidence": [
+      "inventory/shared-building/page-012.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/4932-4703-4933-4703": {
+    "label": "Industrial staircase",
+    "family": "industrial staircase",
+    "reason": "The source/map shows a three-cell staircase with side stringers. The middle has ascending treads; narrow side pieces form continuous stair edging rather than a textured prism.",
+    "baseline_entry_sha256": "751cf915fb04c40064c8525240915c98665edc3873456530e160c0b45b59ba4c",
+    "contact_position": 362,
+    "evidence": [
+      "inventory/shared-building/page-012.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/4717-4717-4683-4828": {
+    "label": "Shipyard overhead corner",
+    "family": "shipyard overhead corner",
+    "reason": "The source is the underside of the shipyard structural beam. Existing complementary corner cuts keep its supporting wall edge and open the machinery bay below.",
+    "baseline_entry_sha256": "8175eecdddc199c599f4d7d36d552c144b8db75b9375c2528066b92f06fdaae7",
+    "contact_position": 374,
+    "evidence": [
+      "inventory/shared-building/page-012.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/4717-4717-4829-4683": {
+    "label": "Shipyard overhead corner",
+    "family": "shipyard overhead corner",
+    "reason": "The source is the underside of the shipyard structural beam. Existing complementary corner cuts keep its supporting wall edge and open the machinery bay below.",
+    "baseline_entry_sha256": "35748e6bb3a398f03cd5e15efe0e0d3a676b09e5aa7d0b97fd950642800653c5",
+    "contact_position": 375,
+    "evidence": [
+      "inventory/shared-building/page-012.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/1530-1531-1532-1533": {
+    "label": "Exchange display shelving",
+    "family": "exchange display shelving",
+    "reason": "The source/map forms gold display shelves and lower cabinets. Existing explicit shelves, recessed goods openings and cabinet fronts have depth and contiguous joining edges; keep the source-specific goods.",
+    "baseline_entry_sha256": "ae14c89ba35a9eb65e09f030cb8b2bb91b7a6f25db7207cda150f1c8cf1a8abc",
+    "contact_position": 386,
+    "evidence": [
+      "inventory/shared-building/page-013.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/1531-1534-1533-1535": {
+    "label": "Exchange display shelving",
+    "family": "exchange display shelving",
+    "reason": "The source/map forms gold display shelves and lower cabinets. Existing explicit shelves, recessed goods openings and cabinet fronts have depth and contiguous joining edges; keep the source-specific goods.",
+    "baseline_entry_sha256": "650a1980a79e37bb7ccb52a79be9029bc2a6f224281a3421d6ff65598fe952eb",
+    "contact_position": 388,
+    "evidence": [
+      "inventory/shared-building/page-013.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/1530-1531-1532-1536": {
+    "label": "Exchange display shelving",
+    "family": "exchange display shelving",
+    "reason": "The source/map forms gold display shelves and lower cabinets. Existing explicit shelves, recessed goods openings and cabinet fronts have depth and contiguous joining edges; keep the source-specific goods.",
+    "baseline_entry_sha256": "a9028d5ba72e7f7f6408111185c28bb012807543f484748aa8172883775e444b",
+    "contact_position": 390,
+    "evidence": [
+      "inventory/shared-building/page-013.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/1531-1534-1537-1535": {
+    "label": "Exchange display shelving",
+    "family": "exchange display shelving",
+    "reason": "The source/map forms gold display shelves and lower cabinets. Existing explicit shelves, recessed goods openings and cabinet fronts have depth and contiguous joining edges; keep the source-specific goods.",
+    "baseline_entry_sha256": "846f5cd5de8f53f4f6af0113d801143a5f52df7517a848a64f27694c6a538630",
+    "contact_position": 392,
+    "evidence": [
+      "inventory/shared-building/page-013.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/1530-1531-1532-1538": {
+    "label": "Exchange display shelving",
+    "family": "exchange display shelving",
+    "reason": "The source/map forms gold display shelves and lower cabinets. Existing explicit shelves, recessed goods openings and cabinet fronts have depth and contiguous joining edges; keep the source-specific goods.",
+    "baseline_entry_sha256": "925a4a845f213361fa46608ebe27437617567c30053f910b6d699a4c37b06399",
+    "contact_position": 393,
+    "evidence": [
+      "inventory/shared-building/page-013.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/1546-1543-1542-1544": {
+    "label": "Exchange display shelving",
+    "family": "exchange display shelving",
+    "reason": "The source/map forms gold display shelves and lower cabinets. Existing explicit shelves, recessed goods openings and cabinet fronts have depth and contiguous joining edges; keep the source-specific goods.",
+    "baseline_entry_sha256": "b61e51e8bbd16ee620f6990fbe7ca6a82ae84d5828e788a80f5c8eea24cc5a92",
+    "contact_position": 397,
+    "evidence": [
+      "inventory/shared-building/page-013.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/1539-1547-1541-1542": {
+    "label": "Exchange display shelving",
+    "family": "exchange display shelving",
+    "reason": "The source/map forms gold display shelves and lower cabinets. Existing explicit shelves, recessed goods openings and cabinet fronts have depth and contiguous joining edges; keep the source-specific goods.",
+    "baseline_entry_sha256": "d2584d22069e15f9dbace95fc2095868ae6770338445bf48638b9f67f579803f",
+    "contact_position": 398,
+    "evidence": [
+      "inventory/shared-building/page-013.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/1547-1543-1542-1544": {
+    "label": "Exchange display shelving",
+    "family": "exchange display shelving",
+    "reason": "The source/map forms gold display shelves and lower cabinets. Existing explicit shelves, recessed goods openings and cabinet fronts have depth and contiguous joining edges; keep the source-specific goods.",
+    "baseline_entry_sha256": "b61e51e8bbd16ee620f6990fbe7ca6a82ae84d5828e788a80f5c8eea24cc5a92",
+    "contact_position": 399,
+    "evidence": [
+      "inventory/shared-building/page-013.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/1531-1531-1533-1536": {
+    "label": "Exchange display shelving",
+    "family": "exchange display shelving",
+    "reason": "The source/map forms gold display shelves and lower cabinets. Existing explicit shelves, recessed goods openings and cabinet fronts have depth and contiguous joining edges; keep the source-specific goods.",
+    "baseline_entry_sha256": "b59580561b403ac2b7a3b05b6418a42e2ab60a27aa2ef4bcfbd7463f26791dd2",
+    "contact_position": 402,
+    "evidence": [
+      "inventory/shared-building/page-013.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/1531-1534-1536-1535": {
+    "label": "Exchange display shelving",
+    "family": "exchange display shelving",
+    "reason": "The source/map forms gold display shelves and lower cabinets. Existing explicit shelves, recessed goods openings and cabinet fronts have depth and contiguous joining edges; keep the source-specific goods.",
+    "baseline_entry_sha256": "7652a0aad45f441f5eedacac02d5913b81da185b71bdf9e44f63033499191441",
+    "contact_position": 403,
+    "evidence": [
+      "inventory/shared-building/page-013.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/1540-1545-1542-1542": {
+    "label": "Exchange display shelving",
+    "family": "exchange display shelving",
+    "reason": "The source/map forms gold display shelves and lower cabinets. Existing explicit shelves, recessed goods openings and cabinet fronts have depth and contiguous joining edges; keep the source-specific goods.",
+    "baseline_entry_sha256": "797b997328b04b3fd57d0fe96ada96b3d066d6449eb833800b512512f5b85512",
+    "contact_position": 408,
+    "evidence": [
+      "inventory/shared-building/page-013.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/1545-1543-1542-1544": {
+    "label": "Exchange display shelving",
+    "family": "exchange display shelving",
+    "reason": "The source/map forms gold display shelves and lower cabinets. Existing explicit shelves, recessed goods openings and cabinet fronts have depth and contiguous joining edges; keep the source-specific goods.",
+    "baseline_entry_sha256": "1c3880c4916be865b7e437ae3bb703ef84ee92228e3e2d1a1661a74a7e65d90b",
+    "contact_position": 410,
+    "evidence": [
+      "inventory/shared-building/page-013.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/1539-1546-1541-1542": {
+    "label": "Exchange display shelving",
+    "family": "exchange display shelving",
+    "reason": "The source/map forms gold display shelves and lower cabinets. Existing explicit shelves, recessed goods openings and cabinet fronts have depth and contiguous joining edges; keep the source-specific goods.",
+    "baseline_entry_sha256": "d2584d22069e15f9dbace95fc2095868ae6770338445bf48638b9f67f579803f",
+    "contact_position": 412,
+    "evidence": [
+      "inventory/shared-building/page-013.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/5054-4971-5055-4973": {
+    "label": "Mt Pyre wall cap",
+    "family": "mt pyre wall cap",
+    "reason": "The source is the upper join of a patterned interior wall, not a gravestone. Its shallow cap and aligned edge complete the adjoining wall treatment.",
+    "baseline_entry_sha256": "6d4f557057a3c58a8c30c49e82e5289dc6099fd4a0cf98fbcf48d88b5641ed83",
+    "contact_position": 406,
+    "evidence": [
+      "inventory/shared-building/page-013.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/5148-5148-5154-5154": {
+    "label": "Raised ship deck",
+    "family": "raised ship deck",
+    "reason": "The source is a flat raised green deck panel. Existing flat top paint and full support form the intended contiguous deck; no freestanding object should be introduced.",
+    "baseline_entry_sha256": "aeee151fa3e7da0f8e6b7a45cb1aba689cd406e50cb56ab0be8c3ad4457cf079",
+    "contact_position": 443,
+    "evidence": [
+      "inventory/shared-building/page-014.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/5148-5148-5148-5148": {
+    "label": "Raised ship deck",
+    "family": "raised ship deck",
+    "reason": "The source is a flat raised green deck panel. Existing flat top paint and full support form the intended contiguous deck; no freestanding object should be introduced.",
+    "baseline_entry_sha256": "3bb85ce3dd90b9fc54d7f2ecbbf30b4f0668f9a78f916e7c527ccdd51a51a32f",
+    "contact_position": 510,
+    "evidence": [
+      "inventory/shared-building/page-016.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/4799-4800-5173-5172": {
+    "label": "Laptop workbench",
+    "family": "laptop workbench",
+    "reason": "Existing open laptop screens, keyboard slabs, level desktops and discrete supports match the computer desks in their room contexts. Their tops are painted from the correct source region.",
+    "baseline_entry_sha256": "35fc263fe89df2b442f6b8cf17be07511de7c4b46aa684825fe5e3989d5d40c1",
+    "contact_position": 452,
+    "evidence": [
+      "inventory/shared-building/page-015.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/4796-4802-5172-5174": {
+    "label": "Laptop workbench",
+    "family": "laptop workbench",
+    "reason": "Existing open laptop screens, keyboard slabs, level desktops and discrete supports match the computer desks in their room contexts. Their tops are painted from the correct source region.",
+    "baseline_entry_sha256": "0b33b125b861faaa095afeca3d79f2c82b7cce0cd433f15809837783debf0970",
+    "contact_position": 453,
+    "evidence": [
+      "inventory/shared-building/page-015.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/4799-4800-5248-5247": {
+    "label": "Laptop workbench",
+    "family": "laptop workbench",
+    "reason": "Existing open laptop screens, keyboard slabs, level desktops and discrete supports match the computer desks in their room contexts. Their tops are painted from the correct source region.",
+    "baseline_entry_sha256": "71becac1b6ad3e96d793771442536f8d43de0ff6f466a1b5a2a6ea727b3a9f0b",
+    "contact_position": 487,
+    "evidence": [
+      "inventory/shared-building/page-016.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/4796-4802-5249-5250": {
+    "label": "Laptop workbench",
+    "family": "laptop workbench",
+    "reason": "Existing open laptop screens, keyboard slabs, level desktops and discrete supports match the computer desks in their room contexts. Their tops are painted from the correct source region.",
+    "baseline_entry_sha256": "f4cfa8873bf4da63cc3563b18de0a6860e5a085b5be2d469a64ccc4b205a2fbf",
+    "contact_position": 488,
+    "evidence": [
+      "inventory/shared-building/page-016.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/4682-4682-4683-4718": {
+    "label": "Submarine bay wall",
+    "family": "submarine bay wall",
+    "reason": "These source cells are wall cornice corners around the submarine berth. Existing solid joining wall geometry and corner paint match the architectural boundary.",
+    "baseline_entry_sha256": "0bc2e5f78e07648a4d828d9560444d16d4ad2bab55152257ff38f38511c04178",
+    "contact_position": 461,
+    "evidence": [
+      "inventory/shared-building/page-015.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/4682-4682-4719-4720": {
+    "label": "Submarine bay wall",
+    "family": "submarine bay wall",
+    "reason": "These source cells are wall cornice corners around the submarine berth. Existing solid joining wall geometry and corner paint match the architectural boundary.",
+    "baseline_entry_sha256": "fcc2d35e8da2a4db0da0f1a3577db83693501a383726a47b2844694fb96b3fbc",
+    "contact_position": 462,
+    "evidence": [
+      "inventory/shared-building/page-015.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/4682-4682-4721-4722": {
+    "label": "Submarine bay wall",
+    "family": "submarine bay wall",
+    "reason": "These source cells are wall cornice corners around the submarine berth. Existing solid joining wall geometry and corner paint match the architectural boundary.",
+    "baseline_entry_sha256": "f20e105de615486771e9fd39f1294e4eb9d7b46bb0236eb9acc969187722b019",
+    "contact_position": 463,
+    "evidence": [
+      "inventory/shared-building/page-015.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/4682-4682-4723-4683": {
+    "label": "Submarine bay wall",
+    "family": "submarine bay wall",
+    "reason": "These source cells are wall cornice corners around the submarine berth. Existing solid joining wall geometry and corner paint match the architectural boundary.",
+    "baseline_entry_sha256": "d890ee96b78f38009d4e851f5973783d79b6bf18f56a17ac50a431603d679a59",
+    "contact_position": 464,
+    "evidence": [
+      "inventory/shared-building/page-015.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/1227-1228-1227-1228": {
+    "label": "Exchange counter barrier",
+    "family": "exchange counter barrier",
+    "reason": "The red counter top, pale rim and supporting cabinet body form a coherent connected service barrier. Keep the explicit end/corner cuts.",
+    "baseline_entry_sha256": "4ffb1be39eda2f323536d314ac4ee44d6f2c5415cce384b59bfef101f975d1a9",
+    "contact_position": 465,
+    "evidence": [
+      "inventory/shared-building/page-015.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/1230-1230-848-848": {
+    "label": "Exchange counter barrier",
+    "family": "exchange counter barrier",
+    "reason": "The red counter top, pale rim and supporting cabinet body form a coherent connected service barrier. Keep the explicit end/corner cuts.",
+    "baseline_entry_sha256": "13e046689c8e1b391c85c9ef0cd8e13e935505785ebaf93c5ba25aa89d1453b6",
+    "contact_position": 535,
+    "evidence": [
+      "inventory/shared-building/page-017.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/1241-1242-1243-848": {
+    "label": "Exchange counter barrier",
+    "family": "exchange counter barrier",
+    "reason": "The red counter top, pale rim and supporting cabinet body form a coherent connected service barrier. Keep the explicit end/corner cuts.",
+    "baseline_entry_sha256": "821693d8485ea741fb94b16f9a30e1d389176e521d1edfade1afeb6606fb7e91",
+    "contact_position": 542,
+    "evidence": [
+      "inventory/shared-building/page-017.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/1253-1244-848-1232": {
+    "label": "Exchange counter barrier",
+    "family": "exchange counter barrier",
+    "reason": "The red counter top, pale rim and supporting cabinet body form a coherent connected service barrier. Keep the explicit end/corner cuts.",
+    "baseline_entry_sha256": "53ab3cf574b7fd18ecd03406b353424de4c894b1cfb6a6a71acfa10d33d41ea7",
+    "contact_position": 547,
+    "evidence": [
+      "inventory/shared-building/page-018.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/5193-5193-4573-5198": {
+    "label": "Devon doorway and steps",
+    "family": "devon doorway and steps",
+    "reason": "The source maps show connected door frames, shallow red steps and threshold edges. Existing thick jambs, open lintel and stepped floor profiles keep the room entrance clear.",
+    "baseline_entry_sha256": "f5b0aa31555278efc68bb1fd0da3e4bde36664f8e74b4b0115f33cb037f7c1e7",
+    "contact_position": 466,
+    "evidence": [
+      "inventory/shared-building/page-015.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/5193-5193-5199-5199": {
+    "label": "Devon doorway and steps",
+    "family": "devon doorway and steps",
+    "reason": "The source maps show connected door frames, shallow red steps and threshold edges. Existing thick jambs, open lintel and stepped floor profiles keep the room entrance clear.",
+    "baseline_entry_sha256": "c69a305f3fd7d622dd69471acd191213afdcc57f9d3979ec8e681edb10fe941f",
+    "contact_position": 467,
+    "evidence": [
+      "inventory/shared-building/page-015.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/5193-5193-5200-4573": {
+    "label": "Devon doorway and steps",
+    "family": "devon doorway and steps",
+    "reason": "The source maps show connected door frames, shallow red steps and threshold edges. Existing thick jambs, open lintel and stepped floor profiles keep the room entrance clear.",
+    "baseline_entry_sha256": "6d710d5ffee542626e85bd50f23a2a5b65d1973b5c8858bfa0a33d18b245a147",
+    "contact_position": 468,
+    "evidence": [
+      "inventory/shared-building/page-015.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/4601-5210-5209-5211": {
+    "label": "Devon doorway and steps",
+    "family": "devon doorway and steps",
+    "reason": "The source maps show connected door frames, shallow red steps and threshold edges. Existing thick jambs, open lintel and stepped floor profiles keep the room entrance clear.",
+    "baseline_entry_sha256": "e613bac73c6bd6bbc4ffa184057a47b23520c9a2705efcfca6924460ad00ccce",
+    "contact_position": 472,
+    "evidence": [
+      "inventory/shared-building/page-015.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/5212-5212-5213-5213": {
+    "label": "Devon doorway and steps",
+    "family": "devon doorway and steps",
+    "reason": "The source maps show connected door frames, shallow red steps and threshold edges. Existing thick jambs, open lintel and stepped floor profiles keep the room entrance clear.",
+    "baseline_entry_sha256": "86ca2fb3111f955aff734ebf288bda8e5ecead84f2c83bef2a91a36ebbab931c",
+    "contact_position": 473,
+    "evidence": [
+      "inventory/shared-building/page-015.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/5214-4601-5215-5209": {
+    "label": "Devon doorway and steps",
+    "family": "devon doorway and steps",
+    "reason": "The source maps show connected door frames, shallow red steps and threshold edges. Existing thick jambs, open lintel and stepped floor profiles keep the room entrance clear.",
+    "baseline_entry_sha256": "fb740585cd48e51b8a7b9bac2074e47ddc69cfce841ba06a164d6babce278262",
+    "contact_position": 475,
+    "evidence": [
+      "inventory/shared-building/page-015.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/4601-5216-5209-5217": {
+    "label": "Devon doorway and steps",
+    "family": "devon doorway and steps",
+    "reason": "The source maps show connected door frames, shallow red steps and threshold edges. Existing thick jambs, open lintel and stepped floor profiles keep the room entrance clear.",
+    "baseline_entry_sha256": "2fb9c7e79ce519a7d553aaa15dc47b3ec8b2a49538165c455cdd90d8c0856879",
+    "contact_position": 476,
+    "evidence": [
+      "inventory/shared-building/page-015.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/3656-3656-5218-5218": {
+    "label": "Devon doorway and steps",
+    "family": "devon doorway and steps",
+    "reason": "The source maps show connected door frames, shallow red steps and threshold edges. Existing thick jambs, open lintel and stepped floor profiles keep the room entrance clear.",
+    "baseline_entry_sha256": "0d1fe31f9500f5fa70c2e957eb020ea8942dc957d1dbc8ce7261346d41330a2a",
+    "contact_position": 477,
+    "evidence": [
+      "inventory/shared-building/page-015.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/5219-4601-5220-5209": {
+    "label": "Devon doorway and steps",
+    "family": "devon doorway and steps",
+    "reason": "The source maps show connected door frames, shallow red steps and threshold edges. Existing thick jambs, open lintel and stepped floor profiles keep the room entrance clear.",
+    "baseline_entry_sha256": "5b319332af48c94639c2e63500aa5c16ec3abc4e4dce5a5c53b05eb364377818",
+    "contact_position": 478,
+    "evidence": [
+      "inventory/shared-building/page-015.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/5202-5203-5204-5205": {
+    "label": "Devon reception counter",
+    "family": "devon reception counter",
+    "reason": "The white and gold counter has a level shallow top with separate lower supports and matching end caps. Source/map context and local front/side/top views agree on the assembled counter form.",
+    "baseline_entry_sha256": "cf9b0d334aaf3aecc8632033391ffa10211fb92615efb0e374a2e32b2f9fa85e",
+    "contact_position": 470,
+    "evidence": [
+      "inventory/shared-building/page-015.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/5203-5206-5207-5208": {
+    "label": "Devon reception counter",
+    "family": "devon reception counter",
+    "reason": "The white and gold counter has a level shallow top with separate lower supports and matching end caps. Source/map context and local front/side/top views agree on the assembled counter form.",
+    "baseline_entry_sha256": "1a576e0261a0646d3c092396a0126645080f1c38981f4826f13f3bd3220821c6",
+    "contact_position": 471,
+    "evidence": [
+      "inventory/shared-building/page-015.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/5203-5203-5207-5205": {
+    "label": "Devon reception counter",
+    "family": "devon reception counter",
+    "reason": "The white and gold counter has a level shallow top with separate lower supports and matching end caps. Source/map context and local front/side/top views agree on the assembled counter form.",
+    "baseline_entry_sha256": "2cd0158bded6195784cb70f401bf80cec129cc9b19fe87a7ff07c4b0828a67a0",
+    "contact_position": 479,
+    "evidence": [
+      "inventory/shared-building/page-015.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/5235-5236-4583-4584": {
+    "label": "Devon technical drawing table",
+    "family": "devon technical drawing table",
+    "reason": "The four source quarters already map the paper plan onto a horizontal tabletop with narrow edge trim and four discrete feet. Retain this complete coherent table treatment.",
+    "baseline_entry_sha256": "cb0a8a2afce944592fbf8595f1cc062a73669072ef1fb420dccef2af64c1f5b7",
+    "contact_position": 482,
+    "evidence": [
+      "inventory/shared-building/page-016.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/5236-5237-4584-4588": {
+    "label": "Devon technical drawing table",
+    "family": "devon technical drawing table",
+    "reason": "The four source quarters already map the paper plan onto a horizontal tabletop with narrow edge trim and four discrete feet. Retain this complete coherent table treatment.",
+    "baseline_entry_sha256": "598d19251bac6b161d22f85ad7a6ce733ef474517ad04280dbb98c24647f4ced",
+    "contact_position": 483,
+    "evidence": [
+      "inventory/shared-building/page-016.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/4604-4605-5251-5252": {
+    "label": "Devon technical drawing table",
+    "family": "devon technical drawing table",
+    "reason": "The four source quarters already map the paper plan onto a horizontal tabletop with narrow edge trim and four discrete feet. Retain this complete coherent table treatment.",
+    "baseline_entry_sha256": "b0be0e7e98f81b259415ad961865feac1eaee39f3d46ddecb9adf3d761644465",
+    "contact_position": 489,
+    "evidence": [
+      "inventory/shared-building/page-016.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/4608-4609-5253-5254": {
+    "label": "Devon technical drawing table",
+    "family": "devon technical drawing table",
+    "reason": "The four source quarters already map the paper plan onto a horizontal tabletop with narrow edge trim and four discrete feet. Retain this complete coherent table treatment.",
+    "baseline_entry_sha256": "24470bd29988ca3a0d97088155fcbe66282d4031ec79655f399cfb7ecdee0b7c",
+    "contact_position": 490,
+    "evidence": [
+      "inventory/shared-building/page-016.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/5257-5258-4927-4661": {
+    "label": "Ship deck hatch frame",
+    "family": "ship deck hatch frame",
+    "reason": "The source marks the corner at the raised deck and hatch opening. Existing thick frame and inset faces match the connected deck boundary.",
+    "baseline_entry_sha256": "a9bca42349ecfcdc5f6414a73fd12f56c1bbd3878669dba5a8c2314638ddc26e",
+    "contact_position": 491,
+    "evidence": [
+      "inventory/shared-building/page-016.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/5273-840-5279-5280": {
+    "label": "Aqua meeting table",
+    "family": "aqua meeting table",
+    "reason": "These four explicit table quarters have level white/gold rims, dark horizontal top art and corner supports. Retain their geometry while the separate lower source leg/background cells are corrected.",
+    "baseline_entry_sha256": "3237a4f5351e8158ff1040f3223f0c03dbadd3c6e1de71716284b68eec343e84",
+    "contact_position": 504,
+    "evidence": [
+      "inventory/shared-building/page-016.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/840-5274-5280-5281": {
+    "label": "Aqua meeting table",
+    "family": "aqua meeting table",
+    "reason": "These four explicit table quarters have level white/gold rims, dark horizontal top art and corner supports. Retain their geometry while the separate lower source leg/background cells are corrected.",
+    "baseline_entry_sha256": "07c85bb5ea43be2bc4e172625794ee3c9aa4983cf28e81dc4bedfffdeddee0ef",
+    "contact_position": 506,
+    "evidence": [
+      "inventory/shared-building/page-016.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/4593-4594-4595-4596": {
+    "label": "Aqua meeting table",
+    "family": "aqua meeting table",
+    "reason": "These four explicit table quarters have level white/gold rims, dark horizontal top art and corner supports. Retain their geometry while the separate lower source leg/background cells are corrected.",
+    "baseline_entry_sha256": "46a7b816c29cb16c448c44add322b87c9bf40b849db2241b2c6ea88e6ad6885c",
+    "contact_position": 537,
+    "evidence": [
+      "inventory/shared-building/page-017.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/4594-4597-4596-4598": {
+    "label": "Aqua meeting table",
+    "family": "aqua meeting table",
+    "reason": "These four explicit table quarters have level white/gold rims, dark horizontal top art and corner supports. Retain their geometry while the separate lower source leg/background cells are corrected.",
+    "baseline_entry_sha256": "ecc3438c16409b08c5a2ef3ef0655d8801cab8695556a8d3355c8363a0f6376b",
+    "contact_position": 538,
+    "evidence": [
+      "inventory/shared-building/page-017.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/5297-4577-5298-5299": {
+    "label": "Wooden cargo crates",
+    "family": "wooden cargo crates",
+    "reason": "The source maps show stacked wooden cargo boxes. Existing closed box volumes and native plank face/top painting form the contiguous crates without pinched relief.",
+    "baseline_entry_sha256": "7cef6234bc79df8a916100fb3d333ad2f9445257f8018aa6ef38404c664381e4",
+    "contact_position": 515,
+    "evidence": [
+      "inventory/shared-building/page-017.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/4577-4578-5299-5300": {
+    "label": "Wooden cargo crates",
+    "family": "wooden cargo crates",
+    "reason": "The source maps show stacked wooden cargo boxes. Existing closed box volumes and native plank face/top painting form the contiguous crates without pinched relief.",
+    "baseline_entry_sha256": "24de10e739ce4f5ae73b6853d158624c3b8dabd4406d738835691d95b0fd4c8a",
+    "contact_position": 516,
+    "evidence": [
+      "inventory/shared-building/page-017.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/5301-5302-5298-5299": {
+    "label": "Wooden cargo crates",
+    "family": "wooden cargo crates",
+    "reason": "The source maps show stacked wooden cargo boxes. Existing closed box volumes and native plank face/top painting form the contiguous crates without pinched relief.",
+    "baseline_entry_sha256": "c149df40c741ba7fdbf1bea68e998977998e7756bd4b493ab8c5c5d564dd7c68",
+    "contact_position": 518,
+    "evidence": [
+      "inventory/shared-building/page-017.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/5302-5303-5299-5300": {
+    "label": "Wooden cargo crates",
+    "family": "wooden cargo crates",
+    "reason": "The source maps show stacked wooden cargo boxes. Existing closed box volumes and native plank face/top painting form the contiguous crates without pinched relief.",
+    "baseline_entry_sha256": "5ec8c3cda05985fde8619c44cd84896a878e9e6316cf81e421e5ea2702621740",
+    "contact_position": 519,
+    "evidence": [
+      "inventory/shared-building/page-017.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/5304-5305-5306-5307": {
+    "label": "Wooden cargo crates",
+    "family": "wooden cargo crates",
+    "reason": "The source maps show stacked wooden cargo boxes. Existing closed box volumes and native plank face/top painting form the contiguous crates without pinched relief.",
+    "baseline_entry_sha256": "3ce21b3989d8b9dbffa944583e5d716bfb4a78caf9933e4c3862c5d9db5efbcc",
+    "contact_position": 521,
+    "evidence": [
+      "inventory/shared-building/page-017.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/5305-5308-5309-5310": {
+    "label": "Wooden cargo crates",
+    "family": "wooden cargo crates",
+    "reason": "The source maps show stacked wooden cargo boxes. Existing closed box volumes and native plank face/top painting form the contiguous crates without pinched relief.",
+    "baseline_entry_sha256": "ca8b76c4e245f9da780c503976f48a8839ab9ef37ddfcaf77520986709d88dea",
+    "contact_position": 523,
+    "evidence": [
+      "inventory/shared-building/page-017.png",
+      "interiors/remaining-context/index.json"
+    ]
+  }
+}

@@ -20,6 +20,7 @@ import dev.kantobridge.client.packs.KbPackReload;
 import dev.kantobridge.client.packs.PackCommands;
 import dev.kantobridge.client.packs.TextureSyncRuntime;
 import dev.kantobridge.client.puppet.PuppetRuntime;
+import dev.kantobridge.client.review.ModelReviewRuntime;
 import dev.kantobridge.client.shape.ClientShapes;
 import dev.kantobridge.client.story.ClientStoryView;
 import dev.kantobridge.client.story.StoryCellRenderer;
@@ -110,7 +111,11 @@ public class KantoBridgeClient implements ClientModInitializer {
 		bridge.addDebugLine(KbPackReload::debugLine);
 		// Dev only (-Dkantobridge.meshstats=true): the rendering measurements of the voxel plan (§10).
 		MeshStatsRuntime.init(bridge);
+		// Player-selected model feedback: F9 highlights, F10 records a local note and its scene.
+		ModelReviewRuntime.init();
 		// Dev only (-Dkantobridge.autopilot=<scene>): a scripted scene for recorded showcases (Wild Routes check C5).
 		Autopilot.init();
+		// Opt-in, offline model comparisons in a separate flat inspection world.
+		dev.kantobridge.client.dev.ModelGallery.init();
 	}
 }

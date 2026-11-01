@@ -204,6 +204,33 @@ class FittedShapesTest {
 	}
 
 	@Test
+	void aLayeredWalkEntryStandsTallOnDecorWithoutCollision() {
+		// a walk-through statue the game draws on a walkable cell: its own voxels and two layers, all decor
+		SceneMap map = surface("WALKL", "......", "......", "..ss..", "..ss..", "......", "......");
+		int s = tile('s');
+		byte[] base = new byte[FittedShapes.VOXEL_BYTES];
+		base[0] = 1;
+		byte[] first = new byte[FittedShapes.VOXEL_BYTES];
+		first[1] = 1;
+		byte[] second = new byte[FittedShapes.VOXEL_BYTES];
+		second[2] = 1;
+		String key = FittedShapes.key(ShapeFixtures.ATLAS, new int[] {s, s, s, s});
+		FittedShapes.useWalkLayersForTest(Map.of(key, new FittedShapes.Entry("voxels", List.of(), base)),
+				Map.of(key, List.of(new FittedShapes.Layer(first, null), new FittedShapes.Layer(second, null))), java.util.Set.of(key));
+		ShapePlanner.MapShapes shapes = plan(map);
+		assertEquals(1, shapes.units().size());
+		Units.Cell cell = shapes.units().get(0);
+		assertEquals("walk_voxels", cell.source());
+		int per = map.perCell();
+		int i = (cell.cy() * per) * map.artCols() + cell.cx() * per;
+		assertEquals((1 << (3 * per)) - 1, shapes.decor()[i], "decor carriers three cells tall");
+		assertEquals(0, shapes.blocks()[i], "no solid blocks");
+		ShapeKey[] column = shapes.open()[i];
+		assertEquals(3 * per, column.length);
+		assertTrue(!column[0].toString().equals(column[per].toString()), "each layer names itself");
+	}
+
+	@Test
 	void aLayeredEntryStandsSeveralCellsTall() {
 		// a building's cell: its own voxels and two layers over them (HAND_MODELS.md section 8)
 		SceneMap map = surface("TALL", "......", "......", "..AA..", "..AA..", "......", "......");

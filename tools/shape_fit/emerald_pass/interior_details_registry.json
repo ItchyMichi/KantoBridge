@@ -1,0 +1,884 @@
+{
+  "g3q/4682-4682-4688-4689": {
+    "role": "panel",
+    "label": "Mounted wall panel",
+    "family": "mounted wall panel",
+    "reason": "Map context identifies a mounted wall display, window, framed board or architectural panel. Replace the pinched relief with constant wall depth and a native painted front; keep adjoining source pieces and existing stack metadata.",
+    "baseline_entry_sha256": "1770177c1cbbca1416fb7ed9ff780a598d12fe8a37318e78e6602cd4bc190aa7",
+    "source_ordinal": 63,
+    "evidence": [
+      "inventory/shared-building/page-002.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "face": [
+      3,
+      10,
+      13,
+      16
+    ]
+  },
+  "g3q/4682-4682-4690-4691": {
+    "role": "panel",
+    "label": "Mounted wall panel",
+    "family": "mounted wall panel",
+    "reason": "Map context identifies a mounted wall display, window, framed board or architectural panel. Replace the pinched relief with constant wall depth and a native painted front; keep adjoining source pieces and existing stack metadata.",
+    "baseline_entry_sha256": "621e9588f0f861512b355893d29c4c1e74352422be4ba8048c3648c7a9ed1305",
+    "source_ordinal": 66,
+    "evidence": [
+      "inventory/shared-building/page-003.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "face": [
+      3,
+      10,
+      13,
+      16
+    ]
+  },
+  "g3q/4707-4708-4704-4704": {
+    "role": "panel",
+    "label": "Mounted wall panel",
+    "family": "mounted wall panel",
+    "reason": "Map context identifies a mounted wall display, window, framed board or architectural panel. Replace the pinched relief with constant wall depth and a native painted front; keep adjoining source pieces and existing stack metadata.",
+    "baseline_entry_sha256": "2739ec2c37ee6f4a1fd0d88ae045772736e3728fed1677440adfea523aaea6f9",
+    "source_ordinal": 83,
+    "evidence": [
+      "inventory/shared-building/page-003.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "face": [
+      3,
+      0,
+      13,
+      8
+    ]
+  },
+  "g3q/4709-4710-4704-4704": {
+    "role": "panel",
+    "label": "Mounted wall panel",
+    "family": "mounted wall panel",
+    "reason": "Map context identifies a mounted wall display, window, framed board or architectural panel. Replace the pinched relief with constant wall depth and a native painted front; keep adjoining source pieces and existing stack metadata.",
+    "baseline_entry_sha256": "406c0fce36335c2e39a59bb888ebf627ffc0e3f893908c24e442f6feaf1bd84e",
+    "source_ordinal": 85,
+    "evidence": [
+      "inventory/shared-building/page-003.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "face": [
+      3,
+      0,
+      13,
+      8
+    ]
+  },
+  "g3q/3698-3695-3746-3747": {
+    "role": "panel",
+    "label": "Mounted wall panel",
+    "family": "mounted wall panel",
+    "reason": "Map context identifies a mounted wall display, window, framed board or architectural panel. Replace the pinched relief with constant wall depth and a native painted front; keep adjoining source pieces and existing stack metadata.",
+    "baseline_entry_sha256": "32fcb2b92fdcf7bb61f33235743b52c8ace2dfbd4d066850deab972defc0d116",
+    "source_ordinal": 132,
+    "evidence": [
+      "inventory/shared-building/page-005.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "face": [
+      0,
+      8,
+      16,
+      16
+    ],
+    "added_on": "g3q/3763-3764-3765-3766"
+  },
+  "g3q/3698-3695-3747-3747": {
+    "role": "panel",
+    "label": "Mounted wall panel",
+    "family": "mounted wall panel",
+    "reason": "Map context identifies a mounted wall display, window, framed board or architectural panel. Replace the pinched relief with constant wall depth and a native painted front; keep adjoining source pieces and existing stack metadata.",
+    "baseline_entry_sha256": "aff94febc61b371ab89f43851e4dd335424c6d2e937743b56d84c7d48bea6063",
+    "source_ordinal": 134,
+    "evidence": [
+      "inventory/shared-building/page-005.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "face": [
+      0,
+      8,
+      16,
+      16
+    ],
+    "added_on": "g3q/3764-3764-3766-3766"
+  },
+  "g3q/3698-3695-3747-3748": {
+    "role": "panel",
+    "label": "Mounted wall panel",
+    "family": "mounted wall panel",
+    "reason": "Map context identifies a mounted wall display, window, framed board or architectural panel. Replace the pinched relief with constant wall depth and a native painted front; keep adjoining source pieces and existing stack metadata.",
+    "baseline_entry_sha256": "9d2d47f296e8a0c524208192e7b82e287af9d477fa5b1c9d5e23c639c987e426",
+    "source_ordinal": 137,
+    "evidence": [
+      "inventory/shared-building/page-005.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "face": [
+      0,
+      8,
+      16,
+      16
+    ],
+    "added_on": "g3q/3764-3767-3766-3768"
+  },
+  "g3q/3763-3764-3765-3766": {
+    "role": "panel",
+    "label": "Mounted wall panel",
+    "family": "mounted wall panel",
+    "reason": "Map context identifies a mounted wall display, window, framed board or architectural panel. Replace the pinched relief with constant wall depth and a native painted front; keep adjoining source pieces and existing stack metadata.",
+    "baseline_entry_sha256": "5efbd1cdffc151546b2ffff62d00c091991a31755f31fb350c7649bab017952e",
+    "source_ordinal": 151,
+    "evidence": [
+      "inventory/shared-building/page-005.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "face": [
+      0,
+      0,
+      16,
+      16
+    ]
+  },
+  "g3q/3764-3764-3766-3766": {
+    "role": "panel",
+    "label": "Mounted wall panel",
+    "family": "mounted wall panel",
+    "reason": "Map context identifies a mounted wall display, window, framed board or architectural panel. Replace the pinched relief with constant wall depth and a native painted front; keep adjoining source pieces and existing stack metadata.",
+    "baseline_entry_sha256": "5a2a868e669361860861b3825325c766708561b19f939187f9e583a29264557a",
+    "source_ordinal": 154,
+    "evidence": [
+      "inventory/shared-building/page-005.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "face": [
+      0,
+      0,
+      16,
+      16
+    ]
+  },
+  "g3q/3764-3767-3766-3768": {
+    "role": "panel",
+    "label": "Mounted wall panel",
+    "family": "mounted wall panel",
+    "reason": "Map context identifies a mounted wall display, window, framed board or architectural panel. Replace the pinched relief with constant wall depth and a native painted front; keep adjoining source pieces and existing stack metadata.",
+    "baseline_entry_sha256": "3d5501eedc8ba0251e6849a388884f7841cd4dc1dd8e5f8dd8ad2215794d7e45",
+    "source_ordinal": 158,
+    "evidence": [
+      "inventory/shared-building/page-005.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "face": [
+      0,
+      0,
+      16,
+      16
+    ]
+  },
+  "g3q/3790-3791-3792-3793": {
+    "role": "panel",
+    "label": "Mounted wall panel",
+    "family": "mounted wall panel",
+    "reason": "Map context identifies a mounted wall display, window, framed board or architectural panel. Replace the pinched relief with constant wall depth and a native painted front; keep adjoining source pieces and existing stack metadata.",
+    "baseline_entry_sha256": "db6ff8a3e1675139ee1f7a4b40814c5b73ced8a5ac791578fb371c378da10d02",
+    "source_ordinal": 192,
+    "evidence": [
+      "inventory/shared-building/page-006.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "face": [
+      0,
+      4,
+      16,
+      13
+    ]
+  },
+  "g3q/3698-3695-3819-3820": {
+    "role": "panel",
+    "label": "Mounted wall panel",
+    "family": "mounted wall panel",
+    "reason": "Map context identifies a mounted wall display, window, framed board or architectural panel. Replace the pinched relief with constant wall depth and a native painted front; keep adjoining source pieces and existing stack metadata.",
+    "baseline_entry_sha256": "93be4c57b745518cd76f7fab6b9a08c512faddc15aad0ca017d3a61247231c15",
+    "source_ordinal": 269,
+    "evidence": [
+      "inventory/shared-building/page-009.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "face": [
+      0,
+      10,
+      16,
+      16
+    ]
+  },
+  "g3q/3698-3695-3826-3827": {
+    "role": "panel",
+    "label": "Mounted wall panel",
+    "family": "mounted wall panel",
+    "reason": "Map context identifies a mounted wall display, window, framed board or architectural panel. Replace the pinched relief with constant wall depth and a native painted front; keep adjoining source pieces and existing stack metadata.",
+    "baseline_entry_sha256": "852de2d8761ea304091efe006c7327cb6ed616573c3ba229eba1a2c78bdfa237",
+    "source_ordinal": 292,
+    "evidence": [
+      "inventory/shared-building/page-010.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "face": [
+      0,
+      10,
+      16,
+      16
+    ]
+  },
+  "g3q/3698-3695-3837-3838": {
+    "role": "panel",
+    "label": "Mounted wall panel",
+    "family": "mounted wall panel",
+    "reason": "Map context identifies a mounted wall display, window, framed board or architectural panel. Replace the pinched relief with constant wall depth and a native painted front; keep adjoining source pieces and existing stack metadata.",
+    "baseline_entry_sha256": "4c1dc8ae7d7b16e80213e72ed591fa531bd0671c612425286ea21ceb8bf86126",
+    "source_ordinal": 304,
+    "evidence": [
+      "inventory/shared-building/page-010.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "face": [
+      0,
+      10,
+      16,
+      16
+    ]
+  },
+  "g3q/3839-3840-3830-3831": {
+    "role": "panel",
+    "label": "Mounted wall panel",
+    "family": "mounted wall panel",
+    "reason": "Map context identifies a mounted wall display, window, framed board or architectural panel. Replace the pinched relief with constant wall depth and a native painted front; keep adjoining source pieces and existing stack metadata.",
+    "baseline_entry_sha256": "e8bcf9adf1143bf50b3c195a0283c01af481db8085be4afb59ed30343b5941e2",
+    "source_ordinal": 307,
+    "evidence": [
+      "inventory/shared-building/page-010.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "face": [
+      2,
+      0,
+      14,
+      14
+    ]
+  },
+  "g3q/3698-3695-3850-3851": {
+    "role": "panel",
+    "label": "Mounted wall panel",
+    "family": "mounted wall panel",
+    "reason": "Map context identifies a mounted wall display, window, framed board or architectural panel. Replace the pinched relief with constant wall depth and a native painted front; keep adjoining source pieces and existing stack metadata.",
+    "baseline_entry_sha256": "c08e7f2362f3551dbf8f0098040516af2da9bba836763b5e8812660e356fdf68",
+    "source_ordinal": 315,
+    "evidence": [
+      "inventory/shared-building/page-010.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "face": [
+      0,
+      10,
+      16,
+      16
+    ]
+  },
+  "g3q/3852-3853-3830-3831": {
+    "role": "panel",
+    "label": "Mounted wall panel",
+    "family": "mounted wall panel",
+    "reason": "Map context identifies a mounted wall display, window, framed board or architectural panel. Replace the pinched relief with constant wall depth and a native painted front; keep adjoining source pieces and existing stack metadata.",
+    "baseline_entry_sha256": "1044adc282dc7bf94f84c6417ddc4e0184a36c19597b9ab71c0a51e5196afa14",
+    "source_ordinal": 317,
+    "evidence": [
+      "inventory/shared-building/page-010.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "face": [
+      2,
+      0,
+      14,
+      14
+    ]
+  },
+  "g3q/3698-3695-3858-3859": {
+    "role": "panel",
+    "label": "Mounted wall panel",
+    "family": "mounted wall panel",
+    "reason": "Map context identifies a mounted wall display, window, framed board or architectural panel. Replace the pinched relief with constant wall depth and a native painted front; keep adjoining source pieces and existing stack metadata.",
+    "baseline_entry_sha256": "ea52b9d92a00b7eeceb3b5152e14b2d5f6524985cffc9ef7a05368bfaeedc4b7",
+    "source_ordinal": 324,
+    "evidence": [
+      "inventory/shared-building/page-011.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "face": [
+      0,
+      10,
+      16,
+      16
+    ]
+  },
+  "g3q/3860-3861-3830-3831": {
+    "role": "panel",
+    "label": "Mounted wall panel",
+    "family": "mounted wall panel",
+    "reason": "Map context identifies a mounted wall display, window, framed board or architectural panel. Replace the pinched relief with constant wall depth and a native painted front; keep adjoining source pieces and existing stack metadata.",
+    "baseline_entry_sha256": "9f7db58f924e0e6da44a8101170351b0db2db0fbba150c486bca79837aa6483c",
+    "source_ordinal": 327,
+    "evidence": [
+      "inventory/shared-building/page-011.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "face": [
+      2,
+      0,
+      14,
+      14
+    ]
+  },
+  "g3q/3871-3872-3830-3831": {
+    "role": "panel",
+    "label": "Mounted wall panel",
+    "family": "mounted wall panel",
+    "reason": "Map context identifies a mounted wall display, window, framed board or architectural panel. Replace the pinched relief with constant wall depth and a native painted front; keep adjoining source pieces and existing stack metadata.",
+    "baseline_entry_sha256": "735b1ba5e0e53f9f20c14730746ffd810268e6b7f307a36f102f90f474940fc9",
+    "source_ordinal": 331,
+    "evidence": [
+      "inventory/shared-building/page-011.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "face": [
+      2,
+      0,
+      14,
+      14
+    ]
+  },
+  "g3q/3879-3880-3830-3831": {
+    "role": "panel",
+    "label": "Mounted wall panel",
+    "family": "mounted wall panel",
+    "reason": "Map context identifies a mounted wall display, window, framed board or architectural panel. Replace the pinched relief with constant wall depth and a native painted front; keep adjoining source pieces and existing stack metadata.",
+    "baseline_entry_sha256": "de0a0e8443122f201c94e5eba54e9802158defa614f95f0e082f460833903930",
+    "source_ordinal": 339,
+    "evidence": [
+      "inventory/shared-building/page-011.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "face": [
+      2,
+      0,
+      14,
+      14
+    ]
+  },
+  "g3q/3904-3905-3906-3907": {
+    "role": "panel",
+    "label": "Mounted wall panel",
+    "family": "mounted wall panel",
+    "reason": "Map context identifies a mounted wall display, window, framed board or architectural panel. Replace the pinched relief with constant wall depth and a native painted front; keep adjoining source pieces and existing stack metadata.",
+    "baseline_entry_sha256": "3c32c10241442dc5f726dd5e82613d47e1f155de2f8432ae10472f49be23d116",
+    "source_ordinal": 370,
+    "evidence": [
+      "inventory/shared-building/page-012.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "face": [
+      1,
+      0,
+      15,
+      13
+    ]
+  },
+  "g3q/4717-4717-4688-4689": {
+    "role": "panel",
+    "label": "Mounted wall panel",
+    "family": "mounted wall panel",
+    "reason": "Map context identifies a mounted wall display, window, framed board or architectural panel. Replace the pinched relief with constant wall depth and a native painted front; keep adjoining source pieces and existing stack metadata.",
+    "baseline_entry_sha256": "4635376eaa79337b47475400d89e80d3ce65e0bfc04485eea0321bb9b983d34a",
+    "source_ordinal": 372,
+    "evidence": [
+      "inventory/shared-building/page-012.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "face": [
+      3,
+      10,
+      13,
+      16
+    ]
+  },
+  "g3q/4717-4717-4690-4691": {
+    "role": "panel",
+    "label": "Mounted wall panel",
+    "family": "mounted wall panel",
+    "reason": "Map context identifies a mounted wall display, window, framed board or architectural panel. Replace the pinched relief with constant wall depth and a native painted front; keep adjoining source pieces and existing stack metadata.",
+    "baseline_entry_sha256": "c0fb2659db1d5c0c157ede5e6e5790eef850a2954b3ef359eb0342f62bb02693",
+    "source_ordinal": 373,
+    "evidence": [
+      "inventory/shared-building/page-012.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "face": [
+      3,
+      10,
+      13,
+      16
+    ]
+  },
+  "g3q/4682-4682-5006-5007": {
+    "role": "panel",
+    "label": "Mounted wall panel",
+    "family": "mounted wall panel",
+    "reason": "Map context identifies a mounted wall display, window, framed board or architectural panel. Replace the pinched relief with constant wall depth and a native painted front; keep adjoining source pieces and existing stack metadata.",
+    "baseline_entry_sha256": "2f34d1c48d22da0619425c017b738e7252e6a2fef18e8daebfa75268037e48ec",
+    "source_ordinal": 385,
+    "evidence": [
+      "inventory/shared-building/page-013.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "face": [
+      1,
+      10,
+      15,
+      16
+    ]
+  },
+  "g3q/3742-3742-3743-3744": {
+    "role": "curtain",
+    "label": "Contest banner and curtain wall",
+    "family": "contest banner and curtain wall",
+    "reason": "Build a shallow continuous fabric backing with vertical folds. Preserve the printed banner and curtain stripes on their forward face, rather than a solid hourglass extrusion.",
+    "baseline_entry_sha256": "2d5a734f12438a8ca441cc248b872dafaac06e01b3cf446aacfa10cdc48c49df",
+    "source_ordinal": 127,
+    "evidence": [
+      "inventory/shared-building/page-004.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "upper_curtain": true,
+    "added_on": "g3q/3697-3761-3732-3732"
+  },
+  "g3q/3742-3742-3745-3743": {
+    "role": "curtain",
+    "label": "Contest banner and curtain wall",
+    "family": "contest banner and curtain wall",
+    "reason": "Build a shallow continuous fabric backing with vertical folds. Preserve the printed banner and curtain stripes on their forward face, rather than a solid hourglass extrusion.",
+    "baseline_entry_sha256": "00b198bbcee825af1c21c7ee6349693f1599f4f4143f4d5efb0adeb20c547a0b",
+    "source_ordinal": 129,
+    "evidence": [
+      "inventory/shared-building/page-005.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "upper_curtain": true,
+    "added_on": "g3q/3762-3697-3732-3732"
+  },
+  "g3q/3697-3761-3732-3732": {
+    "role": "curtain",
+    "label": "Contest banner and curtain wall",
+    "family": "contest banner and curtain wall",
+    "reason": "Build a shallow continuous fabric backing with vertical folds. Preserve the printed banner and curtain stripes on their forward face, rather than a solid hourglass extrusion.",
+    "baseline_entry_sha256": "fc32e9def6a9ddc5b992be12be8fa3418e859140289336b08fdb798e360ed40e",
+    "source_ordinal": 147,
+    "evidence": [
+      "inventory/shared-building/page-005.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/3762-3697-3732-3732": {
+    "role": "curtain",
+    "label": "Contest banner and curtain wall",
+    "family": "contest banner and curtain wall",
+    "reason": "Build a shallow continuous fabric backing with vertical folds. Preserve the printed banner and curtain stripes on their forward face, rather than a solid hourglass extrusion.",
+    "baseline_entry_sha256": "775f16020f0777bafddc1505675254054deeb40147120f44054574c0f445afa9",
+    "source_ordinal": 149,
+    "evidence": [
+      "inventory/shared-building/page-005.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/3810-3810-3811-3812": {
+    "role": "stairs",
+    "label": "Contest main stage stairs",
+    "family": "contest main stage stairs",
+    "reason": "Author three broad level treads across the actual three-column/two-row stage approach, with grey risers and native horizontal source paint.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "source_ordinal": 244,
+    "evidence": [
+      "inventory/shared-building/page-008.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "section": 0
+  },
+  "g3q/3810-3810-3812-3812": {
+    "role": "stairs",
+    "label": "Contest main stage stairs",
+    "family": "contest main stage stairs",
+    "reason": "Author three broad level treads across the actual three-column/two-row stage approach, with grey risers and native horizontal source paint.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "source_ordinal": 247,
+    "evidence": [
+      "inventory/shared-building/page-008.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "section": 0
+  },
+  "g3q/3810-3810-3812-3813": {
+    "role": "stairs",
+    "label": "Contest main stage stairs",
+    "family": "contest main stage stairs",
+    "reason": "Author three broad level treads across the actual three-column/two-row stage approach, with grey risers and native horizontal source paint.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "source_ordinal": 250,
+    "evidence": [
+      "inventory/shared-building/page-008.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "section": 0
+  },
+  "g3q/3811-3812-3811-3812": {
+    "role": "stairs",
+    "label": "Contest main stage stairs",
+    "family": "contest main stage stairs",
+    "reason": "Author three broad level treads across the actual three-column/two-row stage approach, with grey risers and native horizontal source paint.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "source_ordinal": 262,
+    "evidence": [
+      "inventory/shared-building/page-009.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "section": 1
+  },
+  "g3q/3812-3812-3812-3812": {
+    "role": "stairs",
+    "label": "Contest main stage stairs",
+    "family": "contest main stage stairs",
+    "reason": "Author three broad level treads across the actual three-column/two-row stage approach, with grey risers and native horizontal source paint.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "source_ordinal": 264,
+    "evidence": [
+      "inventory/shared-building/page-009.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "section": 1
+  },
+  "g3q/3812-3813-3812-3813": {
+    "role": "stairs",
+    "label": "Contest main stage stairs",
+    "family": "contest main stage stairs",
+    "reason": "Author three broad level treads across the actual three-column/two-row stage approach, with grey risers and native horizontal source paint.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "source_ordinal": 266,
+    "evidence": [
+      "inventory/shared-building/page-009.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "section": 1
+  },
+  "g3q/3810-3810-3816-3817": {
+    "role": "judge_desk_upper",
+    "label": "Contest judge's desk upper",
+    "family": "contest judge desk",
+    "reason": "Source/map and judge placement identify a low white/gold desk. Its two sprite rows describe floor depth, not vertically separated plates. Whole tabletop, front apron and four legs are sliced at the source seam; source floor pixels are excluded. Exact WALK rendering flag keeps Lilycove desk variants visible without changing collision.",
+    "baseline_entry_sha256": "c69f69ec525264c0a8024f272c5e794176068f3df388064a8bbceb95ae345c1e",
+    "source_ordinal": 254,
+    "evidence": [
+      "inventory/shared-building/page-008.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "render_on_walk": true,
+    "remove_on": true
+  },
+  "g3q/3821-3822-3810-3810": {
+    "role": "judge_desk_lower",
+    "label": "Contest judge's desk lower",
+    "family": "contest judge desk",
+    "reason": "Source/map and judge placement identify a low white/gold desk. Its two sprite rows describe floor depth, not vertically separated plates. Whole tabletop, front apron and four legs are sliced at the source seam; source floor pixels are excluded. Exact WALK rendering flag keeps Lilycove desk variants visible without changing collision.",
+    "baseline_entry_sha256": "c64ddb3e90c96b655b87882f1608d3309890d7262643a51f131d3e8dd424458a",
+    "source_ordinal": 270,
+    "evidence": [
+      "inventory/shared-building/page-009.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "render_on_walk": true
+  },
+  "g3q/4684-4685-4686-4687": {
+    "role": "extinguisher_upper",
+    "label": "Wall fire extinguisher upper body",
+    "family": "wall fire extinguisher upper body",
+    "reason": "Build a rounded red tank, shoulder, valve and dark hose in front of its constant-depth wall mount; match the existing lower source section.",
+    "baseline_entry_sha256": "f5f3db7ef33a33e971f1a64390596e8cf172a8784065943056612e419f393269",
+    "source_ordinal": 62,
+    "evidence": [
+      "inventory/shared-building/page-002.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/4705-4706-4704-4704": {
+    "role": "extinguisher_base",
+    "label": "Wall fire extinguisher lower mount",
+    "family": "wall fire extinguisher lower mount",
+    "reason": "Retain the wall backing and a rounded lower tank termination at its upper edge so the vertically joined tank has a supported mounting plate.",
+    "baseline_entry_sha256": "7ac41dee8dd23eb04a2ab99d8177a997f98b6e283f5410ae22255504c4a3a0fc",
+    "source_ordinal": 82,
+    "evidence": [
+      "inventory/shared-building/page-003.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/5876-5877-5676-5677": {
+    "role": "cabinet_upper",
+    "label": "Cabinet upper section",
+    "family": "cabinet upper section",
+    "reason": "Source/map identifies a closed cabinet or control cupboard. Author a rectangular enclosure with constant depth, native door face and a clean solid top.",
+    "baseline_entry_sha256": "a1d9ca4075c1a3a97e9586ea26e48fb8267f97f6d08698d22654d77490421c41",
+    "source_ordinal": 102,
+    "evidence": [
+      "inventory/shared-building/page-004.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/5012-5013-5014-5015": {
+    "role": "cabinet_upper",
+    "label": "Cabinet upper section",
+    "family": "cabinet upper section",
+    "reason": "Source/map identifies a closed cabinet or control cupboard. Author a rectangular enclosure with constant depth, native door face and a clean solid top.",
+    "baseline_entry_sha256": "12ca5dde4372101c94ad41e14f3aa4202bc7aa67a51da7c62bf64b8f9e0f5591",
+    "source_ordinal": 389,
+    "evidence": [
+      "inventory/shared-building/page-013.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/5259-5260-5261-5262": {
+    "role": "cabinet_upper",
+    "label": "Cabinet upper section",
+    "family": "cabinet upper section",
+    "reason": "Source/map identifies a closed cabinet or control cupboard. Author a rectangular enclosure with constant depth, native door face and a clean solid top.",
+    "baseline_entry_sha256": "f2e0b17ace714277107b2d457f34f95264e57ffae6e4d23ef466c842770e2252",
+    "source_ordinal": 492,
+    "evidence": [
+      "inventory/shared-building/page-016.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/5891-5892-5474-5474": {
+    "role": "cabinet_base",
+    "label": "Cabinet lower section",
+    "family": "cabinet lower section",
+    "reason": "Replace the pinched support with a closed lower cabinet on four short feet, using the native door/control face and omitting floor-colored bulk.",
+    "baseline_entry_sha256": "fd317b1121c1bd4d7a1e92d37053ccb73da935ec7a4b887da32230356a5363a2",
+    "source_ordinal": 119,
+    "evidence": [
+      "inventory/shared-building/page-004.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "short_base": true,
+    "front": [
+      0,
+      0,
+      16,
+      16
+    ]
+  },
+  "g3q/5030-5031-5032-5033": {
+    "role": "cabinet_base",
+    "label": "Cabinet lower section",
+    "family": "cabinet lower section",
+    "reason": "Replace the pinched support with a closed lower cabinet on four short feet, using the native door/control face and omitting floor-colored bulk.",
+    "baseline_entry_sha256": "856f0b4817c81804762e64d6c83ed70e90f524fa22f45aecc19e10107902b463",
+    "source_ordinal": 395,
+    "evidence": [
+      "inventory/shared-building/page-013.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/5263-5264-5265-5266": {
+    "role": "cabinet_base",
+    "label": "Cabinet lower section",
+    "family": "cabinet lower section",
+    "reason": "Replace the pinched support with a closed lower cabinet on four short feet, using the native door/control face and omitting floor-colored bulk.",
+    "baseline_entry_sha256": "89974b99e41bc99f5ffeaddc1853d7558990df8d3d7278bfb678389a72d403b2",
+    "source_ordinal": 493,
+    "evidence": [
+      "inventory/shared-building/page-016.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/4928-4929-4731-4732": {
+    "role": "console_upper",
+    "label": "Industrial console head",
+    "family": "industrial console head",
+    "reason": "The screen and buttons belong to a constant-depth rectangular console head. Preserve its source display face and vertical support relationship.",
+    "baseline_entry_sha256": "eccd47cc65fbf2d89737f9eb2a111cb4d219ffbaceba9f46aca3a8fb156a51f9",
+    "source_ordinal": 356,
+    "evidence": [
+      "inventory/shared-building/page-012.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/4749-4750-4625-4626": {
+    "role": "console_base",
+    "label": "Industrial console cabinet",
+    "family": "industrial console cabinet",
+    "reason": "Build a supported rectangular cabinet under the controls, on four feet; exclude neighboring floor patterns from side and underside material.",
+    "baseline_entry_sha256": "44a16ab15bfb8f292945648337ae9b04599b3ae5237ffb9bad3703ffc072c814",
+    "source_ordinal": 364,
+    "evidence": [
+      "inventory/shared-building/page-012.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/4934-4935-4625-4626": {
+    "role": "console_base",
+    "label": "Industrial console cabinet",
+    "family": "industrial console cabinet",
+    "reason": "Build a supported rectangular cabinet under the controls, on four feet; exclude neighboring floor patterns from side and underside material.",
+    "baseline_entry_sha256": "c98e6c7d31b2c28ab2c5de7d336030db9b03c3f0e1e32f56ce0aa8009c87ec0f",
+    "source_ordinal": 365,
+    "evidence": [
+      "inventory/shared-building/page-012.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/4749-4750-4994-4993": {
+    "role": "console_base",
+    "label": "Industrial console cabinet",
+    "family": "industrial console cabinet",
+    "reason": "Build a supported rectangular cabinet under the controls, on four feet; exclude neighboring floor patterns from side and underside material.",
+    "baseline_entry_sha256": "7a460148fd4b681c3c69c72b620637daf2ff830609b0b909be9f4688c6e6baa3",
+    "source_ordinal": 458,
+    "evidence": [
+      "inventory/shared-building/page-015.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/5181-5182-4994-4993": {
+    "role": "console_base",
+    "label": "Industrial console cabinet",
+    "family": "industrial console cabinet",
+    "reason": "Build a supported rectangular cabinet under the controls, on four feet; exclude neighboring floor patterns from side and underside material.",
+    "baseline_entry_sha256": "5526d5431e4ef6ae36b37e39586bb6ff1a7e882ccfb07a62162294a3f027690d",
+    "source_ordinal": 459,
+    "evidence": [
+      "inventory/shared-building/page-015.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/4753-4754-4994-4993": {
+    "role": "console_base",
+    "label": "Industrial console cabinet",
+    "family": "industrial console cabinet",
+    "reason": "Build a supported rectangular cabinet under the controls, on four feet; exclude neighboring floor patterns from side and underside material.",
+    "baseline_entry_sha256": "6c536d325df8669feebf9774d9673cf20d7242b019702aaba2a5a8d0ab418353",
+    "source_ordinal": 460,
+    "evidence": [
+      "inventory/shared-building/page-015.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/5311-5312-5298-5299": {
+    "role": "crate",
+    "label": "Wooden cargo crate edge",
+    "family": "wooden cargo crate edge",
+    "reason": "The map shows these as edges of solid timber cargo boxes. Replace isolated thin strips with a joined box and source-local wood surfaces, excluding surrounding water/floor from the cap.",
+    "baseline_entry_sha256": "ff979d8f3806c1d43d37d44876108481653f35dbe1f18e87b307a3c424440015",
+    "source_ordinal": 524,
+    "evidence": [
+      "inventory/shared-building/page-017.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/5312-5313-5299-5300": {
+    "role": "crate",
+    "label": "Wooden cargo crate edge",
+    "family": "wooden cargo crate edge",
+    "reason": "The map shows these as edges of solid timber cargo boxes. Replace isolated thin strips with a joined box and source-local wood surfaces, excluding surrounding water/floor from the cap.",
+    "baseline_entry_sha256": "53aeaa98767067edafb9fa6dcca5017bbc7192f29b8538ebe19f8fe56a523027",
+    "source_ordinal": 526,
+    "evidence": [
+      "inventory/shared-building/page-017.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/5297-4577-5324-4579": {
+    "role": "crate",
+    "label": "Wooden cargo crate edge",
+    "family": "wooden cargo crate edge",
+    "reason": "The map shows these as edges of solid timber cargo boxes. Replace isolated thin strips with a joined box and source-local wood surfaces, excluding surrounding water/floor from the cap.",
+    "baseline_entry_sha256": "bc9e4b85a6765108cb48fddfb53f4c0fd74de5336985a4e99ac0a01e7bb4d9e8",
+    "source_ordinal": 530,
+    "evidence": [
+      "inventory/shared-building/page-017.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "front": [
+      0,
+      0,
+      16,
+      8
+    ]
+  },
+  "g3q/4577-4578-4579-4580": {
+    "role": "crate",
+    "label": "Wooden cargo crate edge",
+    "family": "wooden cargo crate edge",
+    "reason": "The map shows these as edges of solid timber cargo boxes. Replace isolated thin strips with a joined box and source-local wood surfaces, excluding surrounding water/floor from the cap.",
+    "baseline_entry_sha256": "23b23fe3ab41f4fea98943e2173fd4e1f004cc5db0613bef0957051dbdb3519e",
+    "source_ordinal": 533,
+    "evidence": [
+      "inventory/shared-building/page-017.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "front": [
+      0,
+      0,
+      16,
+      8
+    ]
+  },
+  "g3q/5791-5792-5793-5794": {
+    "role": "plant_base",
+    "label": "Cream indoor plant pot",
+    "family": "cream indoor plant pot",
+    "reason": "Build a round cream pot, soil opening and a narrow native brown stem. Preserve the upper plant as a separate source piece and remove the surrounding carpet volume.",
+    "baseline_entry_sha256": "1c3af64f391e39b70a34aef2d39d6dce35c2a1e12af424beb14d7fd72be9a23f",
+    "source_ordinal": 64,
+    "evidence": [
+      "inventory/shared-building/page-002.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/5282-5283-5284-5285": {
+    "role": "pit",
+    "label": "Damaged ship deck hole",
+    "family": "damaged ship deck hole",
+    "reason": "The dark irregular opening is a depression in the deck. Use a shallow native floor patch; do not raise the hole into a freestanding block.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "source_ordinal": 509,
+    "evidence": [
+      "inventory/shared-building/page-016.png",
+      "interiors/remaining-context/index.json"
+    ]
+  },
+  "g3q/4601-4601-4602-4603": {
+    "role": "frieze",
+    "label": "Devon wall frieze behind glass pedestal",
+    "family": "devon wall frieze behind glass pedestal",
+    "reason": "Source map and whole pedestal review show that this is the wall behind a separate display. Remove the false on link and retain only the wall/frieze source region in a shallow wall backing.",
+    "baseline_entry_sha256": "861d93d8366fd3c06bd2ac3cb4e78c4507adeac47ce8715c9eea3be6b21fbc7c",
+    "source_ordinal": 540,
+    "evidence": [
+      "inventory/shared-building/page-017.png",
+      "interiors/remaining-context/index.json"
+    ],
+    "remove_on": true
+  }
+}

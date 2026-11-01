@@ -33,9 +33,23 @@ final class FittedBuildings {
 
 	/** The generated buildings' claims on a map (the band buildings' held tiles left alone; held filled in). */
 	static List<Buildings.Claim> claims(SceneMap map, boolean[] held, Map<String, Integer> tally, Map<Profile.Building, FittedShapes.Building> of) {
+		return claims(map, held, tally, of, false);
+	}
+
+	/** The reference pass omits only explicitly opted-in terrain-preserving models. */
+	static List<Buildings.Claim> claims(SceneMap map, boolean[] held, Map<String, Integer> tally, Map<Profile.Building, FittedShapes.Building> of,
+			boolean omitPreservingTerrain) {
+		return claims(map, held, tally, of, omitPreservingTerrain, false);
+	}
+
+	static List<Buildings.Claim> claims(SceneMap map, boolean[] held, Map<String, Integer> tally, Map<Profile.Building, FittedShapes.Building> of,
+			boolean omitPreservingTerrain, boolean omitPreservingCarriers) {
 		List<Profile.Building> entries = new ArrayList<>();
 		int index = 0;
 		for (FittedShapes.Building b : FittedShapes.buildings(map.atlas())) {
+			if (omitPreservingTerrain && (FittedShapes.preserveTerrainBuilding(b) || FittedShapes.preserveCarriersBuilding(b))) continue;
+			if (omitPreservingCarriers && FittedShapes.preserveCarriersBuilding(b)) continue;
+			if (!map.outdoors() && !FittedShapes.interiorBuilding(b)) continue;
 			Profile.Building entry = new Profile.Building(index++, b.tiles(), List.of(), false, Set.of(), null);
 			of.put(entry, b);
 			entries.add(entry);
@@ -88,6 +102,11 @@ final class FittedBuildings {
 	/** The same, the model at most {@code room} blocks tall (a landscape model's: LandscapeModels.ROOM). */
 	static Templates.Placed place(SceneMap map, int atlas, Buildings.Claim claim, FittedShapes.Building building, int mapGround, ShapeKey[][] keys,
 			int[] blocks, int[] mask, int[] decor, int[] floor, Map<String, Integer> tally, int room) {
+		return place(map, atlas, claim, building, mapGround, keys, blocks, mask, decor, floor, tally, room, null);
+	}
+
+	static Templates.Placed place(SceneMap map, int atlas, Buildings.Claim claim, FittedShapes.Building building, int mapGround, ShapeKey[][] keys,
+			int[] blocks, int[] mask, int[] decor, int[] floor, Map<String, Integer> tally, int room, FittedCarriers.Profile nativeCarriers) {
 		int cols = map.artCols();
 		boolean indoor = !(map.outdoors() && map.env().outdoor());
 		int bw = claim.width();
@@ -98,6 +117,10 @@ final class FittedBuildings {
 		int voxels = parts ? PartsBuilding.height(box)
 				: BoxBuilding.height(bh * px, box.get("roofRows").getAsInt(), "hip".equals(box.get("roof").getAsString()));
 		int high = Math.min(Math.max(2, (voxels + px - 1) / px), room);
+		// Explicit low interior furniture must not turn a native talk-through counter
+		// into a two-block wall. SOLID ends and all other template routes keep their
+		// existing carrier heights; the changed hull also changes its mesh signature.
+		boolean lowInteriorCounter = indoor && parts && voxels <= px && FittedShapes.interiorBuilding(building);
 		int ground = Buildings.ground(map, claim, mapGround);
 		JsonArray tiles = new JsonArray();
 		JsonArray columns = new JsonArray();
@@ -112,7 +135,12 @@ final class FittedBuildings {
 				boolean claimed = claim.claimed()[y * bw + x];
 				CellKind kind = map.kindAtTile(tx, ty);
 				int s = claimed && (kind == CellKind.SOLID || kind == CellKind.COUNTER) ? high : 0;
+				if (lowInteriorCounter && kind == CellKind.COUNTER) s = Math.min(s, 1);
 				int a = claimed && kind == CellKind.WALK ? high : 0;
+				if (nativeCarriers != null) {
+					s = nativeCarriers.solid()[y * bw + x];
+					a = nativeCarriers.air()[y * bw + x];
+				}
 				if (a > 0 && x % per == 0 && y % per == 0) {
 					JsonArray door = new JsonArray();
 					door.add(x / per);
@@ -151,6 +179,9 @@ final class FittedBuildings {
 				int s = solid.get(y * bw + x).getAsInt();
 				int a = air.get(y * bw + x).getAsInt();
 				int n = Math.max(s, a);
+				if (nativeCarriers != null && claim.claimed()[y * bw + x]) {
+					floor[i] = nativeCarriers.floor()[y * bw + x];
+				}
 				if (n == 0) {
 					continue;
 				}
@@ -164,7 +195,7 @@ final class FittedBuildings {
 					mask[i] = (1 << s) - 1;
 				} else {
 					decor[i] = (1 << a) - 1;
-					floor[i] = ground;
+					floor[i] = nativeCarriers == null ? ground : nativeCarriers.floor()[y * bw + x];
 				}
 			}
 		}

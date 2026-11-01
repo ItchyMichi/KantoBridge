@@ -159,7 +159,7 @@ def pick(rect, a: float, b: float, draw: np.ndarray) -> tuple[int, int]:
     return min(draw.shape[0] - 1, max(0, v)), min(draw.shape[1] - 1, max(0, u))
 
 
-def build(spec: dict, draw: np.ndarray):
+def build(spec: dict, draw: np.ndarray, *, terrain_cell_px=16):
     D, W = draw.shape[0], draw.shape[1]
     H = int(spec.get("height", 64))
     y, z, x = np.meshgrid(np.arange(H), np.arange(D), np.arange(W), indexing="ij")
@@ -173,6 +173,15 @@ def build(spec: dict, draw: np.ndarray):
         else:
             occ |= m
             owner[m] = i
+    # Fitted-building terrain cells have no render carriers. Remove them before
+    # surface/paint selection, as the runtime does, so previews cannot hide
+    # missing walls behind geometry that the actual map will omit.
+    for cx, cz in spec.get('terrain', []):
+        x0, z0 = max(0, cx * terrain_cell_px), max(0, cz * terrain_cell_px)
+        x1, z1 = min(W, (cx + 1) * terrain_cell_px), min(D, (cz + 1) * terrain_cell_px)
+        if x0 < x1 and z0 < z1:
+            occ[:, z0:z1, x0:x1] = False
+            owner[:, z0:z1, x0:x1] = -1
     col = np.zeros((H, D, W, 3), np.uint8)
     for yy, zz, xx in np.argwhere(occ):
         part = spec["parts"][owner[yy, zz, xx]]

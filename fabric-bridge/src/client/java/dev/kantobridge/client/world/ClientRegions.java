@@ -160,6 +160,11 @@ public final class ClientRegions {
 		return index == null || map == null ? null : new ShapeDocs(index, map);
 	}
 
+	/** An immutable captured shape document source; obtaining it does not inflate the document. */
+	public static java.util.function.@Nullable Supplier<String> shapeIndexSource(@Nullable String region) {
+		return DOCS.shapeIndexSource(region);
+	}
+
 	/** A region's shape index text and shape map wire form. */
 	public record ShapeDocs(String indexText, String mapWire) {
 	}

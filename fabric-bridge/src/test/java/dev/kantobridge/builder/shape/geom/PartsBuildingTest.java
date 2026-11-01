@@ -40,6 +40,31 @@ class PartsBuildingTest {
 	}
 
 	@Test
+	void absentCarrierColumnsAreCutBeforeMeshingAndExposeClosedWalls() {
+		JsonObject spec = JsonParser.parseString("""
+				{"height":16,"parts":[{"shape":"box","x":[0,32],"z":[0,32],"y":[0,16]}]}
+				""").getAsJsonObject();
+		int[] texels = new int[32 * 32];
+		int[] carriers = new int[16];
+		for (int z = 0; z < 4; z++) for (int x = 0; x < 2; x++) carriers[z * 4 + x] = 2;
+		VoxelGrid whole = PartsBuilding.voxels(spec, texels, 32, 32, 8, 0, 0, 32, 32, carriers);
+		assertEquals(16 * 32 * 16, whole.count());
+		assertTrue(whole.solid(15, 8, 10));
+		assertFalse(whole.solid(16, 8, 10));
+		var mesh = QuadMerger.merge(whole, QuadMerger.ALL_FACES, 0);
+		for (int by = 0; by < 2; by++) {
+			for (int bz = 0; bz < 4; bz++) {
+				assertTrue(mesh.get(QuadMerger.blockKey(1, by, bz)).stream().anyMatch(q -> q.face() == ShapeQuad.EAST),
+						"the exposed inner wall must have faces; dropping carriers after meshing left a hole");
+			}
+		}
+		VoxelGrid window = PartsBuilding.voxels(spec, texels, 32, 32, 8, 8, 8, 24, 24, carriers);
+		for (int z = 8; z < 32; z++) for (int x = 8; x < 32; x++) for (int y = 0; y < 16; y++) {
+			assertEquals(whole.at(x, y, z), window.at(x - 8, y, z - 8), "window clipping uses whole-model coordinates");
+		}
+	}
+
+	@Test
 	void aLandscapeModelKeepsToItsTilesAndADoorsHeadroom() {
 		// A box over the whole drawing, kept to the west half's tiles and, over a door's tiles (the south-east cell), from 24
 		// voxels up: as tools/landscape_sections/terrain_model.py keeps it.

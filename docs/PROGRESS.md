@@ -3483,6 +3483,58 @@ taken from what already arrived. `test_battle` and `test_route1` fail on cpu3g p
 **Deviation.** A real gym leader was not walked to (the drivers start trainer battles by script, as before); the Name
 Rater is its write to the record, not the walk to his house.
 
+## Raised outdoors by default; the build's memory (2026-11-01)
+
+The user's report of 2026-11-01 (no raised ground in Emerald's outdoors) and their requests the same day: find why, bring
+the build's heap down, make the heights the default. Measured on the user's PC (64 GB, 32 threads); one pod (a throwaway
+cpu3g x4 to copy the table off the volume, about 2 minutes, terminated).
+
+- **Why the outdoors were flat:** outdoor levels, the chain and the landscape models were opt-in build properties
+  (`-Pkb.outdoorLevels`, `-Pkb.chainLevels`, `-Pkb.landscapeModels`) that only headless builds got; Create world never set
+  them, and the models table lived on the volume and kb-hub only. Only the pod's LandSky4-6 had them (W6 above was never
+  closed as a default).
+- **Now every build's default** (Create world, Add a region, headless): every outdoor map on raised ground, chained, with
+  the jar's models table `kantobridge/landscape_models.json` (v16t, LandSky6's, sha256 4bc49344..., identical to v16).
+  A property left unset means on; blank, `none` or `false` means off: the JUnit task sets them blank, the GameTest run
+  `none`/`false` (their synthetic worlds stay flat), `build_world.py --flat` builds the old flat outdoors. **The user's
+  ruling (2026-11-01):** shape data (this table, the fitted shapes, the model registries) is an artist's interpretation of
+  the sprites as 3D models, not ROM data; the textures stay extracted and stored locally. So it is committed (with the
+  new Emerald models), which LANDSCAPE_ROLLOUT_PLAN's "never committed" predates.
+  Worlds built before keep their flat outdoors until rebuilt.
+- **The build's memory.** The "20 GB heap" (the landscape rollout, 2026-10-22) predated the next day's windowed rock
+  masses and was never measured again (LandSky4-6 reused `HEAP=20g`). A headless Hoenn build (508 maps, levels on every
+  map, chained, v16t), the live heap from `jcmd GC.class_histogram` every 20 s:
+
+  | Run | Code | Shape report | Heap | Result | Time | Live heap while building | Peak live |
+  |---|---|---|---|---|---|---|---|
+  | A | before | on | 24 GB | ok | 8 min 55 s | ~6.2 GB | 7.2 GB |
+  | B | fix 1 | on | 24 GB | ok | 8 min 35 s | 1.9-2.3 GB | 5.7 GB (the autosave) |
+  | C | fix 1 | off | 24 GB | ok | 5 min 18 s | ~1.9 GB | 4.1 GB (the stop's save) |
+  | D1 | fix 1 | off | **4 GB** | ok | 5 min 21 s | ~1.9 GB | 2.8 GB |
+
+  (D2, B capped at 6 GB, was cancelled by the user. Chunk counts differ by about 2% between runs: each fresh world's seed
+  places the Wild Routes zones.)
+  - **Fix 1:** the build's `ShapeReport` built the shape table keeping every template's quads and voxels and held the
+    table through the whole placement. Now `ShapeTable.Keep.SUMMARY`: templates built one at a time as a client's, each
+    kept only as its kind, gate, scores and roof rows (`Template.summary()`), cell units without their blocks
+    (`Unit.summary()`); the report keeps only numbers once it has counted. A client's lean build now counts a template's
+    keys per `atlas|sig` (was `sig`): the same quads, a template freed after its own atlas's last key.
+  - **Fix 2:** `BuildOptions.shapeReport` (default on): Create world and Add a region turn it off, since only the headless
+    checks read it. An in-game Hoenn build no longer builds the table (planning 25 s instead of 230 s); its
+    `build_report.json` has no shape fields and no `shape_selfcheck.json` is written. Headless builds and GameTests keep it.
+  - **What is left over the steady level** is Minecraft's own chunk saving of the freshly built chunks (the 5-minute
+    autosave, the stop's save). Saving in smaller batches during placement would lower it; not done.
+  - Tools: `-Pkb.buildPackDir` (a headless build's pack elsewhere: the measurements never touched the play pack),
+    `-Pkb.buildShapeReport=false`. Headless builds on this PC need `local/minecraft/eula.txt` (the user accepted it).
+- **Checks:** JUnit `builder.plan`, `builder.shape.geom`, `builder.Build*` and every `builder.shape` class but the Emerald
+  proof tests (they rewrite the gallery's hash-bound evidence): 506 passed, 7 skipped (real bundles), 0 failed; new
+  `ShapeTableTest` summary case, `BuildOptionsTest.theShapeReportIsOnUnlessTheClientsBuildTurnsItOff`, the defaults in
+  `OutdoorLevelsTest`, `MapChainTest` and `LandscapeModelsTest` (the jar's table reads). GameTests 148/148.
+  `tools/e2e/test_build_world.py` 7 passed (its e2e case skipped).
+- **Not checked:** an in-game Create world with the defaults (PLAYTEST "Raised outdoors by default"); the pod's e2e suite
+  (its Kanto build now has raised ground, so `test_full_build_from_the_real_export`'s gates may move); the full JUnit
+  suite in one run.
+
 ## Walking about in a battle (2026-10-31, specs/BATTLE_ROAM_PLAN.md)
 
 The user's request of 2026-10-31 (Cobblemon's R to reposition in a battle, then the snap back to the hidden player), built

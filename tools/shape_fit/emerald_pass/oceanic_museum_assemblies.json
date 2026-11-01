@@ -1,0 +1,2510 @@
+[
+  {
+    "id": "emerald_oceanic_stairs1",
+    "kind": "object (model as one)",
+    "note": "stairs1; source-audited complete museum object",
+    "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_1F",
+    "rect": [
+      5,
+      0,
+      3,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/7639-7818-7640-7819",
+        "g3q/7643-7643-7644-7645",
+        "g3q/7801-7639-7802-7640"
+      ],
+      [
+        "g3q/7651-7819-7652-7820",
+        "g3q/7655-7656-7657-7658",
+        "g3q/7821-7651-7822-7652"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/7639-7818-7640-7819",
+        "g3q/7643-7643-7644-7645",
+        "g3q/7801-7639-7802-7640"
+      ],
+      [
+        "g3q/7651-7819-7652-7820",
+        "g3q/7655-7656-7657-7658",
+        "g3q/7821-7651-7822-7652"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          2,
+          1
+        ],
+        "offset": [
+          2,
+          0,
+          1
+        ]
+      }
+    ],
+    "baseline_layout": [
+      [
+        "g3q/7639-7818-7640-7819",
+        "g3q/7643-7643-7644-7645",
+        "g3q/7801-7639-7802-7640"
+      ],
+      [
+        "g3q/7651-7819-7652-7820",
+        "g3q/7655-7656-7657-7658",
+        "g3q/7821-7651-7822-7652"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          2,
+          1
+        ],
+        "offset": [
+          2,
+          0,
+          1
+        ]
+      }
+    ],
+    "occurrences": [
+      {
+        "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_1F",
+        "x": 5,
+        "y": 0
+      }
+    ]
+  },
+  {
+    "id": "emerald_oceanic_stairs2",
+    "kind": "object (model as one)",
+    "note": "stairs2; source-audited complete museum object",
+    "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_2F",
+    "rect": [
+      5,
+      0,
+      3,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/7639-7818-7640-7823",
+        "g3q/7643-7643-7646-7646",
+        "g3q/7801-7639-7826-7640"
+      ],
+      [
+        "g3q/7651-7824-7652-7825",
+        "g3q/7659-7659-7660-7660",
+        "g3q/7827-7651-7828-7652"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/7639-7818-7640-7823",
+        "g3q/7643-7643-7646-7646",
+        "g3q/7801-7639-7826-7640"
+      ],
+      [
+        "g3q/7651-7824-7652-7825",
+        "g3q/7659-7659-7660-7660",
+        "g3q/7827-7651-7828-7652"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          2,
+          1
+        ],
+        "offset": [
+          2,
+          0,
+          1
+        ]
+      }
+    ],
+    "baseline_layout": [
+      [
+        "g3q/7639-7818-7640-7823",
+        "g3q/7643-7643-7646-7646",
+        "g3q/7801-7639-7826-7640"
+      ],
+      [
+        "g3q/7651-7824-7652-7825",
+        "g3q/7659-7659-7660-7660",
+        "g3q/7827-7651-7828-7652"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          2,
+          1
+        ],
+        "offset": [
+          2,
+          0,
+          1
+        ]
+      }
+    ],
+    "occurrences": [
+      {
+        "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_2F",
+        "x": 5,
+        "y": 0
+      }
+    ]
+  },
+  {
+    "id": "emerald_oceanic_counter_left",
+    "kind": "object (model as one)",
+    "note": "counter left; source-audited complete museum object",
+    "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_1F",
+    "rect": [
+      5,
+      6,
+      4,
+      3
+    ],
+    "source_layout": [
+      [
+        "g3q/7739-7740-7741-7799",
+        "g3q/7740-7788-7764-7764",
+        "g3q/7788-7789-7764-7764",
+        "g3q/7740-7742-7800-7743"
+      ],
+      [
+        "g3q/7741-7743-7741-7743",
+        "g3q/7635-7636-7637-7634",
+        "g3q/7635-7636-7633-7634",
+        "g3q/7741-7743-7741-7743"
+      ],
+      [
+        "g3q/7762-7765-7763-7766",
+        "g3q/7635-7632-7637-7634",
+        "g3q/7631-7632-7633-7634",
+        "g3q/7762-7765-7763-7766"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/7739-7740-7741-7799",
+        "g3q/7740-7788-7764-7764",
+        "g3q/7788-7789-7764-7764",
+        "g3q/7740-7742-7800-7743"
+      ],
+      [
+        "g3q/7741-7743-7741-7743",
+        null,
+        null,
+        "g3q/7741-7743-7741-7743"
+      ],
+      [
+        "g3q/7762-7765-7763-7766",
+        null,
+        null,
+        "g3q/7762-7765-7763-7766"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          3,
+          0
+        ],
+        "offset": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          3,
+          1
+        ],
+        "offset": [
+          3,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          0,
+          2
+        ],
+        "offset": [
+          0,
+          0,
+          2
+        ]
+      },
+      {
+        "source": [
+          3,
+          2
+        ],
+        "offset": [
+          3,
+          0,
+          2
+        ]
+      }
+    ],
+    "baseline_layout": [
+      [
+        "g3q/7739-7740-7741-7799",
+        "g3q/7740-7788-7764-7764",
+        "g3q/7788-7789-7764-7764",
+        "g3q/7740-7742-7800-7743"
+      ],
+      [
+        "g3q/7741-7743-7741-7743",
+        null,
+        null,
+        "g3q/7741-7743-7741-7743"
+      ],
+      [
+        "g3q/7762-7765-7763-7766",
+        null,
+        null,
+        "g3q/7762-7765-7763-7766"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          3,
+          0
+        ],
+        "offset": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          3,
+          1
+        ],
+        "offset": [
+          3,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          0,
+          2
+        ],
+        "offset": [
+          0,
+          0,
+          2
+        ]
+      },
+      {
+        "source": [
+          3,
+          2
+        ],
+        "offset": [
+          3,
+          0,
+          2
+        ]
+      }
+    ],
+    "occurrences": [
+      {
+        "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_1F",
+        "x": 5,
+        "y": 6
+      }
+    ]
+  },
+  {
+    "id": "emerald_oceanic_counter_right",
+    "kind": "object (model as one)",
+    "note": "counter right; source-audited complete museum object",
+    "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_1F",
+    "rect": [
+      11,
+      6,
+      4,
+      3
+    ],
+    "source_layout": [
+      [
+        "g3q/7739-7740-7741-7799",
+        "g3q/7788-7789-7764-7764",
+        "g3q/7740-7740-7764-7764",
+        "g3q/7740-7742-7800-7743"
+      ],
+      [
+        "g3q/7741-7743-7741-7743",
+        "g3q/7635-7636-7637-7634",
+        "g3q/7635-7636-7633-7634",
+        "g3q/7741-7743-7741-7743"
+      ],
+      [
+        "g3q/7762-7765-7763-7766",
+        "g3q/7635-7632-7637-7634",
+        "g3q/7631-7632-7633-7634",
+        "g3q/7762-7765-7763-7766"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/7739-7740-7741-7799",
+        "g3q/7788-7789-7764-7764",
+        "g3q/7740-7740-7764-7764",
+        "g3q/7740-7742-7800-7743"
+      ],
+      [
+        "g3q/7741-7743-7741-7743",
+        null,
+        null,
+        "g3q/7741-7743-7741-7743"
+      ],
+      [
+        "g3q/7762-7765-7763-7766",
+        null,
+        null,
+        "g3q/7762-7765-7763-7766"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          3,
+          0
+        ],
+        "offset": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          3,
+          1
+        ],
+        "offset": [
+          3,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          0,
+          2
+        ],
+        "offset": [
+          0,
+          0,
+          2
+        ]
+      },
+      {
+        "source": [
+          3,
+          2
+        ],
+        "offset": [
+          3,
+          0,
+          2
+        ]
+      }
+    ],
+    "baseline_layout": [
+      [
+        "g3q/7739-7740-7741-7799",
+        "g3q/7788-7789-7764-7764",
+        "g3q/7740-7740-7764-7764",
+        "g3q/7740-7742-7800-7743"
+      ],
+      [
+        "g3q/7741-7743-7741-7743",
+        null,
+        null,
+        "g3q/7741-7743-7741-7743"
+      ],
+      [
+        "g3q/7762-7765-7763-7766",
+        null,
+        null,
+        "g3q/7762-7765-7763-7766"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          3,
+          0
+        ],
+        "offset": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          3,
+          1
+        ],
+        "offset": [
+          3,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          0,
+          2
+        ],
+        "offset": [
+          0,
+          0,
+          2
+        ]
+      },
+      {
+        "source": [
+          3,
+          2
+        ],
+        "offset": [
+          3,
+          0,
+          2
+        ]
+      }
+    ],
+    "occurrences": [
+      {
+        "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_1F",
+        "x": 11,
+        "y": 6
+      }
+    ]
+  },
+  {
+    "id": "emerald_oceanic_specimen_table",
+    "kind": "object (model as one)",
+    "note": "specimen table; source-audited complete museum object",
+    "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_2F",
+    "rect": [
+      2,
+      3,
+      4,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/7774-7775-7741-7776",
+        "g3q/7777-7778-7779-7780",
+        "g3q/7781-7782-7783-7784",
+        "g3q/7740-7742-7740-7743"
+      ],
+      [
+        "g3q/7762-7740-7763-7764",
+        "g3q/7740-7740-7764-7764",
+        "g3q/7740-7740-7764-7764",
+        "g3q/7740-7765-7764-7766"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/7774-7775-7741-7776",
+        "g3q/7777-7778-7779-7780",
+        "g3q/7781-7782-7783-7784",
+        "g3q/7740-7742-7740-7743"
+      ],
+      [
+        "g3q/7762-7740-7763-7764",
+        "g3q/7740-7740-7764-7764",
+        "g3q/7740-7740-7764-7764",
+        "g3q/7740-7765-7764-7766"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          3,
+          0
+        ],
+        "offset": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          2,
+          1
+        ],
+        "offset": [
+          2,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          3,
+          1
+        ],
+        "offset": [
+          3,
+          0,
+          1
+        ]
+      }
+    ],
+    "baseline_layout": [
+      [
+        "g3q/7774-7775-7741-7776",
+        "g3q/7777-7778-7779-7780",
+        "g3q/7781-7782-7783-7784",
+        "g3q/7740-7742-7740-7743"
+      ],
+      [
+        "g3q/7762-7740-7763-7764",
+        "g3q/7740-7740-7764-7764",
+        "g3q/7740-7740-7764-7764",
+        "g3q/7740-7765-7764-7766"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          3,
+          0
+        ],
+        "offset": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          2,
+          1
+        ],
+        "offset": [
+          2,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          3,
+          1
+        ],
+        "offset": [
+          3,
+          0,
+          1
+        ]
+      }
+    ],
+    "occurrences": [
+      {
+        "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_2F",
+        "x": 2,
+        "y": 3
+      }
+    ]
+  },
+  {
+    "id": "emerald_oceanic_ship_table",
+    "kind": "object (model as one)",
+    "note": "ship table; source-audited complete museum object",
+    "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_2F",
+    "rect": [
+      2,
+      6,
+      4,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/7739-7740-7741-7740",
+        "g3q/7754-7755-7756-7757",
+        "g3q/7758-7759-7760-7761",
+        "g3q/7740-7742-7740-7743"
+      ],
+      [
+        "g3q/7762-7740-7763-7764",
+        "g3q/7740-7740-7764-7764",
+        "g3q/7740-7740-7764-7764",
+        "g3q/7740-7765-7764-7766"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/7739-7740-7741-7740",
+        "g3q/7754-7755-7756-7757",
+        "g3q/7758-7759-7760-7761",
+        "g3q/7740-7742-7740-7743"
+      ],
+      [
+        "g3q/7762-7740-7763-7764",
+        "g3q/7740-7740-7764-7764",
+        "g3q/7740-7740-7764-7764",
+        "g3q/7740-7765-7764-7766"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          3,
+          0
+        ],
+        "offset": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          2,
+          1
+        ],
+        "offset": [
+          2,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          3,
+          1
+        ],
+        "offset": [
+          3,
+          0,
+          1
+        ]
+      }
+    ],
+    "baseline_layout": [
+      [
+        "g3q/7739-7740-7741-7740",
+        "g3q/7754-7755-7756-7757",
+        "g3q/7758-7759-7760-7761",
+        "g3q/7740-7742-7740-7743"
+      ],
+      [
+        "g3q/7762-7740-7763-7764",
+        "g3q/7740-7740-7764-7764",
+        "g3q/7740-7740-7764-7764",
+        "g3q/7740-7765-7764-7766"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          3,
+          0
+        ],
+        "offset": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          2,
+          1
+        ],
+        "offset": [
+          2,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          3,
+          1
+        ],
+        "offset": [
+          3,
+          0,
+          1
+        ]
+      }
+    ],
+    "occurrences": [
+      {
+        "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_2F",
+        "x": 2,
+        "y": 6
+      }
+    ]
+  },
+  {
+    "id": "emerald_oceanic_ship_plinth",
+    "kind": "object (model as one)",
+    "note": "ship plinth; source-audited complete museum object",
+    "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_2F",
+    "rect": [
+      13,
+      7,
+      2,
+      1
+    ],
+    "source_layout": [
+      [
+        "g3q/7804-7805-7806-7807",
+        "g3q/7808-7809-7810-7811"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/7804-7805-7806-7807",
+        "g3q/7808-7809-7810-7811"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      }
+    ],
+    "baseline_layout": [
+      [
+        "g3q/7804-7805-7806-7807",
+        "g3q/7808-7809-7810-7811"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      }
+    ],
+    "occurrences": [
+      {
+        "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_2F",
+        "x": 13,
+        "y": 7
+      }
+    ]
+  },
+  {
+    "id": "emerald_oceanic_divider",
+    "kind": "object (model as one)",
+    "note": "divider; source-audited complete museum object",
+    "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_2F",
+    "rect": [
+      10,
+      0,
+      1,
+      4
+    ],
+    "source_layout": [
+      [
+        "g3q/7723-7724-7723-7724"
+      ],
+      [
+        "g3q/7723-7724-7723-7724"
+      ],
+      [
+        "g3q/7744-7745-7746-7747"
+      ],
+      [
+        "g3q/7767-7768-7769-7770"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/7723-7724-7723-7724"
+      ],
+      [
+        "g3q/7723-7724-7723-7724"
+      ],
+      [
+        "g3q/7744-7745-7746-7747"
+      ],
+      [
+        "g3q/7767-7768-7769-7770"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          0,
+          2
+        ],
+        "offset": [
+          0,
+          0,
+          2
+        ]
+      },
+      {
+        "source": [
+          0,
+          3
+        ],
+        "offset": [
+          0,
+          0,
+          3
+        ]
+      }
+    ],
+    "baseline_layout": [
+      [
+        "g3q/7723-7724-7723-7724"
+      ],
+      [
+        "g3q/7723-7724-7723-7724"
+      ],
+      [
+        "g3q/7744-7745-7746-7747"
+      ],
+      [
+        "g3q/7767-7768-7769-7770"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          0,
+          2
+        ],
+        "offset": [
+          0,
+          0,
+          2
+        ]
+      },
+      {
+        "source": [
+          0,
+          3
+        ],
+        "offset": [
+          0,
+          0,
+          3
+        ]
+      }
+    ],
+    "occurrences": [
+      {
+        "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_2F",
+        "x": 10,
+        "y": 0
+      }
+    ]
+  },
+  {
+    "id": "emerald_oceanic_wall_case",
+    "kind": "object (model as one)",
+    "note": "wall case; source-audited complete museum object",
+    "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_2F",
+    "rect": [
+      8,
+      1,
+      2,
+      1
+    ],
+    "source_layout": [
+      [
+        "g3q/7661-7662-7663-7664",
+        "g3q/7665-7666-7667-7668"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/7661-7662-7663-7664",
+        "g3q/7665-7666-7667-7668"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      }
+    ],
+    "baseline_layout": [
+      [
+        "g3q/7661-7662-7663-7664",
+        "g3q/7665-7666-7667-7668"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      }
+    ],
+    "occurrences": [
+      {
+        "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_2F",
+        "x": 8,
+        "y": 1
+      },
+      {
+        "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_2F",
+        "x": 15,
+        "y": 1
+      },
+      {
+        "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_2F",
+        "x": 18,
+        "y": 1
+      }
+    ]
+  },
+  {
+    "id": "emerald_oceanic_aquarium",
+    "kind": "object (model as one)",
+    "note": "aquarium; source-audited complete museum object",
+    "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_1F",
+    "rect": [
+      2,
+      0,
+      2,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/7669-7670-7671-7672",
+        "g3q/7670-7673-7672-7674"
+      ],
+      [
+        "g3q/7692-7693-7694-7695",
+        "g3q/7693-7696-7695-7697"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/7669-7670-7671-7672",
+        "g3q/7670-7673-7672-7674"
+      ],
+      [
+        "g3q/7692-7693-7694-7695",
+        "g3q/7693-7696-7695-7697"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      }
+    ],
+    "baseline_layout": [
+      [
+        "g3q/7669-7670-7671-7672",
+        "g3q/7670-7673-7672-7674"
+      ],
+      [
+        "g3q/7692-7693-7694-7695",
+        "g3q/7693-7696-7695-7697"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      }
+    ],
+    "occurrences": [
+      {
+        "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_1F",
+        "x": 2,
+        "y": 0
+      }
+    ]
+  },
+  {
+    "id": "emerald_oceanic_vent",
+    "kind": "object (model as one)",
+    "note": "vent; source-audited complete museum object",
+    "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_1F",
+    "rect": [
+      16,
+      0,
+      2,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/7639-7675-7676-7677",
+        "g3q/7678-7639-7679-7680"
+      ],
+      [
+        "g3q/7698-7699-7700-7701",
+        "g3q/7702-7703-7704-7705"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/7639-7675-7676-7677",
+        "g3q/7678-7639-7679-7680"
+      ],
+      [
+        "g3q/7698-7699-7700-7701",
+        "g3q/7702-7703-7704-7705"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      }
+    ],
+    "baseline_layout": [
+      [
+        "g3q/7639-7675-7676-7677",
+        "g3q/7678-7639-7679-7680"
+      ],
+      [
+        "g3q/7698-7699-7700-7701",
+        "g3q/7702-7703-7704-7705"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      }
+    ],
+    "occurrences": [
+      {
+        "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_1F",
+        "x": 16,
+        "y": 0
+      }
+    ]
+  },
+  {
+    "id": "emerald_oceanic_small_case",
+    "kind": "object (model as one)",
+    "note": "small case; source-audited complete museum object",
+    "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_1F",
+    "rect": [
+      2,
+      3,
+      1,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/7711-7712-7713-7714"
+      ],
+      [
+        "g3q/7731-7732-7733-7734"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/7711-7712-7713-7714"
+      ],
+      [
+        "g3q/7731-7732-7733-7734"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    ],
+    "baseline_layout": [
+      [
+        "g3q/7711-7712-7713-7714"
+      ],
+      [
+        "g3q/7731-7732-7733-7734"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    ],
+    "occurrences": [
+      {
+        "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_1F",
+        "x": 2,
+        "y": 3
+      },
+      {
+        "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_1F",
+        "x": 2,
+        "y": 6
+      },
+      {
+        "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_2F",
+        "x": 18,
+        "y": 3
+      },
+      {
+        "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_2F",
+        "x": 18,
+        "y": 6
+      }
+    ]
+  },
+  {
+    "id": "emerald_oceanic_information",
+    "kind": "object (model as one)",
+    "note": "information; source-audited complete museum object",
+    "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_1F",
+    "rect": [
+      15,
+      3,
+      1,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/7715-7716-7717-7718"
+      ],
+      [
+        "g3q/7735-7736-7737-7738"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/7715-7716-7717-7718"
+      ],
+      [
+        "g3q/7735-7736-7737-7738"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    ],
+    "baseline_layout": [
+      [
+        "g3q/7715-7716-7717-7718"
+      ],
+      [
+        "g3q/7735-7736-7737-7738"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    ],
+    "occurrences": [
+      {
+        "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_1F",
+        "x": 15,
+        "y": 3
+      },
+      {
+        "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_1F",
+        "x": 18,
+        "y": 3
+      },
+      {
+        "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_1F",
+        "x": 18,
+        "y": 6
+      }
+    ]
+  },
+  {
+    "id": "emerald_oceanic_large_case",
+    "kind": "object (model as one)",
+    "note": "large case; source-audited complete museum object",
+    "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_1F",
+    "rect": [
+      9,
+      0,
+      2,
+      3
+    ],
+    "source_layout": [
+      [
+        "g3q/7725-7726-7727-7728",
+        "g3q/7729-7639-7730-7640"
+      ],
+      [
+        "g3q/7748-7749-7750-7751",
+        "g3q/7752-7651-7753-7652"
+      ],
+      [
+        "g3q/7771-7772-7637-7638",
+        "g3q/7773-7636-7637-7638"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/7725-7726-7727-7728",
+        "g3q/7729-7639-7730-7640"
+      ],
+      [
+        "g3q/7748-7749-7750-7751",
+        "g3q/7752-7651-7753-7652"
+      ],
+      [
+        "g3q/7771-7772-7637-7638",
+        "g3q/7773-7636-7637-7638"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          2
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          1,
+          2
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      }
+    ],
+    "baseline_layout": [
+      [
+        "g3q/7725-7726-7727-7728",
+        "g3q/7729-7639-7730-7640"
+      ],
+      [
+        "g3q/7748-7749-7750-7751",
+        "g3q/7752-7651-7753-7652"
+      ],
+      [
+        null,
+        null
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      }
+    ],
+    "occurrences": [
+      {
+        "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_1F",
+        "x": 9,
+        "y": 0
+      },
+      {
+        "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_1F",
+        "x": 12,
+        "y": 0
+      }
+    ]
+  },
+  {
+    "id": "emerald_oceanic_pc",
+    "kind": "object (model as one)",
+    "note": "pc; source-audited complete museum object",
+    "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_2F",
+    "rect": [
+      12,
+      3,
+      2,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/7631-7632-7796-7797",
+        "g3q/7631-7632-7798-7634"
+      ],
+      [
+        "g3q/7812-7813-7814-7815",
+        "g3q/7816-7636-7817-7638"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/7631-7632-7796-7797",
+        "g3q/7631-7632-7798-7634"
+      ],
+      [
+        "g3q/7812-7813-7814-7815",
+        "g3q/7816-7636-7817-7638"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      }
+    ],
+    "baseline_layout": [
+      [
+        null,
+        null
+      ],
+      [
+        "g3q/7812-7813-7814-7815",
+        "g3q/7816-7636-7817-7638"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      }
+    ],
+    "occurrences": [
+      {
+        "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_2F",
+        "x": 12,
+        "y": 3
+      },
+      {
+        "map": "EM_SLATEPORT_CITY_OCEANIC_MUSEUM_2F",
+        "x": 15,
+        "y": 3
+      }
+    ]
+  }
+]

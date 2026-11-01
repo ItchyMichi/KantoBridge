@@ -179,6 +179,11 @@ public final class CellUnits {
 				boolean[] foreground) {
 			this(kind, failed, match, cover, maxQuads, blocks, foreground, null, null);
 		}
+
+		/** This unit without its geometry (no blocks, colours or voxels; its foreground kept): what a build's report reads. */
+		public Unit summary() {
+			return new Unit(this.kind, this.failed, this.match, this.cover, this.maxQuads, List.of(), this.foreground, null, null);
+		}
 	}
 
 	/** A pack's model in place of a unit (V6): its blocks as they are, no self-check (the pack maker's own art). */

@@ -99,6 +99,7 @@ final class Units {
 		}
 		int mapGround = mapGround(map, grass, frames);
 		boolean indoor = !(map.outdoors() && map.env().outdoor());
+		boolean[] aliasFits = fittedAliasPairs(map, keys, decor, classes, held, layout);
 		int[] region = probe == null ? null : regions(map);
 		Map<String, Integer> repeats = probe == null ? null : repeats(map, region);
 		for (int cy = 0; cy < map.h(); cy++) {
@@ -117,6 +118,13 @@ final class Units {
 				}
 				String pinned = classes == null ? null : classes.unitClass(cx, cy);
 				boolean unitPin = pinned != null && !ProfileClasses.OTHER.equals(pinned);
+				if (map.kind(cx, cy) == CellKind.COUNTER && pinned == null) {
+					FittedShapes.Entry counter = FittedShapes.counter(map.atlas(), tiles(map, cx, cy));
+					if (counter != null && counterUnit(map, atlasIndex, cx, cy, counter, keys, blocks, mask, decor, units, indoor, tally)) {
+						why(map, cx, cy, "counter_voxels");
+						continue;
+					}
+				}
 				if (map.kind(cx, cy) == CellKind.WALK && !unitPin) {
 					FittedShapes.Entry seat = FittedShapes.seat(map.atlas(), tiles(map, cx, cy));
 					if (seat != null) {
@@ -151,7 +159,8 @@ final class Units {
 				}
 				// A cell Tier A raised (taller than one cell, but no roof or building shape) still takes a reviewed voxel shape from
 				// the fitted shapes table: a market stall's jars and balloons in one solid block of stalls (FITTED_SHAPES.md section 13).
-				boolean raisedFit = !unitPin && unshaped(map, mask, cx, cy) && FittedShapes.voxels(map.atlas(), tiles(map, cx, cy));
+				boolean raisedFit = !unitPin && (unshaped(map, mask, cx, cy) || aliasFits[cy * map.w() + cx])
+						&& FittedShapes.voxels(map.atlas(), tiles(map, cx, cy));
 				// A layered entry (a building's storeys, HAND_MODELS.md section 8) makes a unit however Tier A raised the cell.
 				int ups = unitPin ? 0 : Math.min(FittedShapes.MAX_LAYERS, FittedShapes.layers(map.atlas(), tiles(map, cx, cy)));
 				if (!low(map, blocks, mask, cx, cy) && !raisedFit && ups == 0) {
@@ -257,9 +266,49 @@ final class Units {
 	}
 
 	/**
+	 * A source-audited alias pair can opt in to fitted geometry even when Tier A inferred a roof across its tree art.
+	 * Validate the complete two-cell pair before either cell is admitted. Unflagged/primary-only links, other games,
+	 * claimed or pinned cells, layered shapes, floor decorations and links continuing into another stack stay untouched.
+	 */
+	private static boolean[] fittedAliasPairs(SceneMap map, ShapeKey[][] keys, int[] decor, @Nullable ProfileClasses classes,
+			boolean @Nullable [] held, @Nullable MapLayout layout) {
+		boolean[] out = new boolean[map.w() * map.h()];
+		if (!FittedShapes.hasStackFits()) return out;
+		for (int y = 0; y + 1 < map.h(); y++) for (int x = 0; x < map.w(); x++) {
+			int[] top = tiles(map, x, y), base = tiles(map, x, y + 1);
+			if (!FittedShapes.fitsAliasStack(map.atlas(), top, FittedShapes.key(map.atlas(), base))) continue;
+			if ((map.kind(x, y) != CellKind.SOLID && map.kind(x, y) != CellKind.WALK) || map.kind(x, y + 1) != CellKind.SOLID) continue;
+			// This opt-in is for an isolated pair; the ordinary stack path still owns every longer chain.
+			if (y > 0 && FittedShapes.stacksOn(map.atlas(), tiles(map, x, y - 1), FittedShapes.key(map.atlas(), top))) continue;
+			if (y + 2 < map.h() && FittedShapes.stacksOn(map.atlas(), base, FittedShapes.key(map.atlas(), tiles(map, x, y + 2)))) continue;
+			boolean valid = true;
+			for (int row = y; row <= y + 1; row++) {
+				int[] source = tiles(map, x, row);FittedShapes.Entry entry = FittedShapes.get(map.atlas(), source);
+				valid &= entry != null && FittedShapes.VOXELS.equals(entry.cls()) && entry.voxels() != null && entry.voxels().length == FittedShapes.VOXEL_BYTES;
+				valid &= FittedShapes.layers(map.atlas(), source) == 0 && FittedShapes.seat(map.atlas(), source) == null && FittedShapes.walk(map.atlas(), source) == null;
+				valid &= held == null || !heldCell(map, held, x, row);
+				valid &= classes == null || classes.unitClass(x, row) == null;
+				valid &= layout == null || layout.ramp(x, row) == null;
+				for (int dz = 0; dz < map.perCell(); dz++) for (int dx = 0; dx < map.perCell(); dx++) {
+					int i = (row * map.perCell() + dz) * map.artCols() + x * map.perCell() + dx;
+					valid &= decor[i] == 0;
+					if (map.kind(x, row) == CellKind.WALK) valid &= keys[i] == null;
+				}
+			}
+			if (valid) {out[y * map.w() + x] = true;out[(y + 1) * map.w() + x] = true;}
+		}
+		return out;
+	}
+
+	/**
 	 * Stacks (docs/specs/FITTED_SHAPES.md section 15): a unit whose table entry stands on the cell below it (one object drawn
 	 * over a tile and the tile under it: a potted plant, a statue on its plinth) moves on top of that cell's unit, which
-	 * becomes two cells tall; its own cell keeps only its floor.
+	 * becomes several cells tall; its own cell keeps only its floor. Contiguous explicit links are validated as a whole
+	 * before any columns move, so a three-row drawing is not partly consumed as a pair. Layered units,
+	 * invalid carriers and chains beyond the map's headroom or the 30-block mask limit remain unstacked. A nonmatching
+	 * local link ends a chain: a shared entry may name a base used only in some of its map occurrences.
+	 * Links advance exactly one map row south. Repeated source keys may form distinct middle sections; traversal is
+	 * bounded by physical positions, so a cyclic source-key relationship cannot revisit a map cell.
 	 */
 	private static void stack(SceneMap map, ShapeKey[][] keys, int[] blocks, int[] mask, List<Cell> units, int per, int cols,
 			Map<String, Integer> tally) {
@@ -267,39 +316,67 @@ final class Units {
 		for (Cell c : units) {
 			at.put((long) c.cy() << 32 | c.cx(), c);
 		}
-		List<Cell> moved = new java.util.ArrayList<>();
+		Map<Cell, Cell> below = new java.util.HashMap<>();
+		Set<Cell> hasTop = new java.util.HashSet<>();
 		for (Cell top : units) {
 			String on = FittedShapes.stackedOn(map.atlas(), tiles(map, top.cx(), top.cy()));
-			Cell below = on == null ? null : at.get((long) (top.cy() + 1) << 32 | top.cx());
-			if (below == null || !on.equals(FittedShapes.key(map.atlas(), tiles(map, below.cx(), below.cy())))) {
+			Cell next = on == null ? null : at.get((long) (top.cy() + 1) << 32 | top.cx());
+			if (next != null && FittedShapes.stacksOn(map.atlas(), tiles(map, top.cx(), top.cy()),
+					FittedShapes.key(map.atlas(), tiles(map, next.cx(), next.cy())))) {
+				below.put(top, next);
+				hasTop.add(next);
+			}
+		}
+		List<Cell> moved = new java.util.ArrayList<>();
+		for (Cell top : units) {
+			if (hasTop.contains(top) || !below.containsKey(top)) {
 				continue;
 			}
-			// only solid units a cell tall stack (a seat or a walkable cell's shape stands on decor, one block or two); a top
-			// on a walkable cell brings only its keys
-			boolean walkTop = STACK_TOP.equals(top.source());
-			if (!(walkTop || solidCellTall(keys, blocks, top, per, cols)) || !solidCellTall(keys, blocks, below, per, cols)) {
+			List<Cell> chain = new java.util.ArrayList<>();
+			Set<Cell> positions = new java.util.HashSet<>();
+			boolean valid = true;
+			for (Cell c = top; c != null; c = below.get(c)) {
+				if (!positions.add(c) || c.cx() != top.cx() || c.cy() != top.cy() + chain.size()
+						|| c.cy() < 0 || c.cy() >= map.h()) {
+					valid = false;
+					break;
+				}
+				chain.add(c);
+				valid &= FittedShapes.layers(map.atlas(), tiles(map, c.cx(), c.cy())) == 0;
+				valid &= STACK_TOP.equals(c.source()) ? stackKeysTall(keys, c, per, cols)
+						: map.kind(c.cx(), c.cy()) == CellKind.SOLID && solidCellTall(keys, blocks, c, per, cols);
+			}
+			Cell base = chain.get(chain.size() - 1);
+			int high = chain.size() * per;
+			valid &= map.kind(base.cx(), base.cy()) == CellKind.SOLID && solidCellTall(keys, blocks, base, per, cols);
+			// Existing pairs also work in legacy scenes with the historical three-block fallback ceiling.
+			// Longer chains require measured headroom; all stacks must fit the carrier bit mask.
+			valid &= high <= 30 && (chain.size() == 2 || high <= ShapeHeights.headroom(map));
+			if (!valid) {
 				tally.merge("stack_skipped", 1, Integer::sum);
 				continue;
 			}
 			for (int bz = 0; bz < per; bz++) {
 				for (int bx = 0; bx < per; bx++) {
-					int it = (top.cy() * per + bz) * cols + top.cx() * per + bx;
-					int ib = (below.cy() * per + bz) * cols + below.cx() * per + bx;
-					ShapeKey[] column = new ShapeKey[2 * per];
-					for (int by = 0; by < per; by++) {
-						column[by] = keys[ib] == null ? null : keys[ib][by];
-						column[per + by] = keys[it] == null ? null : keys[it][by];
+					int ib = (base.cy() * per + bz) * cols + base.cx() * per + bx;
+					ShapeKey[] column = new ShapeKey[high];
+					for (int level = 0; level < chain.size(); level++) {
+						Cell source = chain.get(chain.size() - 1 - level);
+						int i = (source.cy() * per + bz) * cols + source.cx() * per + bx;
+						System.arraycopy(keys[i], 0, column, level * per, per);
+						if (source != base) {
+							keys[i] = null;
+							blocks[i] = 0;
+							mask[i] = 0;
+						}
 					}
 					keys[ib] = column;
-					blocks[ib] = 2 * per;
-					mask[ib] = (1 << (2 * per)) - 1;
-					keys[it] = null;
-					blocks[it] = 0;
-					mask[it] = 0;
+					blocks[ib] = high;
+					mask[ib] = (1 << high) - 1;
 				}
 			}
-			moved.add(top);
-			tally.merge("stacked", 1, Integer::sum);
+			moved.addAll(chain.subList(0, chain.size() - 1));
+			tally.merge("stacked", chain.size() - 1, Integer::sum);
 		}
 		units.removeAll(moved);
 		// a walkable top with nothing to stand on keeps no keys (its cell is floor)
@@ -359,12 +436,24 @@ final class Units {
 		return true;
 	}
 
-	/** True when every column of a unit's cell is solid and at least a cell ({@code per} blocks) of keys tall. */
+	/** True when every column is exactly one cell high; never truncate a layered shape to make a stack. */
 	private static boolean solidCellTall(ShapeKey[][] keys, int[] blocks, Cell c, int per, int cols) {
 		for (int bz = 0; bz < per; bz++) {
 			for (int bx = 0; bx < per; bx++) {
 				int i = (c.cy() * per + bz) * cols + c.cx() * per + bx;
-				if (keys[i] == null || keys[i].length < per || blocks[i] <= 0) {
+				if (keys[i] == null || keys[i].length != per || blocks[i] != per) {
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+
+	private static boolean stackKeysTall(ShapeKey[][] keys, Cell c, int per, int cols) {
+		for (int bz = 0; bz < per; bz++) {
+			for (int bx = 0; bx < per; bx++) {
+				ShapeKey[] column = keys[(c.cy() * per + bz) * cols + c.cx() * per + bx];
+				if (column == null || column.length != per) {
 					return false;
 				}
 			}
@@ -467,6 +556,42 @@ final class Units {
 	 * cell stays walked through at floor level (a warp still triggers by position); its floor the ground. False (nothing
 	 * placed) for an empty shape.
 	 */
+	/** Keep the source counter's one collision block; at most one extra carrier is purely decorative. */
+	private static boolean counterUnit(SceneMap map, int atlasIndex, int cx, int cy, FittedShapes.Entry entry, ShapeKey[][] keys,
+			int[] blocks, int[] mask, int[] decor, List<Cell> units, boolean indoor, Map<String, Integer> tally) {
+		int top = -1;
+		byte[] occupied = entry.voxels();
+		for (int bit = 0; bit < 4096; bit++) {
+			if ((occupied[bit >> 3] >> (bit & 7) & 1) != 0) top = bit / 256;
+		}
+		if (top < 0) return false;
+		int high = (top + 8) / 8, per = map.perCell(), cols = map.artCols();
+		if (per != 2 || high > 2 || high > ShapeHeights.headroom(map)) return false;
+		for (int z = 0; z < per; z++) {
+			for (int x = 0; x < per; x++) {
+				int i = (cy * per + z) * cols + cx * per + x;
+				if (blocks[i] != 1 || mask[i] != 0 || decor[i] != 0) return false;
+			}
+		}
+		int[] tiles = tiles(map, cx, cy);
+		CellUnits.Context context = new CellUnits.Context(0, indoor, false, false, false, FittedShapes.VOXELS, 0, entry.params());
+		ShapeKey first = null;
+		for (int z = 0; z < per; z++) {
+			for (int x = 0; x < per; x++) {
+				int i = (cy * per + z) * cols + cx * per + x;
+				ShapeKey[] column = new ShapeKey[high];
+				for (int y = 0; y < high; y++) column[y] = ShapeKey.cell(atlasIndex, tiles, -1, x, y, z).withVariant(context.variant());
+				keys[i] = column;
+				mask[i] = 1;
+				decor[i] = high == 2 ? 2 : 0;
+				first = first == null ? column[0] : first;
+			}
+		}
+		units.add(new Cell(cx, cy, first, false, "counter_voxels"));
+		tally.merge("counter_voxels", 1, Integer::sum);
+		return true;
+	}
+
 	private static boolean walkUnit(SceneMap map, SceneAtlas atlas, int atlasIndex, int cx, int cy, FittedShapes.Entry entry, ShapeKey[][] keys,
 			int[] decor, int[] floor, List<Cell> units, int mapGround, boolean indoor, Map<String, Integer> tally) {
 		byte[] v = entry.voxels();
@@ -477,13 +602,23 @@ final class Units {
 			}
 		}
 		int per = map.perCell();
-		int high = Math.min(per, (top + 8) / 8);
+		int[] tiles = tiles(map, cx, cy);
+		// A layered walk entry (a walk-through statue on its pedestal) stands as tall as its layers on decor carriers,
+		// like a layered solid unit but without collision; an unlayered one keeps its single cell of decor.
+		int ups = Math.min(FittedShapes.MAX_LAYERS, FittedShapes.layers(map.atlas(), tiles));
+		int high = ups > 0 ? per * (1 + ups) : Math.min(per, (top + 8) / 8);
 		if (top < 0 || high <= 0) {
 			return false;
 		}
 		int cols = map.artCols();
-		int[] tiles = tiles(map, cx, cy);
 		CellUnits.Context context = new CellUnits.Context(0, indoor, false, false, false, FittedShapes.VOXELS, 0, entry.params());
+		String[] variants = new String[(high + per - 1) / per];
+		variants[0] = context.variant();
+		for (int layer = 1; layer < variants.length; layer++) {
+			List<Integer> params = new java.util.ArrayList<>(context.params());
+			params.add(layer);
+			variants[layer] = new CellUnits.Context(0, indoor, false, false, false, FittedShapes.VOXELS, 0, params).variant();
+		}
 		int g = ground(map, cx, cy, atlas.grassTiles(), atlas.frameTiles(), mapGround);
 		ShapeKey first = null;
 		for (int bz = 0; bz < per; bz++) {
@@ -491,7 +626,7 @@ final class Units {
 				int i = (cy * per + bz) * cols + cx * per + bx;
 				ShapeKey[] column = new ShapeKey[high];
 				for (int by = 0; by < high; by++) {
-					column[by] = ShapeKey.cell(atlasIndex, tiles, g, bx, by, bz).withVariant(context.variant());
+					column[by] = ShapeKey.cell(atlasIndex, tiles, g, bx, by % per, bz).withVariant(variants[by / per]);
 				}
 				first = first == null ? column[0] : first;
 				keys[i] = column;

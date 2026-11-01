@@ -1,0 +1,757 @@
+[
+  {
+    "schema": 1,
+    "id": "emerald-route124-treasure-hunters-house",
+    "status": "source-proven exact b112 candidate authored; guarded addition and Minecraft actual-map verification pending",
+    "scope_note": "Existing112-template review does not imply complete Hoenn building-template coverage.",
+    "map": "EM_ROUTE124",
+    "tileset": "general__mossdeep",
+    "rectangle": {
+      "x": 69,
+      "y": 45,
+      "width": 4,
+      "depth": 4
+    },
+    "layout": [
+      [
+        "g3q/12506-10660-12507-10662",
+        "g3q/10660-10660-10662-10662",
+        "g3q/10660-10660-10662-10662",
+        "g3q/10660-10661-10662-10663"
+      ],
+      [
+        "g3q/10786-10787-10786-10787",
+        "g3q/10787-10787-10787-10787",
+        "g3q/10787-10787-10787-10787",
+        "g3q/10787-10827-10787-10827"
+      ],
+      [
+        "g3q/22036-10692-22037-10987",
+        "g3q/10692-10692-11145-11146",
+        "g3q/10692-10692-10693-10694",
+        "g3q/10692-22038-10987-22039"
+      ],
+      [
+        "g3q/22045-10987-22046-11412",
+        "g3q/11453-11454-11455-11456",
+        "g3q/10850-10851-10852-10852",
+        "g3q/10987-22039-11412-22047"
+      ]
+    ],
+    "cells": [
+      {
+        "x": 69,
+        "y": 45,
+        "key": "g3q/12506-10660-12507-10662",
+        "metatile": 8,
+        "collision_byte": 0,
+        "elevation": 3,
+        "fitted_metadata": {
+          "class": "voxels",
+          "from": "hand"
+        }
+      },
+      {
+        "x": 70,
+        "y": 45,
+        "key": "g3q/10660-10660-10662-10662",
+        "metatile": 9,
+        "collision_byte": 0,
+        "elevation": 3,
+        "fitted_metadata": {
+          "class": "voxels",
+          "from": "hand"
+        }
+      },
+      {
+        "x": 71,
+        "y": 45,
+        "key": "g3q/10660-10660-10662-10662",
+        "metatile": 9,
+        "collision_byte": 0,
+        "elevation": 3,
+        "fitted_metadata": {
+          "class": "voxels",
+          "from": "hand"
+        }
+      },
+      {
+        "x": 72,
+        "y": 45,
+        "key": "g3q/10660-10661-10662-10663",
+        "metatile": 10,
+        "collision_byte": 0,
+        "elevation": 3,
+        "fitted_metadata": {
+          "class": "voxels",
+          "from": "hand"
+        }
+      },
+      {
+        "x": 69,
+        "y": 46,
+        "key": "g3q/10786-10787-10786-10787",
+        "metatile": 16,
+        "collision_byte": 7,
+        "elevation": 3,
+        "fitted_metadata": {
+          "class": "voxels",
+          "from": "hand"
+        }
+      },
+      {
+        "x": 70,
+        "y": 46,
+        "key": "g3q/10787-10787-10787-10787",
+        "metatile": 17,
+        "collision_byte": 7,
+        "elevation": 3,
+        "fitted_metadata": {
+          "class": "voxels",
+          "from": "hand"
+        }
+      },
+      {
+        "x": 71,
+        "y": 46,
+        "key": "g3q/10787-10787-10787-10787",
+        "metatile": 17,
+        "collision_byte": 7,
+        "elevation": 3,
+        "fitted_metadata": {
+          "class": "voxels",
+          "from": "hand"
+        }
+      },
+      {
+        "x": 72,
+        "y": 46,
+        "key": "g3q/10787-10827-10787-10827",
+        "metatile": 18,
+        "collision_byte": 7,
+        "elevation": 3,
+        "fitted_metadata": {
+          "class": "voxels",
+          "from": "hand"
+        }
+      },
+      {
+        "x": 69,
+        "y": 47,
+        "key": "g3q/22036-10692-22037-10987",
+        "metatile": 736,
+        "collision_byte": 7,
+        "elevation": 3,
+        "fitted_metadata": {
+          "class": "voxels",
+          "from": "hand"
+        }
+      },
+      {
+        "x": 70,
+        "y": 47,
+        "key": "g3q/10692-10692-11145-11146",
+        "metatile": 25,
+        "collision_byte": 7,
+        "elevation": 3,
+        "fitted_metadata": {
+          "class": "voxels",
+          "from": "hand"
+        }
+      },
+      {
+        "x": 71,
+        "y": 47,
+        "key": "g3q/10692-10692-10693-10694",
+        "metatile": 11,
+        "collision_byte": 7,
+        "elevation": 3,
+        "fitted_metadata": {
+          "class": "voxels",
+          "from": "hand"
+        }
+      },
+      {
+        "x": 72,
+        "y": 47,
+        "key": "g3q/10692-22038-10987-22039",
+        "metatile": 737,
+        "collision_byte": 7,
+        "elevation": 3,
+        "fitted_metadata": {
+          "class": "voxels",
+          "from": "hand"
+        }
+      },
+      {
+        "x": 69,
+        "y": 48,
+        "key": "g3q/22045-10987-22046-11412",
+        "metatile": 744,
+        "collision_byte": 7,
+        "elevation": 3,
+        "fitted_metadata": {
+          "class": "voxels",
+          "from": "hand"
+        }
+      },
+      {
+        "x": 70,
+        "y": 48,
+        "key": "g3q/11453-11454-11455-11456",
+        "metatile": 33,
+        "collision_byte": 113,
+        "elevation": 3,
+        "fitted_metadata": {
+          "class": "voxels",
+          "from": "hand"
+        }
+      },
+      {
+        "x": 71,
+        "y": 48,
+        "key": "g3q/10850-10851-10852-10852",
+        "metatile": 19,
+        "collision_byte": 7,
+        "elevation": 3,
+        "fitted_metadata": {
+          "class": "voxels",
+          "from": "hand"
+        }
+      },
+      {
+        "x": 72,
+        "y": 48,
+        "key": "g3q/10987-22039-11412-22047",
+        "metatile": 745,
+        "collision_byte": 7,
+        "elevation": 3,
+        "fitted_metadata": {
+          "class": "voxels",
+          "from": "hand"
+        }
+      }
+    ],
+    "warps": [
+      {
+        "to": "EM_ROUTE124_DIVING_TREASURE_HUNTERS_HOUSE",
+        "warp": 0,
+        "x": 70,
+        "y": 48
+      }
+    ],
+    "nearest_existing_template": {
+      "id": "emerald_b051_EM_LAVARIDGE_TOWN",
+      "matching_cells": 12,
+      "total_cells": 16,
+      "differences": [
+        {
+          "x": 0,
+          "y": 2,
+          "actual": "g3q/22036-10692-22037-10987",
+          "template": "g3q/10985-10692-10986-10987"
+        },
+        {
+          "x": 3,
+          "y": 2,
+          "actual": "g3q/10692-22038-10987-22039",
+          "template": "g3q/10692-11195-10987-11196"
+        },
+        {
+          "x": 0,
+          "y": 3,
+          "actual": "g3q/22045-10987-22046-11412",
+          "template": "g3q/11410-10987-11411-11412"
+        },
+        {
+          "x": 3,
+          "y": 3,
+          "actual": "g3q/10987-22039-11412-22047",
+          "template": "g3q/10987-11196-11412-11557"
+        }
+      ]
+    },
+    "identification": "Red stepped-roof house at Route124 island; warp destination identifies Diving Treasure Hunter house.",
+    "source_evidence": {
+      "native": "local/model-gallery/emerald-pass-study/towns/gaps/route124-house-native.png",
+      "enlarged": "local/model-gallery/emerald-pass-study/towns/gaps/route124-house.png",
+      "source_pixels_sha256": "be71ae4595a52de1d8717e419c68b47cd35fa42d81e49109bd7126665f26b632"
+    },
+    "baseline_table_sha256": "7958d43cb8545ae006b3568bb6b86d809c7def79cb128a7789c36016756797d6",
+    "existing_matching_occurrences": [],
+    "preservation_requirement": "Any added template must derive doors from actual warp70,48 and keep all16 source keys, collision/elevation metadata and existing IDs unchanged.",
+    "candidate": {
+      "id": "emerald_b112_EM_ROUTE124",
+      "updates": "local/model-gallery/emerald-pass-study/building-route124/updates.json",
+      "added_ledger": "local/model-gallery/emerald-pass-study/building-route124/added-ledger.json",
+      "python_visual_qa": "local/model-gallery/emerald-pass-study/building-route124/python-visual-qa.json",
+      "terrain": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ]
+      ],
+      "source_rgb_pixel_sha256": "354a6b3693dceff4fd038ca582b055caf1f2849b868ff4263c27c2a47a9a7585",
+      "new_template_count": 1
+    }
+  },
+  {
+    "schema": 1,
+    "id": "emerald-frontier-flag-stack-coverage",
+    "status": "source-proven candidate authored; runtime verification pending",
+    "scope_note": "Existing fitted entries lacked working on links; three west flag bases were absent from the fitted table. Existing112 building templates did not supply these flags.",
+    "candidate_module": "tools/shape_fit/emerald_pass/towns_frontier.py",
+    "source_evidence": "local/model-gallery/emerald-pass-study/towns-frontier/assembly-placements.json",
+    "alias_evidence": "local/model-gallery/emerald-pass-study/towns-frontier/also-on-source-proof.json",
+    "existing_cells_changed": 8,
+    "new_base_keys": [
+      "g3q/12737-10671-13184-10672",
+      "g3q/12737-10671-10672-13183",
+      "g3q/12737-10671-10669-10672"
+    ],
+    "complete_flags": 24,
+    "map_variants": [
+      {
+        "id": "emerald_frontier_east_flag",
+        "layout": [
+          [
+            "g3q/11858-11878-11878-12640",
+            "g3q/11858-11878-12645-12650"
+          ],
+          [
+            "g3q/11858-12692-11878-12693",
+            "g3q/12698-12703-11878-11858"
+          ],
+          [
+            "g3q/10670-12635-10729-10728",
+            "g3q/10670-10671-10729-10728"
+          ]
+        ],
+        "occurrences": [
+          {
+            "map": "EM_BATTLE_FRONTIER_OUTSIDE_EAST",
+            "x": 40,
+            "y": 2,
+            "palette": "BAKED"
+          },
+          {
+            "map": "EM_BATTLE_FRONTIER_OUTSIDE_EAST",
+            "x": 43,
+            "y": 2,
+            "palette": "BAKED"
+          },
+          {
+            "map": "EM_BATTLE_FRONTIER_OUTSIDE_EAST",
+            "x": 46,
+            "y": 2,
+            "palette": "BAKED"
+          },
+          {
+            "map": "EM_BATTLE_FRONTIER_OUTSIDE_EAST",
+            "x": 49,
+            "y": 2,
+            "palette": "BAKED"
+          },
+          {
+            "map": "EM_BATTLE_FRONTIER_OUTSIDE_EAST",
+            "x": 52,
+            "y": 2,
+            "palette": "BAKED"
+          },
+          {
+            "map": "EM_BATTLE_FRONTIER_OUTSIDE_EAST",
+            "x": 55,
+            "y": 2,
+            "palette": "BAKED"
+          },
+          {
+            "map": "EM_BATTLE_FRONTIER_OUTSIDE_EAST",
+            "x": 58,
+            "y": 2,
+            "palette": "BAKED"
+          },
+          {
+            "map": "EM_BATTLE_FRONTIER_OUTSIDE_EAST",
+            "x": 61,
+            "y": 2,
+            "palette": "BAKED"
+          },
+          {
+            "map": "EM_BATTLE_FRONTIER_OUTSIDE_EAST",
+            "x": 64,
+            "y": 2,
+            "palette": "BAKED"
+          }
+        ]
+      },
+      {
+        "id": "emerald_frontier_west_flag_1",
+        "layout": [
+          [
+            "g3q/11858-11878-13555-13560",
+            "g3q/11858-11878-13565-11858"
+          ],
+          [
+            "g3q/13582-13587-13588-11858",
+            "g3q/13593-11878-11878-11858"
+          ],
+          [
+            "g3q/12737-10671-13184-10672",
+            "g3q/10670-10671-10672-13183"
+          ]
+        ],
+        "occurrences": [
+          {
+            "map": "EM_BATTLE_FRONTIER_OUTSIDE_WEST",
+            "x": 9,
+            "y": 1,
+            "palette": "BAKED"
+          },
+          {
+            "map": "EM_BATTLE_FRONTIER_OUTSIDE_WEST",
+            "x": 15,
+            "y": 1,
+            "palette": "BAKED"
+          },
+          {
+            "map": "EM_BATTLE_FRONTIER_OUTSIDE_WEST",
+            "x": 21,
+            "y": 1,
+            "palette": "BAKED"
+          },
+          {
+            "map": "EM_BATTLE_FRONTIER_OUTSIDE_WEST",
+            "x": 27,
+            "y": 1,
+            "palette": "BAKED"
+          },
+          {
+            "map": "EM_BATTLE_FRONTIER_OUTSIDE_WEST",
+            "x": 33,
+            "y": 1,
+            "palette": "BAKED"
+          }
+        ]
+      },
+      {
+        "id": "emerald_frontier_west_flag_2",
+        "layout": [
+          [
+            "g3q/11858-11878-13555-13560",
+            "g3q/11858-11878-13565-11858"
+          ],
+          [
+            "g3q/13582-13587-13588-11858",
+            "g3q/13593-11878-11878-11858"
+          ],
+          [
+            "g3q/12737-10671-10672-13183",
+            "g3q/10670-10671-13184-10672"
+          ]
+        ],
+        "occurrences": [
+          {
+            "map": "EM_BATTLE_FRONTIER_OUTSIDE_WEST",
+            "x": 12,
+            "y": 1,
+            "palette": "BAKED"
+          },
+          {
+            "map": "EM_BATTLE_FRONTIER_OUTSIDE_WEST",
+            "x": 18,
+            "y": 1,
+            "palette": "BAKED"
+          },
+          {
+            "map": "EM_BATTLE_FRONTIER_OUTSIDE_WEST",
+            "x": 24,
+            "y": 1,
+            "palette": "BAKED"
+          },
+          {
+            "map": "EM_BATTLE_FRONTIER_OUTSIDE_WEST",
+            "x": 30,
+            "y": 1,
+            "palette": "BAKED"
+          },
+          {
+            "map": "EM_BATTLE_FRONTIER_OUTSIDE_WEST",
+            "x": 36,
+            "y": 1,
+            "palette": "BAKED"
+          }
+        ]
+      },
+      {
+        "id": "emerald_frontier_west_flag_3",
+        "layout": [
+          [
+            "g3q/11858-11878-13555-13560",
+            "g3q/11858-11878-13565-11858"
+          ],
+          [
+            "g3q/13582-13587-13588-11858",
+            "g3q/13593-11878-11878-11858"
+          ],
+          [
+            "g3q/12737-10671-13184-10672",
+            "g3q/10670-12459-10672-10668"
+          ]
+        ],
+        "occurrences": [
+          {
+            "map": "EM_BATTLE_FRONTIER_OUTSIDE_WEST",
+            "x": 39,
+            "y": 1,
+            "palette": "BAKED"
+          }
+        ]
+      },
+      {
+        "id": "emerald_frontier_west_flag_4",
+        "layout": [
+          [
+            "g3q/11858-11878-13555-13560",
+            "g3q/11858-11878-13565-11858"
+          ],
+          [
+            "g3q/13582-13587-13588-11858",
+            "g3q/13593-11878-11878-11858"
+          ],
+          [
+            "g3q/12737-10671-10669-10672",
+            "g3q/10670-10671-10669-10672"
+          ]
+        ],
+        "occurrences": [
+          {
+            "map": "EM_BATTLE_FRONTIER_OUTSIDE_WEST",
+            "x": 11,
+            "y": 63,
+            "palette": "BAKED"
+          },
+          {
+            "map": "EM_BATTLE_FRONTIER_OUTSIDE_WEST",
+            "x": 14,
+            "y": 63,
+            "palette": "BAKED"
+          },
+          {
+            "map": "EM_BATTLE_FRONTIER_OUTSIDE_WEST",
+            "x": 17,
+            "y": 63,
+            "palette": "BAKED"
+          },
+          {
+            "map": "EM_BATTLE_FRONTIER_OUTSIDE_WEST",
+            "x": 20,
+            "y": 63,
+            "palette": "BAKED"
+          }
+        ]
+      }
+    ],
+    "metadata_corrections": "local/model-gallery/emerald-pass-study/towns-frontier/metadata-corrections.json",
+    "remaining": "Root applies source-proven aliases/additions and verifies actual placement in Minecraft before marking this gap closed."
+  },
+  {
+    "schema": 1,
+    "id": "emerald-sootopolis-cone-towers",
+    "status": "ten exact source-proven candidates authored; guarded additions and actual-map runtime QA pending",
+    "scope_note": "The original112 templates omit all eleven cone-roof towers; reviewing the original table did not imply exhaustive Hoenn building coverage.",
+    "map": "EM_SOOTOPOLIS_CITY",
+    "rectangles": [
+      {
+        "id": "emerald_b113_EM_SOOTOPOLIS_CITY",
+        "x": 27,
+        "y": 0,
+        "width": 3,
+        "depth": 5
+      },
+      {
+        "id": "emerald_b114_EM_SOOTOPOLIS_CITY",
+        "x": 51,
+        "y": 0,
+        "width": 3,
+        "depth": 5
+      },
+      {
+        "id": "emerald_b115_EM_SOOTOPOLIS_CITY",
+        "x": 22,
+        "y": 1,
+        "width": 3,
+        "depth": 5
+      },
+      {
+        "id": "emerald_b115_EM_SOOTOPOLIS_CITY",
+        "x": 52,
+        "y": 8,
+        "width": 3,
+        "depth": 5
+      },
+      {
+        "id": "emerald_b116_EM_SOOTOPOLIS_CITY",
+        "x": 54,
+        "y": 1,
+        "width": 3,
+        "depth": 5
+      },
+      {
+        "id": "emerald_b117_EM_SOOTOPOLIS_CITY",
+        "x": 8,
+        "y": 2,
+        "width": 3,
+        "depth": 5
+      },
+      {
+        "id": "emerald_b118_EM_SOOTOPOLIS_CITY",
+        "x": 8,
+        "y": 13,
+        "width": 3,
+        "depth": 5
+      },
+      {
+        "id": "emerald_b119_EM_SOOTOPOLIS_CITY",
+        "x": 43,
+        "y": 13,
+        "width": 3,
+        "depth": 5
+      },
+      {
+        "id": "emerald_b120_EM_SOOTOPOLIS_CITY",
+        "x": 53,
+        "y": 15,
+        "width": 3,
+        "depth": 5
+      },
+      {
+        "id": "emerald_b121_EM_SOOTOPOLIS_CITY",
+        "x": 0,
+        "y": 16,
+        "width": 3,
+        "depth": 5
+      },
+      {
+        "id": "emerald_b122_EM_SOOTOPOLIS_CITY",
+        "x": 53,
+        "y": 33,
+        "width": 3,
+        "depth": 5
+      }
+    ],
+    "candidate_updates": "local/model-gallery/emerald-pass-study/buildings-sootopolis/updates.json",
+    "added_ledger": "local/model-gallery/emerald-pass-study/buildings-sootopolis/added-ledger.json",
+    "exact_layouts_collision_warps": "local/model-gallery/emerald-pass-study/buildings-sootopolis/occurrences.json",
+    "source_and_preview_review": "local/model-gallery/emerald-pass-study/buildings-sootopolis/python-visual-qa.json",
+    "companion_cliff_key": "g3q/21924-21925-26998-26999",
+    "companion_cliff_proof": "local/model-gallery/emerald-pass-study/towns-sootopolis/cliff-background-proof.json",
+    "known_runtime_followup": [
+      "Capture all ten exact templates in front/side/angled Minecraft views.",
+      "Inspect real Sootopolis tower/cliff interfaces, especially b118 WALK top center, b121 east WALK roof projection and b122 full WALK upper roof row.",
+      "Apply and inspect the companion Sootopolis31 cliff-background correction; do not claim top-row cliff carriers as tower geometry."
+    ]
+  },
+  {
+    "id": "emerald-route121-safari-gate-exterior",
+    "status": "candidate authored and Python visually inspected; Minecraft capture pending",
+    "map": "EM_ROUTE121",
+    "rectangle": {
+      "x": 35,
+      "y": 0,
+      "width": 5,
+      "depth": 6
+    },
+    "candidate_id": "emerald_b123_EM_ROUTE121",
+    "nearest_existing_template": "emerald_b109_EM_SAFARI_ZONE_SOUTH",
+    "best_aligned_matching_cells": 15,
+    "total_cells": 30,
+    "source_evidence": "local/model-gallery/emerald-pass-study/building-safari-route121/occurrences.json",
+    "candidate_patch": "local/model-gallery/emerald-pass-study/building-safari-route121/updates.json",
+    "candidate_ledger": "local/model-gallery/emerald-pass-study/building-safari-route121/added-ledger.json",
+    "python_qa": "local/model-gallery/emerald-pass-study/building-safari-route121/python-visual-qa.json"
+  },
+  {
+    "id": "emerald-fortree-leaf-roof-treehouses",
+    "status": "candidate authored and Python visually inspected; Minecraft capture pending",
+    "map": "EM_FORTREE_CITY",
+    "candidate_id": "emerald_b124_EM_FORTREE_CITY",
+    "exact_pattern_count": 1,
+    "occurrences": 6,
+    "source_evidence": "local/model-gallery/emerald-pass-study/towns-fortree/treehouse-source-proof.json",
+    "candidate_patch": "local/model-gallery/emerald-pass-study/building-fortree-treehouse/updates.json",
+    "candidate_ledger": "local/model-gallery/emerald-pass-study/building-fortree-treehouse/added-ledger.json",
+    "python_qa": "local/model-gallery/emerald-pass-study/building-fortree-treehouse/python-visual-qa.json"
+  },
+  {
+    "id": "emerald-route119-weather-institute",
+    "status": "source-proven missing11x7 building; authoring delegated gallery_bounds",
+    "map": "EM_ROUTE119",
+    "rectangle": {
+      "x": 1,
+      "y": 26,
+      "width": 11,
+      "depth": 7
+    },
+    "reserved_id": "emerald_b130_EM_ROUTE119",
+    "source_evidence": "local/model-gallery/emerald-pass-study/towns-fortree/weather-institute-source-proof.json"
+  },
+  {
+    "id": "emerald-fortree-large-palms",
+    "status": "Two exact whole candidates authored and Python inspected; Minecraft matching/capture pending",
+    "map": "EM_FORTREE_CITY",
+    "candidate_ids": [
+      "emerald_object_fortree_palm_short",
+      "emerald_object_fortree_palm_long"
+    ],
+    "exact_pattern_count": 2,
+    "occurrences": 5,
+    "source_evidence": "local/model-gallery/emerald-pass-study/object-fortree-palms/added-ledger.json",
+    "candidate_patch": "local/model-gallery/emerald-pass-study/object-fortree-palms/updates.json",
+    "python_qa": "local/model-gallery/emerald-pass-study/object-fortree-palms/python-visual-qa.json"
+  },
+  {
+    "id": "sky-pillar-exact-source-patterns",
+    "status": "source-proven Python candidate frozen; runtime matching/capture pending",
+    "new_templates": [
+      "emerald_object_sky_pillar_tower",
+      "emerald_object_sky_pillar_ascending_portal",
+      "emerald_object_sky_pillar_upper_stairs"
+    ],
+    "evidence": "local/model-gallery/emerald-pass-study/object-sky-pillar-patterns/added-ledger.json",
+    "runtime_audit": "local/model-gallery/emerald-pass-study/object-sky-pillar-patterns/runtime-placement-audit.json",
+    "original_preserved": [
+      "emerald_b110_EM_SKY_PILLAR_OUTSIDE",
+      "emerald_b111_EM_SKY_PILLAR_TOP"
+    ],
+    "reason": "Actual tower doorway differs in two cells from original b110; ascending portal differs from b111; upper4x2 flight requires continuous whole geometry across WALK cells."
+  },
+  {
+    "id": "dewford-exact-house-ferry-island-trees",
+    "status": "Five source-proven Python candidates frozen; guarded merge/Minecraft review pending",
+    "new_templates": [
+      "emerald_object_dewford_house1",
+      "emerald_object_island_ferry",
+      "emerald_object_birth_island_tree_north",
+      "emerald_object_birth_island_tree_west",
+      "emerald_object_birth_island_tree_east"
+    ],
+    "source_evidence": "local/model-gallery/emerald-pass-study/objects-dewford/added-ledger.json",
+    "candidate_patch": "local/model-gallery/emerald-pass-study/objects-dewford/updates.json",
+    "python_qa": "local/model-gallery/emerald-pass-study/objects-dewford/python-visual-qa.json",
+    "actual_map_followups": "local/model-gallery/emerald-pass-study/towns-dewford/actual-map-followups.json",
+    "source_pattern_count": 5,
+    "exact_occurrences": 6
+  }
+]

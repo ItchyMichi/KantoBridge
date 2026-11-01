@@ -5,7 +5,8 @@
 	"plugin": "dev.kantobridge.client.model.MeshStatsMixinPlugin",
 	"compatibilityLevel": "JAVA_21",
 	"client": [
-		"SectionCompilerTimingMixin"
+		"SectionCompilerTimingMixin",
+		"GalleryChunkMapAccessor"
 	],
 	"injectors": {
 		"defaultRequire": 1

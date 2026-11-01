@@ -165,6 +165,12 @@ public final class BridgeRuntime {
 		// The server's stored presence on join: the region it names is followed when a link runs its game (MG5's crossings
 		// end with the same message, after the server moved the body into the far gate house).
 		ClientRelay.get().register(MsgTypes.REGION_STATE, message -> runtime.links.serverPresence(message.data()));
+		// An offline gallery must not attach to a user's running hidden game, even when its default port is live.
+		String gallery = System.getProperty("kantobridge.gallery");
+		if (gallery != null && !gallery.isBlank()) {
+			LOGGER.info("bridge: offline model gallery; hidden-game connections disabled");
+			return;
+		}
 		runtime.links.start();
 		for (BridgeLink link : runtime.links.all()) {
 			LOGGER.info("bridge: connecting to gen1-bridge on {}:{}{}", BridgeConfig.LOOPBACK, link.port(),

@@ -217,6 +217,12 @@ public final class PartsBuilding {
 	 * window at a time keeps a block of margin round each one and drops it. Null when the spec has no parts.
 	 */
 	public static VoxelGrid voxels(JsonObject spec, int[] texel, int w, int d, int px, int x0, int z0, int ww, int wd) {
+		return voxels(spec, texel, w, d, px, x0, z0, ww, wd, null);
+	}
+
+	/** Clip to the planner's carrier heights before finding exposed faces, including window margins. */
+	static VoxelGrid voxels(JsonObject spec, int[] texel, int w, int d, int px, int x0, int z0, int ww, int wd,
+			int[] carrierHeights) {
 		List<Part> parts = new ArrayList<>();
 		if (spec.has("parts")) {
 			for (JsonElement el : spec.getAsJsonArray("parts")) {
@@ -256,6 +262,17 @@ public final class PartsBuilding {
 			}
 		}
 		footprint(spec, owners, w, d, px);
+		if (carrierHeights != null) {
+			if (carrierHeights.length != (w / px) * (d / px)) {
+				throw new IllegalArgumentException("carrier dimensions differ from parts drawing");
+			}
+			for (int z = z0; z < z0 + wd; z++) {
+				for (int x = x0; x < x0 + ww; x++) {
+					int high = Math.max(0, carrierHeights[(z / px) * (w / px) + x / px]) * px;
+					for (int y = high; y < h; y++) owners.set(x, y, z, -1);
+				}
+			}
+		}
 		int gh = Math.max(px, ((h + px - 1) / px) * px);
 		VoxelGrid grid = new VoxelGrid(ww, gh, wd, px);
 		for (int y = 0; y < h; y++) {

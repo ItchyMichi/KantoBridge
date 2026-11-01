@@ -101,6 +101,18 @@ class LandscapeModelsTest {
 	}
 
 	@Test
+	void theJarCarriesTheTableEveryBuildReadsByDefault() throws Exception {
+		String json;
+		try (java.io.InputStream in = LandscapeModels.class.getResourceAsStream(LandscapeModels.RESOURCE)) {
+			assertTrue(in != null, "the jar's models table (v16t)");
+			json = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+		}
+		assertTrue(LandscapeModels.parse(json).size() > 100, "models on every region's outdoor maps");
+		assertFalse(LandscapeModels.parseSlopes(json).isEmpty(), "the marked slopes and stairs");
+		assertFalse(LandscapeModels.parsePins(json).isEmpty(), "the reviews' pins");
+	}
+
+	@Test
 	void aTableReads() {
 		Map<String, List<LandscapeModels.Model>> table = LandscapeModels.parse("""
 				{"maps": {"ROCK": [{"name": "rock", "tx": 2, "ty": 4, "w": 6, "h": 6, "claim": [[0, 0], [1, 2]],

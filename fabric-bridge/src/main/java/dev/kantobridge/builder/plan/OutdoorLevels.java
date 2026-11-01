@@ -19,7 +19,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Which outdoor maps stand on raised ground (docs/specs/HEIGHTS_ALL_GAMES_PLAN.md D3, D4; the levels pilot of
  * LANDSCAPE_SECTIONS_PLAN.md): the maps the system property {@value #PROPERTY} names (map ids, comma-separated, or
- * {@value #ALL} for every one), on the surface or under the open sky. Unset, every outdoor map stays flat, as before. Each named map takes the levels its
+ * {@value #ALL} for every one), on the surface or under the open sky. Unset, every outdoor map (the default since
+ * 2026-11-01); blank or {@value #NONE}, every outdoor map stays flat, as before (the JUnit and GameTest runs). Each named map takes the levels its
  * game gives ({@link RaisedRegions#gen3Outdoor}: Emerald's elevations; {@link RaisedRegions#outdoor}: Crystal's and
  * Blue's areas and the faces between them), a cell of stairs or of face climbing {@link RaisedRegions#OUTDOOR_RISE}. A
  * map whose landscape marks name its slopes and stairs ({@link LandscapeModels#slopes}) stands on its drawing's levels
@@ -32,9 +33,13 @@ public final class OutdoorLevels {
 	private OutdoorLevels() {
 	}
 
-	/** The maps the system property names (none when unset). */
+	/** The property's value for no map: every outdoor map flat. */
+	public static final String NONE = "none";
+
+	/** The maps the system property names: every one ({@value #ALL}) when it is unset, none when blank or {@value #NONE}. */
 	public static Set<String> fromProperty() {
-		return parse(System.getProperty(PROPERTY));
+		String value = System.getProperty(PROPERTY);
+		return value == null ? Set.of(ALL) : parse(value);
 	}
 
 	/**
@@ -287,11 +292,11 @@ public final class OutdoorLevels {
 		return named.contains(ALL) || named.contains(id);
 	}
 
-	/** The maps {@code value} names (map ids, comma-separated; {@value #ALL} for every outdoor map). */
+	/** The maps {@code value} names (map ids, comma-separated; {@value #ALL} for every outdoor map, {@value #NONE} for none). */
 	static Set<String> parse(@Nullable String value) {
 		Set<String> out = new TreeSet<>();
 		if (value != null) {
-			Arrays.stream(value.split(",")).map(String::trim).filter(s -> !s.isEmpty()).forEach(out::add);
+			Arrays.stream(value.split(",")).map(String::trim).filter(s -> !s.isEmpty() && !NONE.equals(s)).forEach(out::add);
 		}
 		return Set.copyOf(out);
 	}

@@ -1,0 +1,650 @@
+{
+  "g3q/7643-7643-7644-7645": {
+    "source_ordinal": 1,
+    "baseline_entry_sha256": "4b2fc22267bb05f39c44b3f5d40747967d69e4e71ecb46f856791d1abac57897",
+    "source_pixel_sha256": "62f2a716f75f79241b97a7a75b9f01453ed176f37661d740dac8a0387935d800",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-001.png",
+    "label": "Museum stair opening and architectural jamb",
+    "family": "stairway",
+    "reason": "Both complete 3x2 stair assemblies have coherent open thresholds, distinct treads and aligned jambs in front, side and angled previews."
+  },
+  "g3q/7643-7643-7646-7646": {
+    "source_ordinal": 2,
+    "baseline_entry_sha256": "7cffc27947c33e0c694135045760e15e1264e5ebd5cef49446ad52b335731c80",
+    "source_pixel_sha256": "6e04a8f002b31d2cc0dc5ce337e741497c47085229cf736d51667759de8529ce",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-001.png",
+    "label": "Museum stair opening and architectural jamb",
+    "family": "stairway",
+    "reason": "Both complete 3x2 stair assemblies have coherent open thresholds, distinct treads and aligned jambs in front, side and angled previews."
+  },
+  "g3q/7655-7656-7657-7658": {
+    "source_ordinal": 3,
+    "baseline_entry_sha256": "a9d5db2a9b5906911a5a0768e5c593619b9255b73adba6a00d32dc77be37d4c0",
+    "source_pixel_sha256": "8678bc790270bded8c52247e20d13fa8cebaae00d70dac2ed9d62b5337b30cc0",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-001.png",
+    "label": "Museum stair opening and architectural jamb",
+    "family": "stairway",
+    "reason": "Both complete 3x2 stair assemblies have coherent open thresholds, distinct treads and aligned jambs in front, side and angled previews."
+  },
+  "g3q/7659-7659-7660-7660": {
+    "source_ordinal": 4,
+    "baseline_entry_sha256": "d6f19469fddc3232bba45be4021b00770c0b53e9bdb5fbacc898719d20461130",
+    "source_pixel_sha256": "5c0ded3d5e9ab13ac057d3cfc76bce637dbbff8d89e814dcbad0cd9f6bd4326a",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-001.png",
+    "label": "Museum stair opening and architectural jamb",
+    "family": "stairway",
+    "reason": "Both complete 3x2 stair assemblies have coherent open thresholds, distinct treads and aligned jambs in front, side and angled previews."
+  },
+  "g3q/7661-7662-7663-7664": {
+    "source_ordinal": 5,
+    "baseline_entry_sha256": "664b537539c1a6fd1b19e04dffc7539cfeeb8908cc518228556960e8bbc14e8c",
+    "source_pixel_sha256": "b1df3dce7974c9f0632d8da61478fc59e6bdfe30ed8f78625a010220f77a3aeb",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-001.png",
+    "role": "wall_case",
+    "label": "Shallow glazed wall display",
+    "family": "museum wall_case",
+    "reason": "Replace distorted depth with explicit supported display geometry and native source-local face/material paint."
+  },
+  "g3q/7665-7666-7667-7668": {
+    "source_ordinal": 6,
+    "baseline_entry_sha256": "920bb94aa08ed6111a3bee29ace5c30a4cc4b61d3e5e6b9e784792aeadc2fd66",
+    "source_pixel_sha256": "f2d6b438b012ef4158ef55f8d455a2c66321c9572531bdf0a01cf9e017e07be9",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-001.png",
+    "role": "wall_case",
+    "label": "Shallow glazed wall display",
+    "family": "museum wall_case",
+    "reason": "Replace distorted depth with explicit supported display geometry and native source-local face/material paint."
+  },
+  "g3q/7669-7670-7671-7672": {
+    "source_ordinal": 7,
+    "baseline_entry_sha256": "11e2b500054f4bb1b1a0f47437ffa6b0094fd00d1946dda1c6e0a9aedbe1c1e2",
+    "source_pixel_sha256": "8ce076c72699bb8f4eddd18cb8e9c539def4d0975074ee51c3413a35fcdec897",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-001.png",
+    "role": "aquarium",
+    "added_on": "g3q/7692-7693-7694-7695",
+    "label": "Mounted aquarium and information plaque",
+    "family": "museum aquarium",
+    "reason": "Replace distorted depth with explicit supported display geometry and native source-local face/material paint."
+  },
+  "g3q/7670-7673-7672-7674": {
+    "source_ordinal": 8,
+    "baseline_entry_sha256": "db87650c08304d039c9645438d60d3d454a4fbf60b1bab2390ea8f5179e115dd",
+    "source_pixel_sha256": "8e527a15a43cae8067d26d4d3cb1f9a083c794ba0d279b1905dbd56c993e43fb",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-001.png",
+    "role": "aquarium",
+    "added_on": "g3q/7693-7696-7695-7697",
+    "label": "Mounted aquarium and information plaque",
+    "family": "museum aquarium",
+    "reason": "Replace distorted depth with explicit supported display geometry and native source-local face/material paint."
+  },
+  "g3q/7639-7675-7676-7677": {
+    "source_ordinal": 9,
+    "baseline_entry_sha256": "c3fa6ce50b46a3ed599ed0a806149fc926639ea4c26da300c9b591d496f71f4b",
+    "source_pixel_sha256": "1305380c5baf56bc04cb493e88499e6b86a56f067438c81f6622baff74908fcc",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-001.png",
+    "role": "vent",
+    "x": 0,
+    "layer": 1,
+    "added_on": "g3q/7698-7699-7700-7701",
+    "label": "Circular grille with independent vertical bars",
+    "family": "museum vent",
+    "reason": "Replace distorted depth with explicit supported display geometry and native source-local face/material paint."
+  },
+  "g3q/7678-7639-7679-7680": {
+    "source_ordinal": 10,
+    "baseline_entry_sha256": "a1bb4557c4ece5d1127ca56c12550c9e22376f232ea273b2e689f524571767fb",
+    "source_pixel_sha256": "872148337a3e7d8319d9b94506731b4a0758f91231ab3406c75ed165644f4c92",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-001.png",
+    "role": "vent",
+    "x": 1,
+    "layer": 1,
+    "added_on": "g3q/7702-7703-7704-7705",
+    "label": "Circular grille with independent vertical bars",
+    "family": "museum vent",
+    "reason": "Replace distorted depth with explicit supported display geometry and native source-local face/material paint."
+  },
+  "g3q/7692-7693-7694-7695": {
+    "source_ordinal": 11,
+    "baseline_entry_sha256": "2f0d5b90ddd4580a6a7b27ba164655c735f312562268bc3a6227bd6c88f08904",
+    "source_pixel_sha256": "f2fa605ce47dcd64105b9adeb307f399007194e0553fc138a4db9a9f052b3b73",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-001.png",
+    "role": "aquarium",
+    "label": "Mounted aquarium and information plaque",
+    "family": "museum aquarium",
+    "reason": "Replace distorted depth with explicit supported display geometry and native source-local face/material paint."
+  },
+  "g3q/7693-7696-7695-7697": {
+    "source_ordinal": 12,
+    "baseline_entry_sha256": "15a4019dc4302d68d5ce9177fc44c0ba4f7ea9bfdf913847e7be437478f1d083",
+    "source_pixel_sha256": "4f9b6dd0e43142f2e1924d37ab87fc6a490b56037d06d612fe53a58cf9fe141c",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-001.png",
+    "role": "aquarium",
+    "label": "Mounted aquarium and information plaque",
+    "family": "museum aquarium",
+    "reason": "Replace distorted depth with explicit supported display geometry and native source-local face/material paint."
+  },
+  "g3q/7698-7699-7700-7701": {
+    "source_ordinal": 13,
+    "baseline_entry_sha256": "78b31c6a0f70bf23272d3af771de59a661974455379c43b9bffe646bdda4a986",
+    "source_pixel_sha256": "c0b5f69e27909fa06babe0d8f70eb002dfa7ab13f0d70785935366560873d6df",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-001.png",
+    "role": "vent",
+    "x": 0,
+    "layer": 0,
+    "label": "Circular grille with independent vertical bars",
+    "family": "museum vent",
+    "reason": "Replace distorted depth with explicit supported display geometry and native source-local face/material paint."
+  },
+  "g3q/7702-7703-7704-7705": {
+    "source_ordinal": 14,
+    "baseline_entry_sha256": "60c0beda736e3d37b7595c22cc03a3f4d6533aab5a887cf7f33814912d81f3fa",
+    "source_pixel_sha256": "a2ffd586e99af9903a9cf4937fd97c6d19ab8f2277c82c5087da94faf0453aea",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-001.png",
+    "role": "vent",
+    "x": 1,
+    "layer": 0,
+    "label": "Circular grille with independent vertical bars",
+    "family": "museum vent",
+    "reason": "Replace distorted depth with explicit supported display geometry and native source-local face/material paint."
+  },
+  "g3q/7711-7712-7713-7714": {
+    "source_ordinal": 15,
+    "baseline_entry_sha256": "de719d2aea9fb6fcec7e6ea2eb627a672eb6c79d0f4251b0b3df77e74f63794a",
+    "source_pixel_sha256": "c7d4e42eb6f65b92f76d553f16d78fbff2469ab187e7750e1fda9f6c8d0870f2",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-001.png",
+    "role": "small_case",
+    "layer": 1,
+    "material_rect": [
+      3,
+      5,
+      13,
+      16
+    ],
+    "label": "Small cylindrical glass exhibit case",
+    "family": "museum small_case",
+    "reason": "Replace distorted depth with explicit supported display geometry and native source-local face/material paint."
+  },
+  "g3q/7715-7716-7717-7718": {
+    "source_ordinal": 16,
+    "baseline_entry_sha256": "3ed6dd2599d7b3a285f1bec448f57f514ae8ca41191c419e9d5821827ca9f565",
+    "source_pixel_sha256": "56f0595e493f7224aa8599db9a44e24e3892a8182a46532b9382080609a9a95e",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-001.png",
+    "role": "information",
+    "layer": 1,
+    "material_rect": [
+      2,
+      5,
+      14,
+      16
+    ],
+    "label": "Supported glass-front information cabinet",
+    "family": "museum information",
+    "reason": "Replace distorted depth with explicit supported display geometry and native source-local face/material paint."
+  },
+  "g3q/7723-7724-7723-7724": {
+    "source_ordinal": 17,
+    "baseline_entry_sha256": "3a6201a6fa328826e0799737269b26a70d64bae2fb161cf42439539c36d60f8f",
+    "source_pixel_sha256": "a6bb770b420908dede7a7d7818b57ff53549daeac6d861f7a4b04f2aa5903bbe",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-002.png",
+    "role": "divider",
+    "label": "Long white-capped blue room divider",
+    "family": "museum divider",
+    "reason": "Retain four-row floor topology; use continuous blue side material and white top instead of unrelated source projections. No new on relationship."
+  },
+  "g3q/7725-7726-7727-7728": {
+    "source_ordinal": 18,
+    "baseline_entry_sha256": "0a1ede39ed1a418cd02fd9748ac81a7ce8f3a5c5fd25ce10f0df21bcd662da3d",
+    "source_pixel_sha256": "c7c15301cfa2fd2d4d5aac612a3b02e9afaa2106283f7a8011836a1d1dbfa0f8",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-002.png",
+    "role": "large_case",
+    "x": 0,
+    "layer": 1,
+    "added_on": "g3q/7748-7749-7750-7751",
+    "label": "Large cylindrical display with low projected base",
+    "family": "museum large_case",
+    "reason": "Build one rounded glass body and gold pedestal before slicing vertical halves and low floor toes; do not turn background wall or floor into cylinder."
+  },
+  "g3q/7729-7639-7730-7640": {
+    "source_ordinal": 19,
+    "baseline_entry_sha256": "f254bc8fedbc183974c1fc535441ef279eb16625eb4999c8a521170b8b13a295",
+    "source_pixel_sha256": "5297879e9c4dbfda57e575f729e08919a54d70ed44396d14a7d7f347520b657a",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-002.png",
+    "role": "large_case",
+    "x": 1,
+    "layer": 1,
+    "material_rect": [
+      0,
+      0,
+      7,
+      16
+    ],
+    "added_on": "g3q/7752-7651-7753-7652",
+    "label": "Large cylindrical display with low projected base",
+    "family": "museum large_case",
+    "reason": "Build one rounded glass body and gold pedestal before slicing vertical halves and low floor toes; do not turn background wall or floor into cylinder."
+  },
+  "g3q/7731-7732-7733-7734": {
+    "source_ordinal": 20,
+    "baseline_entry_sha256": "7900db4e6363785827454bd1604d3307366ac4d3843322c7d0d5f8b942456533",
+    "source_pixel_sha256": "037122c4642ea353862a998235b704026c2f127b633b57d79d13b084d080fe7d",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-002.png",
+    "role": "small_case",
+    "layer": 0,
+    "material_rect": [
+      3,
+      0,
+      13,
+      16
+    ],
+    "label": "Small cylindrical glass exhibit case",
+    "family": "museum small_case",
+    "reason": "Replace distorted depth with explicit supported display geometry and native source-local face/material paint."
+  },
+  "g3q/7735-7736-7737-7738": {
+    "source_ordinal": 21,
+    "baseline_entry_sha256": "7becccb609f2c138190a8f69b1cbef32a93ed12d68d8932c389832e396dfba0b",
+    "source_pixel_sha256": "13e4a410f6296763d4b251047174482a79dbb8678ae70bff9eea51f9897c7e49",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-002.png",
+    "role": "information",
+    "layer": 0,
+    "material_rect": [
+      2,
+      0,
+      14,
+      16
+    ],
+    "label": "Supported glass-front information cabinet",
+    "family": "museum information",
+    "reason": "Replace distorted depth with explicit supported display geometry and native source-local face/material paint."
+  },
+  "g3q/7739-7740-7741-7740": {
+    "source_ordinal": 22,
+    "baseline_entry_sha256": "e2e1f2ae1ab4607deb4f0c95ec10b1b16aa39c8ca10340113993032892efcb97",
+    "source_pixel_sha256": "89582db6340654977edc0172ad2554724bb948842e8648d8642fa8ad8b076c46",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-002.png",
+    "label": "Cream museum display table or service-counter section",
+    "family": "display furniture",
+    "reason": "Both complete U counters and both 4x2 specimen tables have coherent rims, supports and native surface paint. Retain fitted gallery geometry; actual COUNTER source cells follow native counter rendering, which is separately under runtime audit."
+  },
+  "g3q/7740-7742-7740-7743": {
+    "source_ordinal": 23,
+    "baseline_entry_sha256": "8f88099a9993d23fee5aca16210334084df960ba25f674146ab42f15150aba3d",
+    "source_pixel_sha256": "65f8f714a0e7c22f82225c63243ee9f96814c9c3f279cd1302a52b54b631af94",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-002.png",
+    "label": "Cream museum display table or service-counter section",
+    "family": "display furniture",
+    "reason": "Both complete U counters and both 4x2 specimen tables have coherent rims, supports and native surface paint. Retain fitted gallery geometry; actual COUNTER source cells follow native counter rendering, which is separately under runtime audit."
+  },
+  "g3q/7744-7745-7746-7747": {
+    "source_ordinal": 24,
+    "baseline_entry_sha256": "47ffaa9f12822d4abfd1d35cfc863c260e1697005ae201f651bb9e986ccede60",
+    "source_pixel_sha256": "6a427000e6a1ca7543ed602f5800f54978671a43ca882bc0146861d54b2dbbcc",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-002.png",
+    "role": "divider",
+    "label": "Long white-capped blue room divider",
+    "family": "museum divider",
+    "reason": "Retain four-row floor topology; use continuous blue side material and white top instead of unrelated source projections. No new on relationship."
+  },
+  "g3q/7748-7749-7750-7751": {
+    "source_ordinal": 25,
+    "baseline_entry_sha256": "2f56d3520282a69c85dea1fb7dccab3b92d7b6c337cb4eb6cd8561e6cef453d0",
+    "source_pixel_sha256": "236414c5e30b0f9034427b7fe3af2ccc69e329ebcfc537251860dbc2d397633c",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-002.png",
+    "role": "large_case",
+    "x": 0,
+    "layer": 0,
+    "label": "Large cylindrical display with low projected base",
+    "family": "museum large_case",
+    "reason": "Build one rounded glass body and gold pedestal before slicing vertical halves and low floor toes; do not turn background wall or floor into cylinder."
+  },
+  "g3q/7752-7651-7753-7652": {
+    "source_ordinal": 26,
+    "baseline_entry_sha256": "9b9c0b42fb3d50aafed2ea45e86b8acb55f9635dd5e31c753c17b8dfc0183367",
+    "source_pixel_sha256": "e387d39d27d5bda0c6f309569efbd239dd780ae1f68e3109e5b4d3eb8b5f29e5",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-002.png",
+    "role": "large_case",
+    "x": 1,
+    "layer": 0,
+    "material_rect": [
+      0,
+      0,
+      7,
+      16
+    ],
+    "label": "Large cylindrical display with low projected base",
+    "family": "museum large_case",
+    "reason": "Build one rounded glass body and gold pedestal before slicing vertical halves and low floor toes; do not turn background wall or floor into cylinder."
+  },
+  "g3q/7754-7755-7756-7757": {
+    "source_ordinal": 27,
+    "baseline_entry_sha256": "1b69d3d9a825332914f467a41307487d24606fe77150393cda32ac9a344214e8",
+    "source_pixel_sha256": "2543d6784841cf7b17466c522b89517ffe7b3a23756572dd2980dbcbf2bfbf88",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-002.png",
+    "label": "Museum miniature exhibit on its display support",
+    "family": "miniature exhibit",
+    "reason": "Whole ship, submarine/artifact and plinth previews retain recognizable supported silhouettes and native paint; no distortion warrants replacing existing hand geometry."
+  },
+  "g3q/7758-7759-7760-7761": {
+    "source_ordinal": 28,
+    "baseline_entry_sha256": "683d07a857d37244e8934b179bb99ebf904fa704749b9c0d85bb1d78fad6857c",
+    "source_pixel_sha256": "8b1c54e7220fb148edd90bd8567843df9464df5cd43a45341e7328ea1fd935c6",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-002.png",
+    "label": "Museum miniature exhibit on its display support",
+    "family": "miniature exhibit",
+    "reason": "Whole ship, submarine/artifact and plinth previews retain recognizable supported silhouettes and native paint; no distortion warrants replacing existing hand geometry."
+  },
+  "g3q/7762-7740-7763-7764": {
+    "source_ordinal": 29,
+    "baseline_entry_sha256": "5301009d000a4aae38126bc1dba1420e2913572b43432e0b807e06ba638d0a72",
+    "source_pixel_sha256": "34bce5e231b3f6525dab026d955cbac3e3272e501a8f0d63d6c80a7ae14c90b9",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-002.png",
+    "label": "Cream museum display table or service-counter section",
+    "family": "display furniture",
+    "reason": "Both complete U counters and both 4x2 specimen tables have coherent rims, supports and native surface paint. Retain fitted gallery geometry; actual COUNTER source cells follow native counter rendering, which is separately under runtime audit."
+  },
+  "g3q/7740-7740-7764-7764": {
+    "source_ordinal": 30,
+    "baseline_entry_sha256": "ca666392f267eb4e5ee26c118f94dc0ea77f85d7e1f2b0108224143ae49b6302",
+    "source_pixel_sha256": "450d70c31987dcc8a5171b05733af0e29f53503b82bfdd2b65f9586423fd7028",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-002.png",
+    "label": "Cream museum display table or service-counter section",
+    "family": "display furniture",
+    "reason": "Both complete U counters and both 4x2 specimen tables have coherent rims, supports and native surface paint. Retain fitted gallery geometry; actual COUNTER source cells follow native counter rendering, which is separately under runtime audit. Add the explicit Emerald counter render opt-in for every source COUNTER144 occurrence. Reviewed voxel geometry is unchanged; the normal planner retains one collision block and places any raised lip on a second noncolliding carrier.",
+    "render_on_counter": true
+  },
+  "g3q/7740-7765-7764-7766": {
+    "source_ordinal": 31,
+    "baseline_entry_sha256": "b6a4a2e0fe826ad007675be125e87299c66f3afd17f790849d08358e01f1423d",
+    "source_pixel_sha256": "dd92b1857c4a73a4a63dc8a880652285cf80c4b32dca1a5b2bc4eee73dde017e",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-002.png",
+    "label": "Cream museum display table or service-counter section",
+    "family": "display furniture",
+    "reason": "Both complete U counters and both 4x2 specimen tables have coherent rims, supports and native surface paint. Retain fitted gallery geometry; actual COUNTER source cells follow native counter rendering, which is separately under runtime audit."
+  },
+  "g3q/7767-7768-7769-7770": {
+    "source_ordinal": 32,
+    "baseline_entry_sha256": "af153d1bd5fa3e1e887aed17e294d99902683eed3a0c60397759d29b72189587",
+    "source_pixel_sha256": "80a2808b515acf3fb5ba6457ccf512348a642ce28f42473b980c9c36f306a2ca",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-002.png",
+    "role": "divider",
+    "label": "Long white-capped blue room divider",
+    "family": "museum divider",
+    "reason": "Retain four-row floor topology; use continuous blue side material and white top instead of unrelated source projections. No new on relationship."
+  },
+  "g3q/7771-7772-7637-7638": {
+    "source_ordinal": 33,
+    "baseline_entry_sha256": "ce9656a7d91fe44b59267637454f398359f6aa2309d859d1f8124249719d088c",
+    "source_pixel_sha256": "6e2eda199cd2c4203bbe04f30775179802613bf752ccd0fd89c715f9721557f7",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-003.png",
+    "role": "large_case",
+    "x": 0,
+    "layer": 0,
+    "z": 1,
+    "material_rect": [
+      0,
+      0,
+      16,
+      5
+    ],
+    "render_on_walk": true,
+    "label": "Large cylindrical display with low projected base",
+    "family": "museum large_case",
+    "reason": "Build one rounded glass body and gold pedestal before slicing vertical halves and low floor toes; do not turn background wall or floor into cylinder."
+  },
+  "g3q/7773-7636-7637-7638": {
+    "source_ordinal": 34,
+    "baseline_entry_sha256": "be2d2f3f3fe3f4b497673c133f0028dbc965dd32e2353c5aa76772ead1538314",
+    "source_pixel_sha256": "351ed0c7b868dc829a9d23444f304ee9cd2e527407f70fac12e967344629c0dc",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-003.png",
+    "role": "large_case",
+    "x": 1,
+    "layer": 0,
+    "z": 1,
+    "material_rect": [
+      0,
+      0,
+      7,
+      5
+    ],
+    "render_on_walk": true,
+    "label": "Large cylindrical display with low projected base",
+    "family": "museum large_case",
+    "reason": "Build one rounded glass body and gold pedestal before slicing vertical halves and low floor toes; do not turn background wall or floor into cylinder."
+  },
+  "g3q/7774-7775-7741-7776": {
+    "source_ordinal": 35,
+    "baseline_entry_sha256": "7b5958f7892425dcac170c2434ff7df228b175cb997cdb9ed772b1a036eebd1d",
+    "source_pixel_sha256": "5bcb127a82854bb08a88346fe442605047ec8ad0179a3b75e9c2e01455d9c16e",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-003.png",
+    "label": "Museum miniature exhibit on its display support",
+    "family": "miniature exhibit",
+    "reason": "Whole ship, submarine/artifact and plinth previews retain recognizable supported silhouettes and native paint; no distortion warrants replacing existing hand geometry."
+  },
+  "g3q/7777-7778-7779-7780": {
+    "source_ordinal": 36,
+    "baseline_entry_sha256": "d04acb07cf3aa09301ab2d1af42897637776312f1b510da9248813aa747bfc91",
+    "source_pixel_sha256": "cab02e71d1131de7e0dd2df9592a81d20c044dafbbda974e9afb22805a76a917",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-003.png",
+    "label": "Museum miniature exhibit on its display support",
+    "family": "miniature exhibit",
+    "reason": "Whole ship, submarine/artifact and plinth previews retain recognizable supported silhouettes and native paint; no distortion warrants replacing existing hand geometry."
+  },
+  "g3q/7741-7743-7741-7743": {
+    "source_ordinal": 37,
+    "baseline_entry_sha256": "bff4dfa9177c03e701dda936d29659a91c31547ffd74051b37b13e34e4843463",
+    "source_pixel_sha256": "29a6ceaab2eb5764a3031a9a9643e67ff1d3958afd2197a00250cd8e465e2fa6",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-003.png",
+    "label": "Cream museum display table or service-counter section",
+    "family": "display furniture",
+    "reason": "Both complete U counters and both 4x2 specimen tables have coherent rims, supports and native surface paint. Retain fitted gallery geometry; actual COUNTER source cells follow native counter rendering, which is separately under runtime audit. Add the explicit Emerald counter render opt-in for every source COUNTER144 occurrence. Reviewed voxel geometry is unchanged; the normal planner retains one collision block and places any raised lip on a second noncolliding carrier.",
+    "render_on_counter": true
+  },
+  "g3q/7781-7782-7783-7784": {
+    "source_ordinal": 38,
+    "baseline_entry_sha256": "e9dbf274d9fd45591926adf5164546ecf6a5d4756934f371a92717611be6da56",
+    "source_pixel_sha256": "6115823a4c2fae416eeba32fdb7cc17894c6ef2ddb3ed55262cfe7c435f2684c",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-003.png",
+    "label": "Museum miniature exhibit on its display support",
+    "family": "miniature exhibit",
+    "reason": "Whole ship, submarine/artifact and plinth previews retain recognizable supported silhouettes and native paint; no distortion warrants replacing existing hand geometry."
+  },
+  "g3q/7740-7788-7764-7764": {
+    "source_ordinal": 39,
+    "baseline_entry_sha256": "fabcc10fbd8fce8c70a37f14f5ee52eb75afd981decdef10c5c3bc5cfe4fb22d",
+    "source_pixel_sha256": "2da515073c07d88cdfc52d121d6f494c4d1853d0dd62d7c9f321c7705fff17e4",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-003.png",
+    "label": "Cream museum display table or service-counter section",
+    "family": "display furniture",
+    "reason": "Both complete U counters and both 4x2 specimen tables have coherent rims, supports and native surface paint. Retain fitted gallery geometry; actual COUNTER source cells follow native counter rendering, which is separately under runtime audit. Add the explicit Emerald counter render opt-in for every source COUNTER144 occurrence. Reviewed voxel geometry is unchanged; the normal planner retains one collision block and places any raised lip on a second noncolliding carrier.",
+    "render_on_counter": true
+  },
+  "g3q/7788-7789-7764-7764": {
+    "source_ordinal": 40,
+    "baseline_entry_sha256": "88c4ef0114c85e5d6e05a6277ead91ca05419acac67fd5940377055e9701aecf",
+    "source_pixel_sha256": "ac6716e0d16debf6efe8fee0672c6c5c017a9d7371a656e356039963e5f873ea",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-003.png",
+    "label": "Cream museum display table or service-counter section",
+    "family": "display furniture",
+    "reason": "Both complete U counters and both 4x2 specimen tables have coherent rims, supports and native surface paint. Retain fitted gallery geometry; actual COUNTER source cells follow native counter rendering, which is separately under runtime audit. Add the explicit Emerald counter render opt-in for every source COUNTER144 occurrence. Reviewed voxel geometry is unchanged; the normal planner retains one collision block and places any raised lip on a second noncolliding carrier.",
+    "render_on_counter": true
+  },
+  "g3q/7631-7632-7796-7797": {
+    "source_ordinal": 41,
+    "baseline_entry_sha256": "6f8c135f702ad8ba7b2d3c07d33148bbda493064c53ceaf0c6af6e037aff9083",
+    "source_pixel_sha256": "3e27551f1accf0f07664a77e72a2003240089cfc872130d8b946c280d9b61880",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-003.png",
+    "role": "pc",
+    "x": 0,
+    "layer": 1,
+    "added_on": "g3q/7812-7813-7814-7815",
+    "label": "Museum information computer and keyboard cabinet",
+    "family": "museum pc",
+    "reason": "Build a supported monitor and keyboard cabinet as one object, excluding upper carpet and the right-hand floor field. Exact source adjacency supports the upper monitor stack."
+  },
+  "g3q/7631-7632-7798-7634": {
+    "source_ordinal": 42,
+    "baseline_entry_sha256": "47a44a6b93cc3552de9c78b18ed30863318679eacbf2fdc81ac2794110ea7751",
+    "source_pixel_sha256": "c67ff841d1a4cc6ea001dbe50772143643936048ff51381a8edd30d9acb6dab8",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-003.png",
+    "role": "pc",
+    "x": 1,
+    "layer": 1,
+    "material_rect": [
+      0,
+      13,
+      5,
+      16
+    ],
+    "added_on": "g3q/7816-7636-7817-7638",
+    "label": "Museum information computer and keyboard cabinet",
+    "family": "museum pc",
+    "reason": "Build a supported monitor and keyboard cabinet as one object, excluding upper carpet and the right-hand floor field. Exact source adjacency supports the upper monitor stack."
+  },
+  "g3q/7739-7740-7741-7799": {
+    "source_ordinal": 43,
+    "baseline_entry_sha256": "0fd440d20c8bd1f1fa8460c77247f0ab19ff1e0c1dc33cd79f258fd7385ad3ab",
+    "source_pixel_sha256": "9917c8e18603d830a0217cb66dd886b0af7c18acd2f77c4569c8f7b5359cc4af",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-003.png",
+    "label": "Cream museum display table or service-counter section",
+    "family": "display furniture",
+    "reason": "Both complete U counters and both 4x2 specimen tables have coherent rims, supports and native surface paint. Retain fitted gallery geometry; actual COUNTER source cells follow native counter rendering, which is separately under runtime audit."
+  },
+  "g3q/7740-7742-7800-7743": {
+    "source_ordinal": 44,
+    "baseline_entry_sha256": "406648c81da88d59e8f3cceaeb1976572b7ef18fcde59f80fbdc34d34db26cee",
+    "source_pixel_sha256": "08f241a2013471f314f3cc8ff217c2b311a3f46367a0a6fa211a4241159f7eae",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-003.png",
+    "label": "Cream museum display table or service-counter section",
+    "family": "display furniture",
+    "reason": "Both complete U counters and both 4x2 specimen tables have coherent rims, supports and native surface paint. Retain fitted gallery geometry; actual COUNTER source cells follow native counter rendering, which is separately under runtime audit."
+  },
+  "g3q/7801-7639-7802-7640": {
+    "source_ordinal": 45,
+    "baseline_entry_sha256": "78176bd9287fed9b0e088a4e60317a2d2ffd7d713dd20ae1774e2283504be800",
+    "source_pixel_sha256": "d0ee58896f1ded03bf72b0908f687c21f26aaa01d307c36688f84f9c9399bfe0",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-003.png",
+    "label": "Museum stair opening and architectural jamb",
+    "family": "stairway",
+    "reason": "Both complete 3x2 stair assemblies have coherent open thresholds, distinct treads and aligned jambs in front, side and angled previews."
+  },
+  "g3q/7804-7805-7806-7807": {
+    "source_ordinal": 46,
+    "baseline_entry_sha256": "6d7975bbf77bd06af6499dc4709c9e411264b9f1466fbe2164fbd7f1f0d7626f",
+    "source_pixel_sha256": "5ba92dac1b22769c7399db17fb7b67ace2853c777a4e92b2615a0a0b639a1e85",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-003.png",
+    "label": "Museum miniature exhibit on its display support",
+    "family": "miniature exhibit",
+    "reason": "Whole ship, submarine/artifact and plinth previews retain recognizable supported silhouettes and native paint; no distortion warrants replacing existing hand geometry."
+  },
+  "g3q/7808-7809-7810-7811": {
+    "source_ordinal": 47,
+    "baseline_entry_sha256": "af02ef427d9ace98f2b61c514b348b445f61f8d5e8ab1cb7584cd6e8ec54db91",
+    "source_pixel_sha256": "133f57668652104469959777f2183986d8a8a57c819a3ca04d755c2e97431251",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-003.png",
+    "label": "Museum miniature exhibit on its display support",
+    "family": "miniature exhibit",
+    "reason": "Whole ship, submarine/artifact and plinth previews retain recognizable supported silhouettes and native paint; no distortion warrants replacing existing hand geometry."
+  },
+  "g3q/7812-7813-7814-7815": {
+    "source_ordinal": 48,
+    "baseline_entry_sha256": "479f3003bfa19db142a13359f66136bfc9e6087d110b579dd8f1fae8406a2c7a",
+    "source_pixel_sha256": "cf06a5a478a8e18aba1c47b79f8fff8fb8f5444d446fa7abb0987646f8f2719c",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-003.png",
+    "role": "pc",
+    "x": 0,
+    "layer": 0,
+    "label": "Museum information computer and keyboard cabinet",
+    "family": "museum pc",
+    "reason": "Build a supported monitor and keyboard cabinet as one object, excluding upper carpet and the right-hand floor field. Exact source adjacency supports the upper monitor stack."
+  },
+  "g3q/7816-7636-7817-7638": {
+    "source_ordinal": 49,
+    "baseline_entry_sha256": "c679c3f200aac5156b797f47d9d5462e988c0913ca550fbc08e8c480c77f087d",
+    "source_pixel_sha256": "a7cb57c94975257783aa9a043b8834b54eaddbd6fdbbec07415f613cafa1079b",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-004.png",
+    "role": "pc",
+    "x": 1,
+    "layer": 0,
+    "material_rect": [
+      0,
+      0,
+      5,
+      14
+    ],
+    "label": "Museum information computer and keyboard cabinet",
+    "family": "museum pc",
+    "reason": "Build a supported monitor and keyboard cabinet as one object, excluding upper carpet and the right-hand floor field. Exact source adjacency supports the upper monitor stack."
+  },
+  "g3q/7639-7818-7640-7819": {
+    "source_ordinal": 50,
+    "baseline_entry_sha256": "b01604e6ce4f5630f1b5a16952e950abe0ce067d0fb99fe55590c2043fceea6b",
+    "source_pixel_sha256": "0c494cf807f2fe9168aba4721da0fd8ff5fc7285119bd6535eef416d30ee4ec9",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-004.png",
+    "label": "Museum stair opening and architectural jamb",
+    "family": "stairway",
+    "reason": "Both complete 3x2 stair assemblies have coherent open thresholds, distinct treads and aligned jambs in front, side and angled previews."
+  },
+  "g3q/7651-7819-7652-7820": {
+    "source_ordinal": 51,
+    "baseline_entry_sha256": "dd16ce961c89a5ad083310d54187e9b11437a13eee7921d6a31962c35fd8d73d",
+    "source_pixel_sha256": "4fc4a4ab51ae6946f6755eea6191e76515998dcdab9a74deeba0d38c703b9ac2",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-004.png",
+    "label": "Museum stair opening and architectural jamb",
+    "family": "stairway",
+    "reason": "Both complete 3x2 stair assemblies have coherent open thresholds, distinct treads and aligned jambs in front, side and angled previews."
+  },
+  "g3q/7821-7651-7822-7652": {
+    "source_ordinal": 52,
+    "baseline_entry_sha256": "cd73e951b55a0cfb4a60d01ae503ce091faaed8ca811f256ebd647ddb386bb3e",
+    "source_pixel_sha256": "dc40aa48648512eff1e8c294596c840beebd9c91cd21a76f14c56c42d56750dc",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-004.png",
+    "label": "Museum stair opening and architectural jamb",
+    "family": "stairway",
+    "reason": "Both complete 3x2 stair assemblies have coherent open thresholds, distinct treads and aligned jambs in front, side and angled previews."
+  },
+  "g3q/7762-7765-7763-7766": {
+    "source_ordinal": 53,
+    "baseline_entry_sha256": "e6c4d4b26c9592942e7715c58a4b105438b7f06b843f4d52f559aa4cf0027e0c",
+    "source_pixel_sha256": "8a78eea8644d5072bae97dfbe86a6befe96c151a621267ab90281d2dbb841f56",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-004.png",
+    "label": "Cream museum display table or service-counter section",
+    "family": "display furniture",
+    "reason": "Both complete U counters and both 4x2 specimen tables have coherent rims, supports and native surface paint. Retain fitted gallery geometry; actual COUNTER source cells follow native counter rendering, which is separately under runtime audit."
+  },
+  "g3q/7639-7818-7640-7823": {
+    "source_ordinal": 54,
+    "baseline_entry_sha256": "0ccdb7475731f47c4c7ae44add5e410f138da2636be5ad1648b24aaa5aff0c40",
+    "source_pixel_sha256": "fd5012a8a7886a8c33f9b8db92fa9fc798eda56b3bd82fbc72d04b2af65ad22f",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-004.png",
+    "label": "Museum stair opening and architectural jamb",
+    "family": "stairway",
+    "reason": "Both complete 3x2 stair assemblies have coherent open thresholds, distinct treads and aligned jambs in front, side and angled previews."
+  },
+  "g3q/7651-7824-7652-7825": {
+    "source_ordinal": 55,
+    "baseline_entry_sha256": "aadaab6599c709e1fcc1128d0b8ff52fc24ac72b643337d1fc08edbd4ea78127",
+    "source_pixel_sha256": "8e706cd831fe0aadaf1998589517138cdadf761da8539cef573f0a36b14d83e7",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-004.png",
+    "label": "Museum stair opening and architectural jamb",
+    "family": "stairway",
+    "reason": "Both complete 3x2 stair assemblies have coherent open thresholds, distinct treads and aligned jambs in front, side and angled previews."
+  },
+  "g3q/7801-7639-7826-7640": {
+    "source_ordinal": 56,
+    "baseline_entry_sha256": "b4e058a8911c22154332cbec8bd46d9dbdbb2cbca49bead0ca99d2f59a0b391e",
+    "source_pixel_sha256": "579c1a5322a363b8bb21f7d11166f18fa1b43c9e2f226b942be825de67a93298",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-004.png",
+    "label": "Museum stair opening and architectural jamb",
+    "family": "stairway",
+    "reason": "Both complete 3x2 stair assemblies have coherent open thresholds, distinct treads and aligned jambs in front, side and angled previews."
+  },
+  "g3q/7827-7651-7828-7652": {
+    "source_ordinal": 57,
+    "baseline_entry_sha256": "739e0372b41e5f92793f4bc789e4ede67fffd31bffba8f74123d84dd3469f19f",
+    "source_pixel_sha256": "41bd92a86ca789ec6f31914cbc0eb822a1f668bd9c23d66855caf69a687d9b73",
+    "source_context": "museums-clubs-study/context/building__oceanic_museum/page-004.png",
+    "label": "Museum stair opening and architectural jamb",
+    "family": "stairway",
+    "reason": "Both complete 3x2 stair assemblies have coherent open thresholds, distinct treads and aligned jambs in front, side and angled previews."
+  }
+}

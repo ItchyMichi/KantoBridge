@@ -15,6 +15,10 @@ Pokémon Red/Blue's story runs in a **hidden Gen1Recomp**. It is displayed and p
   defaults. [`docs/PROGRESS.md`](docs/PROGRESS.md) records where execution stands (milestones,
   spikes, deviations, open issues, blocked questions), and [`docs/PLAYTEST.md`](docs/PLAYTEST.md)
   is the user's manual checklist.
+- [`docs/MODEL_AUTHORING_WORKFLOW.md`](docs/MODEL_AUTHORING_WORKFLOW.md) records the accepted sprite/scenery and building
+  improvement process. [`docs/EMERALD_MODEL_HANDOFF.md`](docs/EMERALD_MODEL_HANDOFF.md) is the context-reset handoff for the
+  next Emerald pass: approved checkpoints, current inventory, commands, gallery limitations and unfinished work.
+  [`docs/MODEL_HISTORY.md`](docs/MODEL_HISTORY.md) covers the user's required per-model rollback history.
 - [`docs/specs/VOXEL_BLOCKS_PLAN.md`](docs/specs/VOXEL_BLOCKS_PLAN.md) is the voxel plan (V1–V9: the blocks'
   runtime model, shapes, story art in the mesh, texture packs, structures and dressing, characters), executed and
   recorded in PROGRESS.md's "Voxel plan" sections. [`docs/PACKS.md`](docs/PACKS.md) is the texture-pack format

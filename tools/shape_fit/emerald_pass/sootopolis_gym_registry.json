@@ -1,0 +1,639 @@
+{
+  "schema": 1,
+  "entries": [
+    {
+      "key": "g3q/9398-9399-9400-9401",
+      "group": "building__sootopolis_gym",
+      "label": "Blue ice-puzzle boulder",
+      "family": "Sootopolis gym fixture",
+      "recipe": null,
+      "reason": "Retain the asymmetric rounded boulder with sloped shoulders and native blue facets; source and front/side/top geometry agree and no upright ice-floor plane remains.",
+      "baseline_entry_sha256": "e278c12cd1175a839e611d78b5cfee81212d1e7be0582763aab2433b2ed43b2f",
+      "source_contact": "../inventory/building__sootopolis_gym/page-001.png",
+      "source_card": 1,
+      "assemblies": []
+    },
+    {
+      "key": "g3q/9402-9403-9404-9405",
+      "group": "building__sootopolis_gym",
+      "label": "Purple dais southwest rounded edge",
+      "family": "Sootopolis gym fixture",
+      "recipe": "platform_0_1",
+      "reason": "Angled review showed the old floor artwork stretched onto slab fronts, with the mint checkerboard missing from the top. Author this slice from one low rounded violet platform, shallow front steps and source checkerboard paint on its upper surface. Explicit walk rendering preserves the actual WALK0 placement without changing collision.",
+      "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+      "source_contact": "../inventory/building__sootopolis_gym/page-001.png",
+      "source_card": 2,
+      "assemblies": [
+        "emerald_sootopolis_dais"
+      ],
+      "render_on_walk": true
+    },
+    {
+      "key": "g3q/9403-9406-9407-9408",
+      "group": "building__sootopolis_gym",
+      "label": "Purple dais southeast rounded edge",
+      "family": "Sootopolis gym fixture",
+      "recipe": "platform_4_1",
+      "reason": "Angled review showed the old floor artwork stretched onto slab fronts, with the mint checkerboard missing from the top. Author this slice from one low rounded violet platform, shallow front steps and source checkerboard paint on its upper surface. Explicit walk rendering preserves the actual WALK0 placement without changing collision.",
+      "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+      "source_contact": "../inventory/building__sootopolis_gym/page-001.png",
+      "source_card": 3,
+      "assemblies": [
+        "emerald_sootopolis_dais"
+      ],
+      "render_on_walk": true
+    },
+    {
+      "key": "g3q/9413-9414-9413-9414",
+      "group": "building__sootopolis_gym",
+      "label": "Projected entry stair treads",
+      "family": "Sootopolis gym fixture",
+      "recipe": "ice_floor",
+      "reason": "The two source rows repeat the same short horizontal tread strip on WALK0 cells. Move the tread artwork from the old slab front onto a one-voxel horizontal surface; ordinary world floor remains flat and no rising chain or collision is invented.",
+      "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+      "source_contact": "../inventory/building__sootopolis_gym/page-001.png",
+      "source_card": 4,
+      "assemblies": [
+        "emerald_sootopolis_entry_treads"
+      ]
+    },
+    {
+      "key": "g3q/9419-9420-9425-9426",
+      "group": "building__sootopolis_gym",
+      "label": "Cliff projection above the basement ladder",
+      "family": "Sootopolis gym fixture",
+      "recipe": null,
+      "reason": "Source shows blue cave wall around the two upper ladder tips. This WALK0 source row has no walk/seat flag; the existing on link cannot terminate on the WALK warp base, so runtime clears its temporary projection. Preserve that behavior and show the actual rung base as the complete physical ladder with this row only in its reference.",
+      "baseline_entry_sha256": "351eeff9d3f48764ba53a7823bf01f46908b3a728e076cd9c656d06bd563d022",
+      "source_contact": "../inventory/building__sootopolis_gym/page-001.png",
+      "source_card": 5,
+      "assemblies": [
+        "emerald_sootopolis_basement_ladder"
+      ]
+    },
+    {
+      "key": "g3q/9435-9436-9437-9438",
+      "group": "building__sootopolis_gym",
+      "label": "Flat ice crossing surface",
+      "family": "Sootopolis gym fixture",
+      "recipe": "ice_floor",
+      "reason": "The white diagonal glints are paint on the walkable ice crossing, not an upright screen. Keep them on a one-voxel horizontal source-painted plane; ordinary world floor remains unchanged.",
+      "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+      "source_contact": "../inventory/building__sootopolis_gym/page-001.png",
+      "source_card": 6,
+      "assemblies": [
+        "emerald_sootopolis_ice_crossing"
+      ]
+    },
+    {
+      "key": "g3q/9448-9449-9450-9451",
+      "group": "building__sootopolis_gym",
+      "label": "Basement warp ladder rungs",
+      "family": "Sootopolis gym fixture",
+      "recipe": null,
+      "reason": "Retain the already walk-enabled open metal ladder with two rails and separate rungs, including its warp behavior. Its source cliff backdrop is reference art, not a tall stack on the walkable landing.",
+      "baseline_entry_sha256": "5f41f03b905942ba036197d9720bd453a3c167558ff1a5988093684839050b82",
+      "source_contact": "../inventory/building__sootopolis_gym/page-001.png",
+      "source_card": 7,
+      "assemblies": [
+        "emerald_sootopolis_basement_ladder"
+      ]
+    },
+    {
+      "key": "g3q/9454-9455-9400-9401",
+      "group": "building__sootopolis_gym",
+      "label": "Ice boulder over dark ice variant",
+      "family": "Sootopolis gym fixture",
+      "recipe": null,
+      "reason": "Retain the same coherent sloped blue rock silhouette with its source-specific dark surrounding ice; the occupied boulder stays rounded in side and top views.",
+      "baseline_entry_sha256": "e278c12cd1175a839e611d78b5cfee81212d1e7be0582763aab2433b2ed43b2f",
+      "source_contact": "../inventory/building__sootopolis_gym/page-001.png",
+      "source_card": 8,
+      "assemblies": []
+    },
+    {
+      "key": "g3q/9456-9457-3262-3263",
+      "group": "building__sootopolis_gym",
+      "label": "Sootopolis entrance statue globe",
+      "family": "Sootopolis gym fixture",
+      "recipe": "statue_1",
+      "reason": "Replace the flat-backed source extrusion with the complete gym stone globe, collar and plinth, using native stone materials without cyan floor corners.",
+      "baseline_entry_sha256": "6e5553341bdac773d0a0dc567895dba8a40af8555572a504e37120314829b814",
+      "source_contact": "../inventory/building__sootopolis_gym/page-001.png",
+      "source_card": 9,
+      "assemblies": [
+        "emerald_sootopolis_statue"
+      ]
+    },
+    {
+      "key": "g3q/3267-3268-9468-9469",
+      "group": "building__sootopolis_gym",
+      "label": "Sootopolis entrance statue pedestal",
+      "family": "Sootopolis gym fixture",
+      "recipe": "statue_0",
+      "reason": "A stepped gray foot, native plaque and continuous plinth support the repaired globe; preserve exact on/collision relationships.",
+      "baseline_entry_sha256": "0d0bedd765cd29cd7f5b3d0170e974f3b42b8b9b9471c016b1f439ff7a1d611e",
+      "source_contact": "../inventory/building__sootopolis_gym/page-001.png",
+      "source_card": 10,
+      "assemblies": [
+        "emerald_sootopolis_statue"
+      ]
+    },
+    {
+      "key": "g3q/9479-9480-9403-9481",
+      "group": "building__sootopolis_gym",
+      "label": "Purple dais north-left mint inset",
+      "family": "Sootopolis gym fixture",
+      "recipe": "platform_1_0",
+      "reason": "Angled review showed the old floor artwork stretched onto slab fronts, with the mint checkerboard missing from the top. Author this slice from one low rounded violet platform, shallow front steps and source checkerboard paint on its upper surface. Explicit walk rendering preserves the actual WALK0 placement without changing collision.",
+      "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+      "source_contact": "../inventory/building__sootopolis_gym/page-001.png",
+      "source_card": 11,
+      "assemblies": [
+        "emerald_sootopolis_dais"
+      ],
+      "render_on_walk": true
+    },
+    {
+      "key": "g3q/9482-9480-9481-9483",
+      "group": "building__sootopolis_gym",
+      "label": "Purple dais mint center",
+      "family": "Sootopolis gym fixture",
+      "recipe": "platform_2_0",
+      "reason": "Angled review showed the old floor artwork stretched onto slab fronts, with the mint checkerboard missing from the top. Author this slice from one low rounded violet platform, shallow front steps and source checkerboard paint on its upper surface. Explicit walk rendering preserves the actual WALK0 placement without changing collision.",
+      "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+      "source_contact": "../inventory/building__sootopolis_gym/page-001.png",
+      "source_card": 12,
+      "assemblies": [
+        "emerald_sootopolis_dais"
+      ],
+      "render_on_walk": true
+    },
+    {
+      "key": "g3q/9482-9484-9483-9403",
+      "group": "building__sootopolis_gym",
+      "label": "Purple dais north-right mint inset",
+      "family": "Sootopolis gym fixture",
+      "recipe": "platform_3_0",
+      "reason": "Angled review showed the old floor artwork stretched onto slab fronts, with the mint checkerboard missing from the top. Author this slice from one low rounded violet platform, shallow front steps and source checkerboard paint on its upper surface. Explicit walk rendering preserves the actual WALK0 placement without changing collision.",
+      "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+      "source_contact": "../inventory/building__sootopolis_gym/page-001.png",
+      "source_card": 13,
+      "assemblies": [
+        "emerald_sootopolis_dais"
+      ],
+      "render_on_walk": true
+    },
+    {
+      "key": "g3q/9493-9484-9494-9403",
+      "group": "building__sootopolis_gym",
+      "label": "Purple dais northwest rounded edge",
+      "family": "Sootopolis gym fixture",
+      "recipe": "platform_0_0",
+      "reason": "Angled review showed the old floor artwork stretched onto slab fronts, with the mint checkerboard missing from the top. Author this slice from one low rounded violet platform, shallow front steps and source checkerboard paint on its upper surface. Explicit walk rendering preserves the actual WALK0 placement without changing collision.",
+      "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+      "source_contact": "../inventory/building__sootopolis_gym/page-001.png",
+      "source_card": 14,
+      "assemblies": [
+        "emerald_sootopolis_dais"
+      ],
+      "render_on_walk": true
+    },
+    {
+      "key": "g3q/9403-9403-9407-9495",
+      "group": "building__sootopolis_gym",
+      "label": "Purple dais south-left step",
+      "family": "Sootopolis gym fixture",
+      "recipe": "platform_1_1",
+      "reason": "Angled review showed the old floor artwork stretched onto slab fronts, with the mint checkerboard missing from the top. Author this slice from one low rounded violet platform, shallow front steps and source checkerboard paint on its upper surface. Explicit walk rendering preserves the actual WALK0 placement without changing collision.",
+      "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+      "source_contact": "../inventory/building__sootopolis_gym/page-001.png",
+      "source_card": 15,
+      "assemblies": [
+        "emerald_sootopolis_dais"
+      ],
+      "render_on_walk": true
+    },
+    {
+      "key": "g3q/9403-9403-9496-9496",
+      "group": "building__sootopolis_gym",
+      "label": "Purple dais central entry step",
+      "family": "Sootopolis gym fixture",
+      "recipe": "platform_2_1",
+      "reason": "Angled review showed the old floor artwork stretched onto slab fronts, with the mint checkerboard missing from the top. Author this slice from one low rounded violet platform, shallow front steps and source checkerboard paint on its upper surface. Explicit walk rendering preserves the actual WALK0 placement without changing collision.",
+      "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+      "source_contact": "../inventory/building__sootopolis_gym/page-001.png",
+      "source_card": 16,
+      "assemblies": [
+        "emerald_sootopolis_dais"
+      ],
+      "render_on_walk": true
+    },
+    {
+      "key": "g3q/9403-9403-9497-9405",
+      "group": "building__sootopolis_gym",
+      "label": "Purple dais south-right step",
+      "family": "Sootopolis gym fixture",
+      "recipe": "platform_3_1",
+      "reason": "Angled review showed the old floor artwork stretched onto slab fronts, with the mint checkerboard missing from the top. Author this slice from one low rounded violet platform, shallow front steps and source checkerboard paint on its upper surface. Explicit walk rendering preserves the actual WALK0 placement without changing collision.",
+      "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+      "source_contact": "../inventory/building__sootopolis_gym/page-001.png",
+      "source_card": 17,
+      "assemblies": [
+        "emerald_sootopolis_dais"
+      ],
+      "render_on_walk": true
+    },
+    {
+      "key": "g3q/9479-9502-9403-9503",
+      "group": "building__sootopolis_gym",
+      "label": "Purple dais northeast rounded edge",
+      "family": "Sootopolis gym fixture",
+      "recipe": "platform_4_0",
+      "reason": "Angled review showed the old floor artwork stretched onto slab fronts, with the mint checkerboard missing from the top. Author this slice from one low rounded violet platform, shallow front steps and source checkerboard paint on its upper surface. Explicit walk rendering preserves the actual WALK0 placement without changing collision.",
+      "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+      "source_contact": "../inventory/building__sootopolis_gym/page-001.png",
+      "source_card": 18,
+      "assemblies": [
+        "emerald_sootopolis_dais"
+      ],
+      "render_on_walk": true
+    },
+    {
+      "key": "g3q/9423-9423-9548-9549",
+      "group": "building__sootopolis_gym",
+      "label": "Crystal ornament upper tip",
+      "family": "Sootopolis gym fixture",
+      "recipe": "crystal_1",
+      "reason": "Remove the large white room-wall slab from the upper model. This slice contains only the native-blue apex of the complete three-spire crystal ornament.",
+      "baseline_entry_sha256": "1f96c8939d226c7b8b08e1349f3881871c2f8b047d9b58b51e90404604510a4b",
+      "source_contact": "../inventory/building__sootopolis_gym/page-001.png",
+      "source_card": 19,
+      "assemblies": [
+        "emerald_sootopolis_crystal"
+      ]
+    },
+    {
+      "key": "g3q/9554-9555-9556-9557",
+      "group": "building__sootopolis_gym",
+      "label": "Crystal ornament and stepped plinth",
+      "family": "Sootopolis gym fixture",
+      "recipe": "crystal_0",
+      "reason": "Build three separate faceted blue crystal spires on a shallow purple plinth, continuous with the existing upper-tip on stack; wall and floor paint do not become vertical backing.",
+      "baseline_entry_sha256": "f9b015c5702d9c5e84a8c9e194ed4c2eb1521667f31b86161d057f43a0087152",
+      "source_contact": "../inventory/building__sootopolis_gym/page-001.png",
+      "source_card": 20,
+      "assemblies": [
+        "emerald_sootopolis_crystal"
+      ]
+    },
+    {
+      "key": "g3q/9423-9423-9564-9565",
+      "group": "building__sootopolis_gym",
+      "label": "Cascade upper-left white header",
+      "family": "Sootopolis gym fixture",
+      "recipe": "cascade_0_0",
+      "reason": "Part of one two-wide three-deep cascade: a supported white header and recessed outlet, followed by a falling sheet and shallow pool. Preserve footprint source rows; no invented vertical on chain.",
+      "baseline_entry_sha256": "58a6ae54d190e5ef3f03cec70ddde0f4cdc028b95f4e06227b01e25e8d3dea18",
+      "source_contact": "../inventory/building__sootopolis_gym/page-001.png",
+      "source_card": 21,
+      "assemblies": [
+        "emerald_sootopolis_north_cascade_left",
+        "emerald_sootopolis_north_cascade_right",
+        "emerald_sootopolis_south_cascade_left",
+        "emerald_sootopolis_south_cascade_right"
+      ],
+      "render_on_walk": true
+    },
+    {
+      "key": "g3q/9423-9423-9565-9566",
+      "group": "building__sootopolis_gym",
+      "label": "Cascade upper-right white header",
+      "family": "Sootopolis gym fixture",
+      "recipe": "cascade_1_0",
+      "reason": "Matching right half of the complete white header and recessed blue outlet; native water and wall parts replace the disconnected source slab.",
+      "baseline_entry_sha256": "299dac595efd9705fc424f8300ee3f6267f36f41363cfd63555eac70d562dbc5",
+      "source_contact": "../inventory/building__sootopolis_gym/page-001.png",
+      "source_card": 22,
+      "assemblies": [
+        "emerald_sootopolis_north_cascade_left",
+        "emerald_sootopolis_north_cascade_right",
+        "emerald_sootopolis_south_cascade_left",
+        "emerald_sootopolis_south_cascade_right"
+      ],
+      "render_on_walk": true
+    },
+    {
+      "key": "g3q/9567-9568-9569-9570",
+      "group": "building__sootopolis_gym",
+      "label": "Cascade middle-left falling water",
+      "family": "Sootopolis gym fixture",
+      "recipe": "cascade_0_1",
+      "reason": "A vertical cyan falling sheet joins the upper outlet to the shallow pool, with a supported pale side frame; keep the maximum height16 so WALK variants render completely on decor carriers.",
+      "baseline_entry_sha256": "8d143ab3f2b15076224c161d35b993d6c72e8fb27153f23c5e79052adf171de4",
+      "source_contact": "../inventory/building__sootopolis_gym/page-001.png",
+      "source_card": 23,
+      "assemblies": [
+        "emerald_sootopolis_north_cascade_left",
+        "emerald_sootopolis_north_cascade_right",
+        "emerald_sootopolis_south_cascade_left",
+        "emerald_sootopolis_south_cascade_right"
+      ],
+      "render_on_walk": true
+    },
+    {
+      "key": "g3q/9568-9571-9570-9572",
+      "group": "building__sootopolis_gym",
+      "label": "Cascade middle-right falling water",
+      "family": "Sootopolis gym fixture",
+      "recipe": "cascade_1_1",
+      "reason": "Matching cyan curtain and pale right frame join the same complete cascade across the center seam.",
+      "baseline_entry_sha256": "1dbf6d41a1f8b1d897cee1c212f185b3a3039bdb9ff815f294c248aa24eae425",
+      "source_contact": "../inventory/building__sootopolis_gym/page-001.png",
+      "source_card": 24,
+      "assemblies": [
+        "emerald_sootopolis_north_cascade_left",
+        "emerald_sootopolis_north_cascade_right",
+        "emerald_sootopolis_south_cascade_left",
+        "emerald_sootopolis_south_cascade_right"
+      ],
+      "render_on_walk": true
+    },
+    {
+      "key": "g3q/9573-9574-9575-9576",
+      "group": "building__sootopolis_gym",
+      "label": "Cascade lower-left ripple pool",
+      "family": "Sootopolis gym fixture",
+      "recipe": "cascade_0_2",
+      "reason": "Keep the source foam and ripples horizontal inside a low rimmed pool connected to the falling water, rather than extruding them into a wall.",
+      "baseline_entry_sha256": "fb946e3b0e644df8fef01c761d04f69436f37269a04f30ad8e1e3af2de35f8fe",
+      "source_contact": "../inventory/building__sootopolis_gym/page-001.png",
+      "source_card": 25,
+      "assemblies": [
+        "emerald_sootopolis_north_cascade_left",
+        "emerald_sootopolis_north_cascade_right",
+        "emerald_sootopolis_south_cascade_left",
+        "emerald_sootopolis_south_cascade_right"
+      ],
+      "render_on_walk": true
+    },
+    {
+      "key": "g3q/9577-9578-9579-9580",
+      "group": "building__sootopolis_gym",
+      "label": "Cascade lower-right ripple pool",
+      "family": "Sootopolis gym fixture",
+      "recipe": "cascade_1_2",
+      "reason": "Complete the low right pool and front rim with native cyan/white ripple paint; no floor-pattern backing volume.",
+      "baseline_entry_sha256": "ea371d7f0c0169399d5de81172b3f465545d14eefcc3060622142cb6ab10e407",
+      "source_contact": "../inventory/building__sootopolis_gym/page-001.png",
+      "source_card": 26,
+      "assemblies": [
+        "emerald_sootopolis_north_cascade_left",
+        "emerald_sootopolis_north_cascade_right",
+        "emerald_sootopolis_south_cascade_left",
+        "emerald_sootopolis_south_cascade_right"
+      ],
+      "render_on_walk": true
+    }
+  ],
+  "assemblies": [
+    {
+      "id": "emerald_sootopolis_dais",
+      "map": "EM_SOOTOPOLIS_CITY_GYM_1F",
+      "rect": [
+        6,
+        2,
+        5,
+        2
+      ],
+      "kind": "platform (model as one)",
+      "source_layout": [
+        [
+          "g3q/9493-9484-9494-9403",
+          "g3q/9479-9480-9403-9481",
+          "g3q/9482-9480-9481-9483",
+          "g3q/9482-9484-9483-9403",
+          "g3q/9479-9502-9403-9503"
+        ],
+        [
+          "g3q/9402-9403-9404-9405",
+          "g3q/9403-9403-9407-9495",
+          "g3q/9403-9403-9496-9496",
+          "g3q/9403-9403-9497-9405",
+          "g3q/9403-9406-9407-9408"
+        ]
+      ],
+      "note": "Actual dais source assembly; matching footprint and collision flags preserved."
+    },
+    {
+      "id": "emerald_sootopolis_statue",
+      "map": "EM_SOOTOPOLIS_CITY_GYM_1F",
+      "rect": [
+        6,
+        23,
+        1,
+        2
+      ],
+      "kind": "stack (model as one)",
+      "source_layout": [
+        [
+          "g3q/9456-9457-3262-3263"
+        ],
+        [
+          "g3q/3267-3268-9468-9469"
+        ]
+      ],
+      "note": "Actual statue source assembly; matching footprint and collision flags preserved."
+    },
+    {
+      "id": "emerald_sootopolis_crystal",
+      "map": "EM_SOOTOPOLIS_CITY_GYM_1F",
+      "rect": [
+        8,
+        0,
+        1,
+        2
+      ],
+      "kind": "stack (model as one)",
+      "source_layout": [
+        [
+          "g3q/9423-9423-9548-9549"
+        ],
+        [
+          "g3q/9554-9555-9556-9557"
+        ]
+      ],
+      "note": "Actual crystal source assembly; matching footprint and collision flags preserved."
+    },
+    {
+      "id": "emerald_sootopolis_north_cascade_left",
+      "map": "EM_SOOTOPOLIS_CITY_GYM_1F",
+      "rect": [
+        4,
+        0,
+        2,
+        3
+      ],
+      "kind": "cascade (model as one)",
+      "source_layout": [
+        [
+          "g3q/9423-9423-9564-9565",
+          "g3q/9423-9423-9565-9566"
+        ],
+        [
+          "g3q/9567-9568-9569-9570",
+          "g3q/9568-9571-9570-9572"
+        ],
+        [
+          "g3q/9573-9574-9575-9576",
+          "g3q/9577-9578-9579-9580"
+        ]
+      ],
+      "note": "Actual north cascade left source assembly; matching footprint and collision flags preserved."
+    },
+    {
+      "id": "emerald_sootopolis_north_cascade_right",
+      "map": "EM_SOOTOPOLIS_CITY_GYM_1F",
+      "rect": [
+        11,
+        0,
+        2,
+        3
+      ],
+      "kind": "cascade (model as one)",
+      "source_layout": [
+        [
+          "g3q/9423-9423-9564-9565",
+          "g3q/9423-9423-9565-9566"
+        ],
+        [
+          "g3q/9567-9568-9569-9570",
+          "g3q/9568-9571-9570-9572"
+        ],
+        [
+          "g3q/9573-9574-9575-9576",
+          "g3q/9577-9578-9579-9580"
+        ]
+      ],
+      "note": "Actual north cascade right source assembly; matching footprint and collision flags preserved."
+    },
+    {
+      "id": "emerald_sootopolis_south_cascade_left",
+      "map": "EM_SOOTOPOLIS_CITY_GYM_1F",
+      "rect": [
+        1,
+        14,
+        2,
+        3
+      ],
+      "kind": "cascade (model as one)",
+      "source_layout": [
+        [
+          "g3q/9423-9423-9564-9565",
+          "g3q/9423-9423-9565-9566"
+        ],
+        [
+          "g3q/9567-9568-9569-9570",
+          "g3q/9568-9571-9570-9572"
+        ],
+        [
+          "g3q/9573-9574-9575-9576",
+          "g3q/9577-9578-9579-9580"
+        ]
+      ],
+      "note": "Actual south cascade left source assembly; matching footprint and collision flags preserved."
+    },
+    {
+      "id": "emerald_sootopolis_south_cascade_right",
+      "map": "EM_SOOTOPOLIS_CITY_GYM_1F",
+      "rect": [
+        14,
+        14,
+        2,
+        3
+      ],
+      "kind": "cascade (model as one)",
+      "source_layout": [
+        [
+          "g3q/9423-9423-9564-9565",
+          "g3q/9423-9423-9565-9566"
+        ],
+        [
+          "g3q/9567-9568-9569-9570",
+          "g3q/9568-9571-9570-9572"
+        ],
+        [
+          "g3q/9573-9574-9575-9576",
+          "g3q/9577-9578-9579-9580"
+        ]
+      ],
+      "note": "Actual south cascade right source assembly; matching footprint and collision flags preserved."
+    },
+    {
+      "id": "emerald_sootopolis_basement_ladder",
+      "map": "EM_SOOTOPOLIS_CITY_GYM_B1F",
+      "rect": [
+        11,
+        21,
+        1,
+        2
+      ],
+      "kind": "ladder (model as one)",
+      "source_layout": [
+        [
+          "g3q/9419-9420-9425-9426"
+        ],
+        [
+          "g3q/9448-9449-9450-9451"
+        ]
+      ],
+      "note": "Actual runtime renders the existing walk-enabled lower ladder only; the cave-wall upper source projection is reference art, not a solid-base stack.",
+      "model_layout": [
+        [
+          "g3q/9448-9449-9450-9451"
+        ]
+      ],
+      "replaces_stack": true
+    },
+    {
+      "id": "emerald_sootopolis_ice_crossing",
+      "map": "EM_SOOTOPOLIS_CITY_GYM_1F",
+      "rect": [
+        8,
+        4,
+        1,
+        2
+      ],
+      "kind": "floor (model as one)",
+      "source_layout": [
+        [
+          "g3q/9435-9436-9437-9438"
+        ],
+        [
+          "g3q/9435-9436-9437-9438"
+        ]
+      ],
+      "note": "Actual ice crossing source assembly; matching footprint and collision flags preserved."
+    },
+    {
+      "id": "emerald_sootopolis_entry_treads",
+      "map": "EM_SOOTOPOLIS_CITY_GYM_1F",
+      "rect": [
+        8,
+        20,
+        1,
+        2
+      ],
+      "kind": "floor (model as one)",
+      "source_layout": [
+        [
+          "g3q/9413-9414-9413-9414"
+        ],
+        [
+          "g3q/9413-9414-9413-9414"
+        ]
+      ],
+      "note": "Actual entry treads source assembly; matching footprint and collision flags preserved."
+    }
+  ]
+}

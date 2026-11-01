@@ -1,0 +1,1631 @@
+{
+  "g3q/8960-8960-8965-8966": {
+    "label": "Mounted retail window or display",
+    "family": "Mounted retail window or display",
+    "reason": "Source and indexed neighborhoods identify a wall window, calendar or three-column decorative mural. Constant wall backing preserves the printed face without a pinched solid or missing frame.",
+    "source_ordinal": 1,
+    "baseline_entry_sha256": "5dee24f7b13f54ec27f8c604d99a06b50bde64fde58cdc10057f52ea89ee6f17",
+    "evidence": [
+      "inventory/building__shop/page-001.png",
+      "retail-residential-context/building__shop/page-001.png"
+    ],
+    "role": "panel"
+  },
+  "g3q/8984-8985-8986-8987": {
+    "label": "Mounted retail window or display",
+    "family": "Mounted retail window or display",
+    "reason": "Source and indexed neighborhoods identify a wall window, calendar or three-column decorative mural. Constant wall backing preserves the printed face without a pinched solid or missing frame.",
+    "source_ordinal": 2,
+    "baseline_entry_sha256": "cb326818c67ee77f66950bd0194bc28e22b92e93bb794d05af7465677ef4738a",
+    "evidence": [
+      "inventory/building__shop/page-001.png",
+      "retail-residential-context/building__shop/page-001.png"
+    ],
+    "role": "panel"
+  },
+  "g3q/9095-9095-8965-8966": {
+    "label": "Mounted retail window or display",
+    "family": "Mounted retail window or display",
+    "reason": "Source and indexed neighborhoods identify a wall window, calendar or three-column decorative mural. Constant wall backing preserves the printed face without a pinched solid or missing frame.",
+    "source_ordinal": 67,
+    "baseline_entry_sha256": "4e9a873b86818a23e92a23909ca3f05adab66b7e130b0f22a487768f342b8dc5",
+    "evidence": [
+      "inventory/building__shop/page-003.png",
+      "retail-residential-context/building__shop/page-005.png"
+    ],
+    "role": "panel"
+  },
+  "g3q/9095-9095-9199-9200": {
+    "label": "Mounted retail window or display",
+    "family": "Mounted retail window or display",
+    "reason": "Source and indexed neighborhoods identify a wall window, calendar or three-column decorative mural. Constant wall backing preserves the printed face without a pinched solid or missing frame.",
+    "source_ordinal": 72,
+    "baseline_entry_sha256": "a4b303499ff3126abd00f0392c7b48313af447aa73ddf4c89e0c39fae45b9f62",
+    "evidence": [
+      "inventory/building__shop/page-003.png",
+      "retail-residential-context/building__shop/page-005.png"
+    ],
+    "role": "panel",
+    "added_on": "g3q/9211-9212-9189-9189"
+  },
+  "g3q/9211-9212-9189-9189": {
+    "label": "Mounted retail window or display",
+    "family": "Mounted retail window or display",
+    "reason": "Source and indexed neighborhoods identify a wall window, calendar or three-column decorative mural. Constant wall backing preserves the printed face without a pinched solid or missing frame.",
+    "source_ordinal": 76,
+    "baseline_entry_sha256": "a09ac4d13710df79fa20e23ecc555b8e65134cfb84314579f3c188cab01c1f03",
+    "evidence": [
+      "inventory/building__shop/page-003.png",
+      "retail-residential-context/building__shop/page-005.png"
+    ],
+    "role": "panel"
+  },
+  "g3q/9095-9095-9314-9315": {
+    "label": "Mounted retail window or display",
+    "family": "Mounted retail window or display",
+    "reason": "Source and indexed neighborhoods identify a wall window, calendar or three-column decorative mural. Constant wall backing preserves the printed face without a pinched solid or missing frame.",
+    "source_ordinal": 109,
+    "baseline_entry_sha256": "24255df0680aa51581eb27b7bf5cd7a179e5d8e7bcb7145af96257c6a87fb035",
+    "evidence": [
+      "inventory/building__shop/page-004.png",
+      "retail-residential-context/building__shop/page-007.png"
+    ],
+    "role": "panel",
+    "added_on": "g3q/9327-9328-9329-9330"
+  },
+  "g3q/9095-9095-9316-9317": {
+    "label": "Mounted retail window or display",
+    "family": "Mounted retail window or display",
+    "reason": "Source and indexed neighborhoods identify a wall window, calendar or three-column decorative mural. Constant wall backing preserves the printed face without a pinched solid or missing frame.",
+    "source_ordinal": 110,
+    "baseline_entry_sha256": "35809fbdd11ba02fc8a0b1808f209955b93d8db8fdf9a3ba186d00794f51e3b1",
+    "evidence": [
+      "inventory/building__shop/page-004.png",
+      "retail-residential-context/building__shop/page-007.png"
+    ],
+    "role": "panel",
+    "added_on": "g3q/9331-9332-9333-9334"
+  },
+  "g3q/9095-9095-9318-9314": {
+    "label": "Mounted retail window or display",
+    "family": "Mounted retail window or display",
+    "reason": "Source and indexed neighborhoods identify a wall window, calendar or three-column decorative mural. Constant wall backing preserves the printed face without a pinched solid or missing frame.",
+    "source_ordinal": 111,
+    "baseline_entry_sha256": "ac89b44bb70aa93ac9b87e1c1b9f5e3a610f2f3dea2be9f275fa2623e1e0da21",
+    "evidence": [
+      "inventory/building__shop/page-004.png",
+      "retail-residential-context/building__shop/page-007.png"
+    ],
+    "role": "panel",
+    "added_on": "g3q/9335-9327-9336-9329"
+  },
+  "g3q/9095-9095-9319-9320": {
+    "label": "Mounted retail window or display",
+    "family": "Mounted retail window or display",
+    "reason": "Source and indexed neighborhoods identify a wall window, calendar or three-column decorative mural. Constant wall backing preserves the printed face without a pinched solid or missing frame.",
+    "source_ordinal": 112,
+    "baseline_entry_sha256": "0832ebcfbe535d9733859e36ff697a761a73ecf503117a676718ac71d08a27a4",
+    "evidence": [
+      "inventory/building__shop/page-004.png",
+      "retail-residential-context/building__shop/page-007.png"
+    ],
+    "role": "panel",
+    "added_on": "g3q/9337-9338-9329-9329"
+  },
+  "g3q/9327-9328-9329-9330": {
+    "label": "Mounted retail window or display",
+    "family": "Mounted retail window or display",
+    "reason": "Source and indexed neighborhoods identify a wall window, calendar or three-column decorative mural. Constant wall backing preserves the printed face without a pinched solid or missing frame.",
+    "source_ordinal": 113,
+    "baseline_entry_sha256": "dea3ded4e4877c5e3281e8a187bdd679f85f7c8ca81a58cb5a44cbfef4e3f609",
+    "evidence": [
+      "inventory/building__shop/page-004.png",
+      "retail-residential-context/building__shop/page-008.png"
+    ],
+    "role": "panel"
+  },
+  "g3q/9331-9332-9333-9334": {
+    "label": "Mounted retail window or display",
+    "family": "Mounted retail window or display",
+    "reason": "Source and indexed neighborhoods identify a wall window, calendar or three-column decorative mural. Constant wall backing preserves the printed face without a pinched solid or missing frame.",
+    "source_ordinal": 114,
+    "baseline_entry_sha256": "67f58e89d85e240366c5a63dad6c31a9a88ca1a278f8f53d42c7628ba1d83bda",
+    "evidence": [
+      "inventory/building__shop/page-004.png",
+      "retail-residential-context/building__shop/page-008.png"
+    ],
+    "role": "panel"
+  },
+  "g3q/9335-9327-9336-9329": {
+    "label": "Mounted retail window or display",
+    "family": "Mounted retail window or display",
+    "reason": "Source and indexed neighborhoods identify a wall window, calendar or three-column decorative mural. Constant wall backing preserves the printed face without a pinched solid or missing frame.",
+    "source_ordinal": 115,
+    "baseline_entry_sha256": "1aa24c03d2b926730eb64dd2705fec252df7ef0c55cc0856c91e68417eadadcd",
+    "evidence": [
+      "inventory/building__shop/page-004.png",
+      "retail-residential-context/building__shop/page-008.png"
+    ],
+    "role": "panel"
+  },
+  "g3q/9095-9095-9378-9379": {
+    "label": "Mounted retail window or display",
+    "family": "Mounted retail window or display",
+    "reason": "Source and indexed neighborhoods identify a wall window, calendar or three-column decorative mural. Constant wall backing preserves the printed face without a pinched solid or missing frame.",
+    "source_ordinal": 131,
+    "baseline_entry_sha256": "96dcec8ee6a53ab9ceec931b41810653442902bb6f454c4b7983080e93477d7d",
+    "evidence": [
+      "inventory/building__shop/page-005.png",
+      "retail-residential-context/building__shop/page-009.png"
+    ],
+    "role": "panel",
+    "added_on": "g3q/9380-9381-9189-9189"
+  },
+  "g3q/8960-8960-8999-9000": {
+    "label": "Retail wall clock crown",
+    "family": "Retail wall clock crown",
+    "reason": "Native clock face continues across two source rows; sculpt one round raised face against a continuous wall before slicing.",
+    "source_ordinal": 3,
+    "baseline_entry_sha256": "835297618dbf7e349870bba0ab44a4669df805315048b7cbd01a2064f2ba90b2",
+    "evidence": [
+      "inventory/building__shop/page-001.png",
+      "retail-residential-context/building__shop/page-001.png"
+    ],
+    "role": "clock",
+    "layer": 1
+  },
+  "g3q/9086-9087-8979-8979": {
+    "label": "Retail wall clock base",
+    "family": "Retail wall clock base",
+    "reason": "Lower clock arc joins the source-aligned raised clock above, with a constant shallow wall backing.",
+    "source_ordinal": 34,
+    "baseline_entry_sha256": "3e04bd01e21d66f5508d1b7396fcf222d37f63569a5faf7c62ded73b8dbbcb92",
+    "evidence": [
+      "inventory/building__shop/page-002.png",
+      "retail-residential-context/building__shop/page-003.png"
+    ],
+    "role": "clock",
+    "layer": 0
+  },
+  "g3q/9095-9095-9203-9204": {
+    "label": "Retail wall clock crown",
+    "family": "Retail wall clock crown",
+    "reason": "Native clock face continues across two source rows; sculpt one round raised face against a continuous wall before slicing.",
+    "source_ordinal": 73,
+    "baseline_entry_sha256": "2b4823ce11ee84da3751088a747a50be73bf466d5c8312f9d5d5d1cf82d22632",
+    "evidence": [
+      "inventory/building__shop/page-003.png",
+      "retail-residential-context/building__shop/page-005.png"
+    ],
+    "role": "clock",
+    "layer": 1
+  },
+  "g3q/9215-9216-9189-9189": {
+    "label": "Retail wall clock base",
+    "family": "Retail wall clock base",
+    "reason": "Lower clock arc joins the source-aligned raised clock above, with a constant shallow wall backing.",
+    "source_ordinal": 77,
+    "baseline_entry_sha256": "1f56c30069a351d255b8edada0d58ca4f6e76db92eb23556a45083e733088366",
+    "evidence": [
+      "inventory/building__shop/page-003.png",
+      "retail-residential-context/building__shop/page-005.png"
+    ],
+    "role": "clock",
+    "layer": 0
+  },
+  "g3q/9004-9005-9006-9007": {
+    "label": "Retail potted plant canopy",
+    "family": "Retail potted plant canopy",
+    "reason": "Actual map pairs show one tall potted plant. Replace the flat hourglass foliage with a coherent rooted stem and radiating leaves before slicing.",
+    "source_ordinal": 6,
+    "baseline_entry_sha256": "8f6bc9f8bbf56200413442065b8cef7a0e5ca98f3d5347b2a9eb38d38ff522e3",
+    "evidence": [
+      "inventory/building__shop/page-001.png",
+      "retail-residential-context/building__shop/page-001.png"
+    ],
+    "role": "plant_cap"
+  },
+  "g3q/9125-9126-9127-9128": {
+    "label": "Retail potted plant canopy",
+    "family": "Retail potted plant canopy",
+    "reason": "Actual map pairs show one tall potted plant. Replace the flat hourglass foliage with a coherent rooted stem and radiating leaves before slicing.",
+    "source_ordinal": 46,
+    "baseline_entry_sha256": "ad39e5376dbd589d015d34aa789c8acebdf039238966ca4a39f3bbc46ba7f925",
+    "evidence": [
+      "inventory/building__shop/page-002.png",
+      "retail-residential-context/building__shop/page-003.png"
+    ],
+    "role": "plant_cap"
+  },
+  "g3q/9159-9126-9160-9128": {
+    "label": "Retail potted plant canopy",
+    "family": "Retail potted plant canopy",
+    "reason": "Actual map pairs show one tall potted plant. Replace the flat hourglass foliage with a coherent rooted stem and radiating leaves before slicing.",
+    "source_ordinal": 56,
+    "baseline_entry_sha256": "247ba5748810f51abf5a44f87e702f0950bac708c97adf35b890f857649693a9",
+    "evidence": [
+      "inventory/building__shop/page-002.png",
+      "retail-residential-context/building__shop/page-004.png"
+    ],
+    "role": "plant_cap"
+  },
+  "g3q/9161-9162-9163-9164": {
+    "label": "Retail potted plant canopy",
+    "family": "Retail potted plant canopy",
+    "reason": "Actual map pairs show one tall potted plant. Replace the flat hourglass foliage with a coherent rooted stem and radiating leaves before slicing.",
+    "source_ordinal": 57,
+    "baseline_entry_sha256": "057f1b830cea0df8ceaf31bb51278499675ecab7ab980e02fceb19622f657790",
+    "evidence": [
+      "inventory/building__shop/page-002.png",
+      "retail-residential-context/building__shop/page-004.png"
+    ],
+    "role": "plant_cap"
+  },
+  "g3q/9125-9307-9160-9128": {
+    "label": "Retail potted plant canopy",
+    "family": "Retail potted plant canopy",
+    "reason": "Actual map pairs show one tall potted plant. Replace the flat hourglass foliage with a coherent rooted stem and radiating leaves before slicing.",
+    "source_ordinal": 106,
+    "baseline_entry_sha256": "8dcd2f8ae49044ea98803440789a3d8b0cfc5f335883ad89aef274bd5395f4a2",
+    "evidence": [
+      "inventory/building__shop/page-004.png",
+      "retail-residential-context/building__shop/page-007.png"
+    ],
+    "role": "plant_cap"
+  },
+  "g3q/9030-9031-9032-9033": {
+    "label": "Retail potted plant base",
+    "family": "Retail potted plant base",
+    "reason": "Source-native pot, open soil and stem connect to the matching complete canopy, excluding surrounding floor rings.",
+    "source_ordinal": 14,
+    "baseline_entry_sha256": "aa385fe7c511fa66be78db1a77800ebd0ebe61657f01b6ad8f6de12614c6b49b",
+    "evidence": [
+      "inventory/building__shop/page-001.png",
+      "retail-residential-context/building__shop/page-001.png"
+    ],
+    "role": "plant_base"
+  },
+  "g3q/9145-9146-9147-9148": {
+    "label": "Retail potted plant base",
+    "family": "Retail potted plant base",
+    "reason": "Source-native pot, open soil and stem connect to the matching complete canopy, excluding surrounding floor rings.",
+    "source_ordinal": 53,
+    "baseline_entry_sha256": "889d94d1f9a113f94080f37df2c158406e7a18e9663e7b71ba6d49de315bad7f",
+    "evidence": [
+      "inventory/building__shop/page-002.png",
+      "retail-residential-context/building__shop/page-004.png"
+    ],
+    "role": "plant_base"
+  },
+  "g3q/9172-9146-9173-9148": {
+    "label": "Retail potted plant base",
+    "family": "Retail potted plant base",
+    "reason": "Source-native pot, open soil and stem connect to the matching complete canopy, excluding surrounding floor rings.",
+    "source_ordinal": 60,
+    "baseline_entry_sha256": "994606700bf4858aa0f7bfcff9c97af79f1a6cdc83f01e3bad44628d9bec2bb0",
+    "evidence": [
+      "inventory/building__shop/page-002.png",
+      "retail-residential-context/building__shop/page-004.png"
+    ],
+    "role": "plant_base"
+  },
+  "g3q/9030-9031-9174-9175": {
+    "label": "Retail potted plant base",
+    "family": "Retail potted plant base",
+    "reason": "Source-native pot, open soil and stem connect to the matching complete canopy, excluding surrounding floor rings.",
+    "source_ordinal": 61,
+    "baseline_entry_sha256": "63c800760aeae8c3d63f75f07d3319d088dcedabd5b56d665dcde704bc80f862",
+    "evidence": [
+      "inventory/building__shop/page-002.png",
+      "retail-residential-context/building__shop/page-004.png"
+    ],
+    "role": "plant_base"
+  },
+  "g3q/8997-8998-9039-8957": {
+    "label": "Retail shelf front foot",
+    "family": "Retail shelf front foot",
+    "reason": "The map shows a short lower cabinet toe followed by patterned floor. Omit floor extrusion and retain a grounded toe adjoining the cabinet. Render this exact WALK source footprint as nonblocking decor; collision stays unchanged.",
+    "source_ordinal": 17,
+    "baseline_entry_sha256": "1886e196e288a015cd22433009f9c75662137513fca5e579b2c74e80f1653254",
+    "evidence": [
+      "inventory/building__shop/page-001.png",
+      "retail-residential-context/building__shop/page-002.png"
+    ],
+    "role": "shelf_foot",
+    "render_on_walk": true
+  },
+  "g3q/9040-9041-8956-8957": {
+    "label": "Retail shelf front foot",
+    "family": "Retail shelf front foot",
+    "reason": "The map shows a short lower cabinet toe followed by patterned floor. Omit floor extrusion and retain a grounded toe adjoining the cabinet. Render this exact WALK source footprint as nonblocking decor; collision stays unchanged.",
+    "source_ordinal": 18,
+    "baseline_entry_sha256": "f13a1efbc911ed248b751fb7e2c4f268cbaa4a69830b7ce48b7de8a8f42845d3",
+    "evidence": [
+      "inventory/building__shop/page-001.png",
+      "retail-residential-context/building__shop/page-002.png"
+    ],
+    "role": "shelf_foot",
+    "render_on_walk": true
+  },
+  "g3q/8977-8977-9020-9021": {
+    "label": "Cash register rear casing",
+    "family": "Cash register rear casing",
+    "reason": "Map locates the source fragment behind the glass service counter. Sculpt only its register casing and support; the pale wall above is background.",
+    "source_ordinal": 11,
+    "baseline_entry_sha256": "f0f217b7d02f5dbee2bc96b88937b37d21428c7806369e1004a6105a45e8d937",
+    "evidence": [
+      "inventory/building__shop/page-001.png",
+      "retail-residential-context/building__shop/page-001.png"
+    ],
+    "role": "register_back"
+  },
+  "g3q/9149-9150-9151-9152": {
+    "label": "Wall terminal projected foot",
+    "family": "Wall terminal projected foot",
+    "reason": "The source lower row contains the PC foot above patterned floor. Keep a short native metal toe, excluding the orange floor disk. Render this exact WALK source footprint as nonblocking decor; collision stays unchanged.",
+    "source_ordinal": 54,
+    "baseline_entry_sha256": "7803709232e72675fdee47118024f59e61051887186df23144310397473744a7",
+    "evidence": [
+      "inventory/building__shop/page-002.png",
+      "retail-residential-context/building__shop/page-004.png"
+    ],
+    "role": "pc_foot",
+    "render_on_walk": true
+  },
+  "g3q/48-49-9169-9170": {
+    "label": "Rooftop vending-machine upper",
+    "family": "Rooftop vending-machine upper",
+    "reason": "Closed cabinet upper half with source-native product window and a constant depth. Preserve the existing upper-to-lower link.",
+    "source_ordinal": 59,
+    "baseline_entry_sha256": "a1c1ea2235a81176537e497fb4d86d88cfd2c6ca332f290fbc211baf33afbb11",
+    "evidence": [
+      "inventory/building__shop/page-002.png",
+      "retail-residential-context/building__shop/page-004.png"
+    ],
+    "role": "vending",
+    "layer": 1
+  },
+  "g3q/9178-9179-9180-9181": {
+    "label": "Rooftop vending-machine lower",
+    "family": "Rooftop vending-machine lower",
+    "reason": "Grounded closed cabinet and two short feet replace the taper beneath the source product display and outlet.",
+    "source_ordinal": 62,
+    "baseline_entry_sha256": "9e67d19f99a5e5bf8f18b465806950d48dc94b1d8d23ac5002d656d84d575194",
+    "evidence": [
+      "inventory/building__shop/page-002.png",
+      "retail-residential-context/building__shop/page-004.png"
+    ],
+    "role": "vending",
+    "layer": 0
+  },
+  "g3q/9165-9166-9167-9168": {
+    "label": "Red department-store stool",
+    "family": "Red department-store stool",
+    "reason": "Four metal feet support a squared padded red cushion; patterned floor and shadow do not become solid upholstery.",
+    "source_ordinal": 58,
+    "baseline_entry_sha256": "ade7b7c659315279186362abe37ce22b831a158af31aeb427bbebe10acab2b52",
+    "evidence": [
+      "inventory/building__shop/page-002.png",
+      "retail-residential-context/building__shop/page-004.png"
+    ],
+    "role": "stool"
+  },
+  "g3q/9270-9271-9272-9273": {
+    "label": "Purple side-facing chair",
+    "family": "Purple side-facing chair",
+    "reason": "Source orientation and map seating rows establish a side-facing chair with seat, back, arms and four feet.",
+    "source_ordinal": 97,
+    "baseline_entry_sha256": "f5ceff8d540ccb71f49bc65badcc7c8a39949fd3d6a7111b93a24fc370b1026b",
+    "evidence": [
+      "inventory/building__shop/page-004.png",
+      "retail-residential-context/building__shop/page-007.png"
+    ],
+    "role": "seat",
+    "turns": 3
+  },
+  "g3q/9283-9284-9285-9286": {
+    "label": "Purple side-facing chair",
+    "family": "Purple side-facing chair",
+    "reason": "Source orientation and map seating rows establish a side-facing chair with seat, back, arms and four feet.",
+    "source_ordinal": 98,
+    "baseline_entry_sha256": "286e1c4e69f493ad376b2c02097b3b86d29300d16fe0a76ac9427ac414625937",
+    "evidence": [
+      "inventory/building__shop/page-004.png",
+      "retail-residential-context/building__shop/page-007.png"
+    ],
+    "role": "seat",
+    "turns": 3
+  },
+  "g3q/9293-9294-9295-9296": {
+    "label": "Purple side-facing chair",
+    "family": "Purple side-facing chair",
+    "reason": "Source orientation and map seating rows establish a side-facing chair with seat, back, arms and four feet.",
+    "source_ordinal": 100,
+    "baseline_entry_sha256": "2b7095c95fc7405222688b44b3312d5d388c5015962a229b05fda8a3b11b59df",
+    "evidence": [
+      "inventory/building__shop/page-004.png",
+      "retail-residential-context/building__shop/page-007.png"
+    ],
+    "role": "seat",
+    "turns": 1
+  },
+  "g3q/9262-9263-9264-9265": {
+    "label": "Rooftop two-seat bench",
+    "family": "Rooftop two-seat bench",
+    "reason": "Author one continuous two-cell slatted seat/back and shared support frame before slicing at the middle.",
+    "source_ordinal": 96,
+    "baseline_entry_sha256": "f18abbf48da81b9598c0aa1c6e2c95d347d08e3963b6c6c4987c5edb9b0edcf0",
+    "evidence": [
+      "inventory/building__shop/page-003.png",
+      "retail-residential-context/building__shop/page-006.png"
+    ],
+    "role": "bench",
+    "x": 0
+  },
+  "g3q/9287-9288-9289-9290": {
+    "label": "Rooftop two-seat bench",
+    "family": "Rooftop two-seat bench",
+    "reason": "Author one continuous two-cell slatted seat/back and shared support frame before slicing at the middle.",
+    "source_ordinal": 99,
+    "baseline_entry_sha256": "8a4d5b8350dd473709156f8828c1bd3f74e49e76ad595d36a61e4cc1af6b7112",
+    "evidence": [
+      "inventory/building__shop/page-004.png",
+      "retail-residential-context/building__shop/page-007.png"
+    ],
+    "role": "bench",
+    "x": 1
+  },
+  "g3q/9118-9119-9120-9121": {
+    "label": "Retail flower-box quarter",
+    "family": "Retail flower-box quarter",
+    "reason": "Full two-by-two source arrangements share one shallow raised planter, rim, soil and rounded foliage. Rear cells contain only projected leaves; their floor is omitted. Render this exact WALK source footprint as nonblocking decor; collision stays unchanged.",
+    "source_ordinal": 44,
+    "baseline_entry_sha256": "7f1a95e810c502a9950e93963fe1d9c150d85c6c7998592507c02595c13563fb",
+    "evidence": [
+      "inventory/building__shop/page-002.png",
+      "retail-residential-context/building__shop/page-003.png"
+    ],
+    "role": "planter",
+    "x": 0,
+    "z": 0,
+    "render_on_walk": true
+  },
+  "g3q/9118-9119-9122-9123": {
+    "label": "Retail flower-box quarter",
+    "family": "Retail flower-box quarter",
+    "reason": "Full two-by-two source arrangements share one shallow raised planter, rim, soil and rounded foliage. Rear cells contain only projected leaves; their floor is omitted. Render this exact WALK source footprint as nonblocking decor; collision stays unchanged.",
+    "source_ordinal": 45,
+    "baseline_entry_sha256": "9a38d27665c0783fedf0315daf8408906787c9f24a944eb08bd38a227260412a",
+    "evidence": [
+      "inventory/building__shop/page-002.png",
+      "retail-residential-context/building__shop/page-003.png"
+    ],
+    "role": "planter",
+    "x": 1,
+    "z": 0,
+    "render_on_walk": true
+  },
+  "g3q/9153-9154-9122-9123": {
+    "label": "Retail flower-box quarter",
+    "family": "Retail flower-box quarter",
+    "reason": "Full two-by-two source arrangements share one shallow raised planter, rim, soil and rounded foliage. Rear cells contain only projected leaves; their floor is omitted. Render this exact WALK source footprint as nonblocking decor; collision stays unchanged.",
+    "source_ordinal": 55,
+    "baseline_entry_sha256": "0c92f7f5e91bd690c00223100a8e691d82ce364d38dfb26d7af4cd5a72322f18",
+    "evidence": [
+      "inventory/building__shop/page-002.png",
+      "retail-residential-context/building__shop/page-004.png"
+    ],
+    "role": "planter",
+    "x": 1,
+    "z": 0,
+    "render_on_walk": true
+  },
+  "g3q/9101-9098-9297-9298": {
+    "label": "Retail flower-box quarter",
+    "family": "Retail flower-box quarter",
+    "reason": "Full two-by-two source arrangements share one shallow raised planter, rim, soil and rounded foliage. Rear cells contain only projected leaves; their floor is omitted. Render this exact WALK source footprint as nonblocking decor; collision stays unchanged.",
+    "source_ordinal": 101,
+    "baseline_entry_sha256": "b13bf269207832b73c34946d2d980c9163780b02322d1fa5a25ac85b3b188bfc",
+    "evidence": [
+      "inventory/building__shop/page-004.png",
+      "retail-residential-context/building__shop/page-007.png"
+    ],
+    "role": "planter",
+    "x": 0,
+    "z": 0,
+    "render_on_walk": true
+  },
+  "g3q/9097-9098-9299-9300": {
+    "label": "Retail flower-box quarter",
+    "family": "Retail flower-box quarter",
+    "reason": "Full two-by-two source arrangements share one shallow raised planter, rim, soil and rounded foliage. Rear cells contain only projected leaves; their floor is omitted. Render this exact WALK source footprint as nonblocking decor; collision stays unchanged.",
+    "source_ordinal": 102,
+    "baseline_entry_sha256": "fb21a952b62dd5d3bc1b3f2e78ac6bff6820a6a170cc482d6ffc765349a31f61",
+    "evidence": [
+      "inventory/building__shop/page-004.png",
+      "retail-residential-context/building__shop/page-007.png"
+    ],
+    "role": "planter",
+    "x": 1,
+    "z": 0,
+    "render_on_walk": true
+  },
+  "g3q/9118-9154-9313-9121": {
+    "label": "Retail flower-box quarter",
+    "family": "Retail flower-box quarter",
+    "reason": "Full two-by-two source arrangements share one shallow raised planter, rim, soil and rounded foliage. Rear cells contain only projected leaves; their floor is omitted. Render this exact WALK source footprint as nonblocking decor; collision stays unchanged.",
+    "source_ordinal": 108,
+    "baseline_entry_sha256": "41eba35f1c2d47644165d46e90c1ced4fc8de3edacaa9013508246faf15040cc",
+    "evidence": [
+      "inventory/building__shop/page-004.png",
+      "retail-residential-context/building__shop/page-007.png"
+    ],
+    "role": "planter",
+    "x": 0,
+    "z": 0,
+    "render_on_walk": true
+  },
+  "g3q/9137-9138-9139-9140": {
+    "label": "Retail flower-box quarter",
+    "family": "Retail flower-box quarter",
+    "reason": "Full two-by-two source arrangements share one shallow raised planter, rim, soil and rounded foliage. Rear cells contain only projected leaves; their floor is omitted.",
+    "source_ordinal": 50,
+    "baseline_entry_sha256": "a9ee3e84dae8a6b93f904980b919decc6b1f55858e18a2da2534bddcd12d67c4",
+    "evidence": [
+      "inventory/building__shop/page-002.png",
+      "retail-residential-context/building__shop/page-004.png"
+    ],
+    "role": "planter",
+    "x": 0,
+    "z": 1
+  },
+  "g3q/9141-9142-9143-9144": {
+    "label": "Retail flower-box quarter",
+    "family": "Retail flower-box quarter",
+    "reason": "Full two-by-two source arrangements share one shallow raised planter, rim, soil and rounded foliage. Rear cells contain only projected leaves; their floor is omitted.",
+    "source_ordinal": 51,
+    "baseline_entry_sha256": "ef09660a72ceb25ee26cc42bc1031164b537886f5d0f6c01699727caea542d6c",
+    "evidence": [
+      "inventory/building__shop/page-002.png",
+      "retail-residential-context/building__shop/page-004.png"
+    ],
+    "role": "planter",
+    "x": 1,
+    "z": 1
+  },
+  "g3q/9137-9138-9301-9140": {
+    "label": "Retail flower-box quarter",
+    "family": "Retail flower-box quarter",
+    "reason": "Full two-by-two source arrangements share one shallow raised planter, rim, soil and rounded foliage. Rear cells contain only projected leaves; their floor is omitted.",
+    "source_ordinal": 103,
+    "baseline_entry_sha256": "ef015f9fb68cca4b27145db1349cf1d7f88f0e48b980a28658560743d5cf2c42",
+    "evidence": [
+      "inventory/building__shop/page-004.png",
+      "retail-residential-context/building__shop/page-007.png"
+    ],
+    "role": "planter",
+    "x": 0,
+    "z": 1
+  },
+  "g3q/9141-9302-9143-9303": {
+    "label": "Retail flower-box quarter",
+    "family": "Retail flower-box quarter",
+    "reason": "Full two-by-two source arrangements share one shallow raised planter, rim, soil and rounded foliage. Rear cells contain only projected leaves; their floor is omitted.",
+    "source_ordinal": 104,
+    "baseline_entry_sha256": "cfa03b59e9c603aa347e2c44272b06fb65531632f959961ca8b256157462f392",
+    "evidence": [
+      "inventory/building__shop/page-004.png",
+      "retail-residential-context/building__shop/page-007.png"
+    ],
+    "role": "planter",
+    "x": 1,
+    "z": 1
+  },
+  "g3q/8995-8995-9008-9009": {
+    "label": "Rooftop terrace railing",
+    "family": "Rooftop terrace railing",
+    "reason": "Native terrace boundary forms connected rails and posts with open gaps, rather than tall extruded sky or paving. Direction is selected from the exact rooftop neighborhood.",
+    "source_ordinal": 7,
+    "baseline_entry_sha256": "3e095d6c5987635b6f682f6e1b3628c25b298b681ff956cb7e565de873ae34c7",
+    "evidence": [
+      "inventory/building__shop/page-001.png",
+      "retail-residential-context/building__shop/page-001.png"
+    ],
+    "role": "rail",
+    "arms": "es"
+  },
+  "g3q/8995-8995-9010-9011": {
+    "label": "Rooftop terrace railing",
+    "family": "Rooftop terrace railing",
+    "reason": "Native terrace boundary forms connected rails and posts with open gaps, rather than tall extruded sky or paving. Direction is selected from the exact rooftop neighborhood.",
+    "source_ordinal": 8,
+    "baseline_entry_sha256": "cb8d3025d4f7532036f5d82560c128f34581c72312a371d333d19d248947847d",
+    "evidence": [
+      "inventory/building__shop/page-001.png",
+      "retail-residential-context/building__shop/page-001.png"
+    ],
+    "role": "rail",
+    "arms": "ws"
+  },
+  "g3q/9034-9035-9034-9036": {
+    "label": "Rooftop terrace railing",
+    "family": "Rooftop terrace railing",
+    "reason": "Native terrace boundary forms connected rails and posts with open gaps, rather than tall extruded sky or paving. Direction is selected from the exact rooftop neighborhood.",
+    "source_ordinal": 15,
+    "baseline_entry_sha256": "c8c78c3aa5a56bedf891d0f96053d950dea82c27a2d3bb895e70a7b8bedba04f",
+    "evidence": [
+      "inventory/building__shop/page-001.png",
+      "retail-residential-context/building__shop/page-001.png"
+    ],
+    "role": "rail",
+    "arms": "ns"
+  },
+  "g3q/9037-9038-9036-9038": {
+    "label": "Rooftop terrace railing",
+    "family": "Rooftop terrace railing",
+    "reason": "Native terrace boundary forms connected rails and posts with open gaps, rather than tall extruded sky or paving. Direction is selected from the exact rooftop neighborhood.",
+    "source_ordinal": 16,
+    "baseline_entry_sha256": "6dfae4f45df2af6c50c10e9068fd0b6cd4026d42165040060ff8c9899e290d63",
+    "evidence": [
+      "inventory/building__shop/page-001.png",
+      "retail-residential-context/building__shop/page-001.png"
+    ],
+    "role": "rail",
+    "arms": "ns"
+  },
+  "g3q/9034-9036-9034-9036": {
+    "label": "Rooftop terrace railing",
+    "family": "Rooftop terrace railing",
+    "reason": "Native terrace boundary forms connected rails and posts with open gaps, rather than tall extruded sky or paving. Direction is selected from the exact rooftop neighborhood.",
+    "source_ordinal": 23,
+    "baseline_entry_sha256": "389323d757e254b093c6f345adbe8bc59e064450065a76aae9fa0ac8a7165bae",
+    "evidence": [
+      "inventory/building__shop/page-001.png",
+      "retail-residential-context/building__shop/page-002.png"
+    ],
+    "role": "rail",
+    "arms": "ns"
+  },
+  "g3q/9036-9038-9036-9038": {
+    "label": "Rooftop terrace railing",
+    "family": "Rooftop terrace railing",
+    "reason": "Native terrace boundary forms connected rails and posts with open gaps, rather than tall extruded sky or paving. Direction is selected from the exact rooftop neighborhood.",
+    "source_ordinal": 24,
+    "baseline_entry_sha256": "ecd3cfcf0be58869b070134e1da93408bf3480a21778b8ede15ce6230f0d54f0",
+    "evidence": [
+      "inventory/building__shop/page-001.png",
+      "retail-residential-context/building__shop/page-002.png"
+    ],
+    "role": "rail",
+    "arms": "ns"
+  },
+  "g3q/9034-9036-9034-9072": {
+    "label": "Rooftop terrace railing",
+    "family": "Rooftop terrace railing",
+    "reason": "Native terrace boundary forms connected rails and posts with open gaps, rather than tall extruded sky or paving. Direction is selected from the exact rooftop neighborhood.",
+    "source_ordinal": 30,
+    "baseline_entry_sha256": "801256bbea5bcb1c422d96d60238fe2e6c926414bc570018b8fcd78c545b6b1f",
+    "evidence": [
+      "inventory/building__shop/page-001.png",
+      "retail-residential-context/building__shop/page-002.png"
+    ],
+    "role": "rail",
+    "arms": "ns"
+  },
+  "g3q/9036-9038-9073-9038": {
+    "label": "Rooftop terrace railing",
+    "family": "Rooftop terrace railing",
+    "reason": "Native terrace boundary forms connected rails and posts with open gaps, rather than tall extruded sky or paving. Direction is selected from the exact rooftop neighborhood.",
+    "source_ordinal": 31,
+    "baseline_entry_sha256": "e43a897d96893ba75a20d6dee393dd1b95794f3dbff4513cbca55e090afb766f",
+    "evidence": [
+      "inventory/building__shop/page-001.png",
+      "retail-residential-context/building__shop/page-002.png"
+    ],
+    "role": "rail",
+    "arms": "ns"
+  },
+  "g3q/9034-9090-9091-9092": {
+    "label": "Rooftop terrace railing",
+    "family": "Rooftop terrace railing",
+    "reason": "Native terrace boundary forms connected rails and posts with open gaps, rather than tall extruded sky or paving. Direction is selected from the exact rooftop neighborhood.",
+    "source_ordinal": 36,
+    "baseline_entry_sha256": "b6166447e4b2e0e583de9f199086f84984dbf831dfbea0223ec355ccacb7b6f0",
+    "evidence": [
+      "inventory/building__shop/page-002.png",
+      "retail-residential-context/building__shop/page-003.png"
+    ],
+    "role": "rail",
+    "arms": "ne"
+  },
+  "g3q/9093-9038-9092-9094": {
+    "label": "Rooftop terrace railing",
+    "family": "Rooftop terrace railing",
+    "reason": "Native terrace boundary forms connected rails and posts with open gaps, rather than tall extruded sky or paving. Direction is selected from the exact rooftop neighborhood.",
+    "source_ordinal": 37,
+    "baseline_entry_sha256": "5357780b00eea3c172806db3a40a94052171ed859dda395f4fee420916cb0ee9",
+    "evidence": [
+      "inventory/building__shop/page-002.png",
+      "retail-residential-context/building__shop/page-003.png"
+    ],
+    "role": "rail",
+    "arms": "nw"
+  },
+  "g3q/9110-9110-9092-9092": {
+    "label": "Rooftop terrace railing",
+    "family": "Rooftop terrace railing",
+    "reason": "Native terrace boundary forms connected rails and posts with open gaps, rather than tall extruded sky or paving. Direction is selected from the exact rooftop neighborhood.",
+    "source_ordinal": 52,
+    "baseline_entry_sha256": "7a865d3104ecaa9be1f0ae8a645f4bdcf5386c273c13f8e898452b61bc0d135d",
+    "evidence": [
+      "inventory/building__shop/page-002.png",
+      "retail-residential-context/building__shop/page-004.png"
+    ],
+    "role": "rail",
+    "arms": "ew"
+  },
+  "g3q/9036-9038-9072-9182": {
+    "label": "Rooftop terrace railing",
+    "family": "Rooftop terrace railing",
+    "reason": "Native terrace boundary forms connected rails and posts with open gaps, rather than tall extruded sky or paving. Direction is selected from the exact rooftop neighborhood.",
+    "source_ordinal": 63,
+    "baseline_entry_sha256": "0f38aad285eb0827d483a86a14795929acda889dc2f927aa83f32e9797ee7738",
+    "evidence": [
+      "inventory/building__shop/page-002.png",
+      "retail-residential-context/building__shop/page-004.png"
+    ],
+    "role": "rail",
+    "arms": "ne"
+  },
+  "g3q/8995-8995-9182-9182": {
+    "label": "Rooftop terrace railing",
+    "family": "Rooftop terrace railing",
+    "reason": "Native terrace boundary forms connected rails and posts with open gaps, rather than tall extruded sky or paving. Direction is selected from the exact rooftop neighborhood.",
+    "source_ordinal": 68,
+    "baseline_entry_sha256": "66d98fcd7bbab2f9ab761ebb82c739b014a2c881d387fc65e84458829fd34002",
+    "evidence": [
+      "inventory/building__shop/page-003.png",
+      "retail-residential-context/building__shop/page-005.png"
+    ],
+    "role": "rail",
+    "arms": "ew"
+  },
+  "g3q/9382-9383-9024-9025": {
+    "label": "Herb-shop display cabinet end",
+    "family": "Herb-shop display cabinet end",
+    "reason": "Closed framed display and foot retain the native merchandise/window face with constant depth, eliminating tapered source relief.",
+    "source_ordinal": 132,
+    "baseline_entry_sha256": "ffe09c25214127b213af1e76840244dd84d27dc05576095f93582c1c385f436d",
+    "evidence": [
+      "inventory/building__shop/page-005.png",
+      "retail-residential-context/building__shop/page-009.png"
+    ],
+    "role": "cabinet"
+  },
+  "g3q/9063-9064-9386-9387": {
+    "label": "Herb-shop display cabinet end",
+    "family": "Herb-shop display cabinet end",
+    "reason": "Closed framed display and foot retain the native merchandise/window face with constant depth, eliminating tapered source relief.",
+    "source_ordinal": 133,
+    "baseline_entry_sha256": "84e7fe6635d96ebee62f59dc0446dee1dac6aa9e14f63f06d889922648d37991",
+    "evidence": [
+      "inventory/building__shop/page-005.png",
+      "retail-residential-context/building__shop/page-009.png"
+    ],
+    "role": "cabinet"
+  },
+  "g3q/8960-8960-9001-9002": {
+    "label": "Retained retail architecture",
+    "family": "Retained retail architecture",
+    "reason": "Individually inspected source/front/east/top and indexed map placement. Existing hand-authored full wall, elevator or rooftop entry framing has straight bounded faces and coherent trim; retain its geometry.",
+    "source_ordinal": 4,
+    "baseline_entry_sha256": "eaeaa4ac07a2f1c3b8530442a189c3e96e82f8f0db9decb2a13b3802793834ea",
+    "evidence": [
+      "inventory/building__shop/page-001.png",
+      "retail-residential-context/building__shop/page-001.png"
+    ]
+  },
+  "g3q/8960-8960-9002-9003": {
+    "label": "Retained retail architecture",
+    "family": "Retained retail architecture",
+    "reason": "Individually inspected source/front/east/top and indexed map placement. Existing hand-authored full wall, elevator or rooftop entry framing has straight bounded faces and coherent trim; retain its geometry.",
+    "source_ordinal": 5,
+    "baseline_entry_sha256": "303147f5ca2f5b9586eab46340bc947f2a9bc8fdcc79684f1c670fd3ec3006e9",
+    "evidence": [
+      "inventory/building__shop/page-001.png",
+      "retail-residential-context/building__shop/page-001.png"
+    ]
+  },
+  "g3q/9054-49-9055-9056": {
+    "label": "Retained retail architecture",
+    "family": "Retained retail architecture",
+    "reason": "Individually inspected source/front/east/top and indexed map placement. Existing hand-authored full wall, elevator or rooftop entry framing has straight bounded faces and coherent trim; retain its geometry.",
+    "source_ordinal": 22,
+    "baseline_entry_sha256": "1eefff30fae3cd750c2c6232fb42c61986ad109711164d6968a5d8ead6f05efc",
+    "evidence": [
+      "inventory/building__shop/page-001.png",
+      "retail-residential-context/building__shop/page-002.png"
+    ]
+  },
+  "g3q/9055-9056-840-9071": {
+    "label": "Retained retail architecture",
+    "family": "Retained retail architecture",
+    "reason": "Individually inspected source/front/east/top and indexed map placement. Existing hand-authored full wall, elevator or rooftop entry framing has straight bounded faces and coherent trim; retain its geometry.",
+    "source_ordinal": 29,
+    "baseline_entry_sha256": "23d164d81b9a2e976fc67d9f8350f4115b850fd75dd7d41110f0776c781f3631",
+    "evidence": [
+      "inventory/building__shop/page-001.png",
+      "retail-residential-context/building__shop/page-002.png"
+    ]
+  },
+  "g3q/840-9071-9088-9089": {
+    "label": "Retained retail architecture",
+    "family": "Retained retail architecture",
+    "reason": "Individually inspected source/front/east/top and indexed map placement. Existing hand-authored full wall, elevator or rooftop entry framing has straight bounded faces and coherent trim; retain its geometry.",
+    "source_ordinal": 35,
+    "baseline_entry_sha256": "5a06c0eb06a1af300b0c89e4677c6288ffd973d7cb403c94be22d8bc2b253022",
+    "evidence": [
+      "inventory/building__shop/page-002.png",
+      "retail-residential-context/building__shop/page-003.png"
+    ]
+  },
+  "g3q/48-9054-9104-9055": {
+    "label": "Retained retail architecture",
+    "family": "Retained retail architecture",
+    "reason": "Individually inspected source/front/east/top and indexed map placement. Existing hand-authored full wall, elevator or rooftop entry framing has straight bounded faces and coherent trim; retain its geometry.",
+    "source_ordinal": 38,
+    "baseline_entry_sha256": "4108d2fc77ae4a12921ec2f71acd2590735fe8467dce0121457a6ad43ba701df",
+    "evidence": [
+      "inventory/building__shop/page-002.png",
+      "retail-residential-context/building__shop/page-003.png"
+    ]
+  },
+  "g3q/9054-9054-9055-9055": {
+    "label": "Retained retail architecture",
+    "family": "Retained retail architecture",
+    "reason": "Individually inspected source/front/east/top and indexed map placement. Existing hand-authored full wall, elevator or rooftop entry framing has straight bounded faces and coherent trim; retain its geometry.",
+    "source_ordinal": 39,
+    "baseline_entry_sha256": "eca959326dff91aec7693407271e87e162d9c4a23098ceaa2ec976629e0967b3",
+    "evidence": [
+      "inventory/building__shop/page-002.png",
+      "retail-residential-context/building__shop/page-003.png"
+    ]
+  },
+  "g3q/9104-9055-9114-840": {
+    "label": "Retained retail architecture",
+    "family": "Retained retail architecture",
+    "reason": "Individually inspected source/front/east/top and indexed map placement. Existing hand-authored full wall, elevator or rooftop entry framing has straight bounded faces and coherent trim; retain its geometry.",
+    "source_ordinal": 42,
+    "baseline_entry_sha256": "3b196202ac197df6969a06c5f9ea47b6bfb1c6e028b7a2fc44245f1783235ebf",
+    "evidence": [
+      "inventory/building__shop/page-002.png",
+      "retail-residential-context/building__shop/page-003.png"
+    ]
+  },
+  "g3q/9055-9055-840-840": {
+    "label": "Retained retail architecture",
+    "family": "Retained retail architecture",
+    "reason": "Individually inspected source/front/east/top and indexed map placement. Existing hand-authored full wall, elevator or rooftop entry framing has straight bounded faces and coherent trim; retain its geometry.",
+    "source_ordinal": 43,
+    "baseline_entry_sha256": "72bbeaf11b0d334de6d5d35a0fba10d1b1d0beaa3a5f6dd73b0dcab5758a06be",
+    "evidence": [
+      "inventory/building__shop/page-002.png",
+      "retail-residential-context/building__shop/page-003.png"
+    ]
+  },
+  "g3q/9114-840-9131-9109": {
+    "label": "Retained retail architecture",
+    "family": "Retained retail architecture",
+    "reason": "Individually inspected source/front/east/top and indexed map placement. Existing hand-authored full wall, elevator or rooftop entry framing has straight bounded faces and coherent trim; retain its geometry.",
+    "source_ordinal": 48,
+    "baseline_entry_sha256": "414c865f0734e3aac687b61b9b6fd21880a387d3a6d8bc6c39b1ae2c8e9ae8de",
+    "evidence": [
+      "inventory/building__shop/page-002.png",
+      "retail-residential-context/building__shop/page-003.png"
+    ]
+  },
+  "g3q/9095-9095-9183-9184": {
+    "label": "Retained retail architecture",
+    "family": "Retained retail architecture",
+    "reason": "Individually inspected source/front/east/top and indexed map placement. Existing hand-authored full wall, elevator or rooftop entry framing has straight bounded faces and coherent trim; retain its geometry.",
+    "source_ordinal": 64,
+    "baseline_entry_sha256": "f875cf34699c6f3e0a601bdddb6d3809b16c6ccad2625c43a8b70fd001206d9a",
+    "evidence": [
+      "inventory/building__shop/page-002.png",
+      "retail-residential-context/building__shop/page-004.png"
+    ]
+  },
+  "g3q/9095-9095-9185-9186": {
+    "label": "Retained retail architecture",
+    "family": "Retained retail architecture",
+    "reason": "Individually inspected source/front/east/top and indexed map placement. Existing hand-authored full wall, elevator or rooftop entry framing has straight bounded faces and coherent trim; retain its geometry.",
+    "source_ordinal": 65,
+    "baseline_entry_sha256": "88de435a4f0b0e9e71d149ba58ad3b1eca55ba222f3bca334b2057824282963d",
+    "evidence": [
+      "inventory/building__shop/page-003.png",
+      "retail-residential-context/building__shop/page-005.png"
+    ]
+  },
+  "g3q/9095-9095-9187-9183": {
+    "label": "Retained retail architecture",
+    "family": "Retained retail architecture",
+    "reason": "Individually inspected source/front/east/top and indexed map placement. Existing hand-authored full wall, elevator or rooftop entry framing has straight bounded faces and coherent trim; retain its geometry.",
+    "source_ordinal": 66,
+    "baseline_entry_sha256": "506227397569999b9f29b3e7efbfb8f4973550aa9b05bcb34a97a58b6635eb6c",
+    "evidence": [
+      "inventory/building__shop/page-003.png",
+      "retail-residential-context/building__shop/page-005.png"
+    ]
+  },
+  "g3q/9115-9188-9189-9190": {
+    "label": "Retained retail architecture",
+    "family": "Retained retail architecture",
+    "reason": "Individually inspected source/front/east/top and indexed map placement. Existing hand-authored full wall, elevator or rooftop entry framing has straight bounded faces and coherent trim; retain its geometry.",
+    "source_ordinal": 69,
+    "baseline_entry_sha256": "5feb3d02d46e985106c2f3583710732a7cc0025a5896c2266b9ba32c95d4a817",
+    "evidence": [
+      "inventory/building__shop/page-003.png",
+      "retail-residential-context/building__shop/page-005.png"
+    ]
+  },
+  "g3q/9191-9192-9193-9194": {
+    "label": "Retained retail architecture",
+    "family": "Retained retail architecture",
+    "reason": "Individually inspected source/front/east/top and indexed map placement. Existing hand-authored full wall, elevator or rooftop entry framing has straight bounded faces and coherent trim; retain its geometry.",
+    "source_ordinal": 70,
+    "baseline_entry_sha256": "094869bcf242ac8884c89d85a506567fea465eb9b76f661b2d1bc41d7d9f09f0",
+    "evidence": [
+      "inventory/building__shop/page-003.png",
+      "retail-residential-context/building__shop/page-005.png"
+    ]
+  },
+  "g3q/9195-9115-9196-9189": {
+    "label": "Retained retail architecture",
+    "family": "Retained retail architecture",
+    "reason": "Individually inspected source/front/east/top and indexed map placement. Existing hand-authored full wall, elevator or rooftop entry framing has straight bounded faces and coherent trim; retain its geometry.",
+    "source_ordinal": 71,
+    "baseline_entry_sha256": "6f172048a52ccf8bee094be1148325114557fe383e4d67708c5995aa694ac26e",
+    "evidence": [
+      "inventory/building__shop/page-003.png",
+      "retail-residential-context/building__shop/page-005.png"
+    ]
+  },
+  "g3q/9095-9095-9314-9184": {
+    "label": "Retained retail architecture",
+    "family": "Retained retail architecture",
+    "reason": "Individually inspected source/front/east/top and indexed map placement. Existing hand-authored full wall, elevator or rooftop entry framing has straight bounded faces and coherent trim; retain its geometry.",
+    "source_ordinal": 118,
+    "baseline_entry_sha256": "45f6a82498a1efef3dd48babf42ddc481e0e531fb3dfdfb8feb8b0a1823d400d",
+    "evidence": [
+      "inventory/building__shop/page-004.png",
+      "retail-residential-context/building__shop/page-008.png"
+    ]
+  },
+  "g3q/9095-9095-9187-9314": {
+    "label": "Retained retail architecture",
+    "family": "Retained retail architecture",
+    "reason": "Individually inspected source/front/east/top and indexed map placement. Existing hand-authored full wall, elevator or rooftop entry framing has straight bounded faces and coherent trim; retain its geometry.",
+    "source_ordinal": 119,
+    "baseline_entry_sha256": "11ed2c903758d8cb887771ab5856b4f920a18b90aedfb173bfea29ae06186964",
+    "evidence": [
+      "inventory/building__shop/page-004.png",
+      "retail-residential-context/building__shop/page-008.png"
+    ]
+  },
+  "g3q/9327-9188-9329-9190": {
+    "label": "Retained retail architecture",
+    "family": "Retained retail architecture",
+    "reason": "Individually inspected source/front/east/top and indexed map placement. Existing hand-authored full wall, elevator or rooftop entry framing has straight bounded faces and coherent trim; retain its geometry.",
+    "source_ordinal": 120,
+    "baseline_entry_sha256": "55183fba0f9b59bb44b96e65e793a2d12a60214774c72828089516936f191154",
+    "evidence": [
+      "inventory/building__shop/page-004.png",
+      "retail-residential-context/building__shop/page-008.png"
+    ]
+  },
+  "g3q/9195-9327-9196-9329": {
+    "label": "Retained retail architecture",
+    "family": "Retained retail architecture",
+    "reason": "Individually inspected source/front/east/top and indexed map placement. Existing hand-authored full wall, elevator or rooftop entry framing has straight bounded faces and coherent trim; retain its geometry.",
+    "source_ordinal": 121,
+    "baseline_entry_sha256": "83fd541fffc7a2a9e13ecd8d14f78c54baa62522e4cdb78df5213d80d8c09107",
+    "evidence": [
+      "inventory/building__shop/page-004.png",
+      "retail-residential-context/building__shop/page-008.png"
+    ]
+  },
+  "g3q/9115-9365-9189-9366": {
+    "label": "Retained retail architecture",
+    "family": "Retained retail architecture",
+    "reason": "Individually inspected source/front/east/top and indexed map placement. Existing hand-authored full wall, elevator or rooftop entry framing has straight bounded faces and coherent trim; retain its geometry.",
+    "source_ordinal": 122,
+    "baseline_entry_sha256": "5df79752353bc0911e18df25d7d366a13bda1a2ec1a239f520035bf5e0e17a36",
+    "evidence": [
+      "inventory/building__shop/page-004.png",
+      "retail-residential-context/building__shop/page-008.png"
+    ]
+  },
+  "g3q/9095-9095-9314-9367": {
+    "label": "Retained retail architecture",
+    "family": "Retained retail architecture",
+    "reason": "Individually inspected source/front/east/top and indexed map placement. Existing hand-authored full wall, elevator or rooftop entry framing has straight bounded faces and coherent trim; retain its geometry.",
+    "source_ordinal": 123,
+    "baseline_entry_sha256": "60855d9074f4160e31230698b958b766c9b145d31704a54124848d91e2344bbe",
+    "evidence": [
+      "inventory/building__shop/page-004.png",
+      "retail-residential-context/building__shop/page-008.png"
+    ]
+  },
+  "g3q/9095-9095-9369-9314": {
+    "label": "Retained retail architecture",
+    "family": "Retained retail architecture",
+    "reason": "Individually inspected source/front/east/top and indexed map placement. Existing hand-authored full wall, elevator or rooftop entry framing has straight bounded faces and coherent trim; retain its geometry.",
+    "source_ordinal": 125,
+    "baseline_entry_sha256": "516a77915175bcb72cb140fa52e27d2337c592c57a374e1832f48f2d550ba52a",
+    "evidence": [
+      "inventory/building__shop/page-004.png",
+      "retail-residential-context/building__shop/page-008.png"
+    ]
+  },
+  "g3q/9327-9370-9329-9371": {
+    "label": "Retained retail architecture",
+    "family": "Retained retail architecture",
+    "reason": "Individually inspected source/front/east/top and indexed map placement. Existing hand-authored full wall, elevator or rooftop entry framing has straight bounded faces and coherent trim; retain its geometry.",
+    "source_ordinal": 126,
+    "baseline_entry_sha256": "4603a5b68ca8131df8b55d99826a33d8c3f0ed929cc71fa7e9dded0e671e8aeb",
+    "evidence": [
+      "inventory/building__shop/page-004.png",
+      "retail-residential-context/building__shop/page-008.png"
+    ]
+  },
+  "g3q/9372-9327-9373-9329": {
+    "label": "Retained retail architecture",
+    "family": "Retained retail architecture",
+    "reason": "Individually inspected source/front/east/top and indexed map placement. Existing hand-authored full wall, elevator or rooftop entry framing has straight bounded faces and coherent trim; retain its geometry.",
+    "source_ordinal": 127,
+    "baseline_entry_sha256": "f86f4f60da729e1eb128c4f3bb52fbe866b43fa997d129ba707c0a56fd951a65",
+    "evidence": [
+      "inventory/building__shop/page-004.png",
+      "retail-residential-context/building__shop/page-008.png"
+    ]
+  },
+  "g3q/9095-9095-9183-9374": {
+    "label": "Retained retail architecture",
+    "family": "Retained retail architecture",
+    "reason": "Individually inspected source/front/east/top and indexed map placement. Existing hand-authored full wall, elevator or rooftop entry framing has straight bounded faces and coherent trim; retain its geometry.",
+    "source_ordinal": 128,
+    "baseline_entry_sha256": "1f0b52ccee98ffb329492556aff1ebe7c1b224a607061c631382d20b6f583ab0",
+    "evidence": [
+      "inventory/building__shop/page-004.png",
+      "retail-residential-context/building__shop/page-008.png"
+    ]
+  },
+  "g3q/9095-9095-9375-9183": {
+    "label": "Retained retail architecture",
+    "family": "Retained retail architecture",
+    "reason": "Individually inspected source/front/east/top and indexed map placement. Existing hand-authored full wall, elevator or rooftop entry framing has straight bounded faces and coherent trim; retain its geometry.",
+    "source_ordinal": 129,
+    "baseline_entry_sha256": "a69bb751a556755ee2620a96bfa54396174956c556491733415ef39429f1e359",
+    "evidence": [
+      "inventory/building__shop/page-005.png",
+      "retail-residential-context/building__shop/page-009.png"
+    ]
+  },
+  "g3q/9376-9115-9377-9189": {
+    "label": "Retained retail architecture",
+    "family": "Retained retail architecture",
+    "reason": "Individually inspected source/front/east/top and indexed map placement. Existing hand-authored full wall, elevator or rooftop entry framing has straight bounded faces and coherent trim; retain its geometry.",
+    "source_ordinal": 130,
+    "baseline_entry_sha256": "2bd3ba1cdc7f944f3dc4683b014aed45a6f023783714087ebe6b6a57d87a79fb",
+    "evidence": [
+      "inventory/building__shop/page-005.png",
+      "retail-residential-context/building__shop/page-009.png"
+    ]
+  },
+  "g3q/9012-9013-9014-9015": {
+    "label": "Retained display or service counter",
+    "family": "Retained display or service counter",
+    "reason": "Source and map show this specific hand-authored cabinet/counter section. Its clean body or horizontal top, supported edges and native merchandise/register details already agree with adjoining pieces.",
+    "source_ordinal": 9,
+    "baseline_entry_sha256": "bd66852a03199b8e2cddfdbb0cd7ae182da5dc98fea7cc10ac9a216a9c839dec",
+    "evidence": [
+      "inventory/building__shop/page-001.png",
+      "retail-residential-context/building__shop/page-001.png"
+    ]
+  },
+  "g3q/9016-9017-9018-9019": {
+    "label": "Retained display or service counter",
+    "family": "Retained display or service counter",
+    "reason": "Source and map show this specific hand-authored cabinet/counter section. Its clean body or horizontal top, supported edges and native merchandise/register details already agree with adjoining pieces.",
+    "source_ordinal": 10,
+    "baseline_entry_sha256": "b49c77c59c574ee7ebc7b9ac35ca75533fcceaa9615a440674c1145ab44037d5",
+    "evidence": [
+      "inventory/building__shop/page-001.png",
+      "retail-residential-context/building__shop/page-001.png"
+    ]
+  },
+  "g3q/9022-9023-9024-9025": {
+    "label": "Retained display or service counter",
+    "family": "Retained display or service counter",
+    "reason": "Source and map show this specific hand-authored cabinet/counter section. Its clean body or horizontal top, supported edges and native merchandise/register details already agree with adjoining pieces.",
+    "source_ordinal": 12,
+    "baseline_entry_sha256": "cce6d3334b3509ea30af8d56f27630fdfba611ff0207b21aba8dc02b836a2b99",
+    "evidence": [
+      "inventory/building__shop/page-001.png",
+      "retail-residential-context/building__shop/page-001.png"
+    ]
+  },
+  "g3q/9026-9027-9028-9029": {
+    "label": "Retained display or service counter",
+    "family": "Retained display or service counter",
+    "reason": "Source and map show this specific hand-authored cabinet/counter section. Its clean body or horizontal top, supported edges and native merchandise/register details already agree with adjoining pieces.",
+    "source_ordinal": 13,
+    "baseline_entry_sha256": "1f2d205ea17a4b8fdf911e9df8890c402cb4b445c025a489bd54b3dcd4bdef7b",
+    "evidence": [
+      "inventory/building__shop/page-001.png",
+      "retail-residential-context/building__shop/page-001.png"
+    ]
+  },
+  "g3q/9042-9043-9044-9045": {
+    "label": "Retained display or service counter",
+    "family": "Retained display or service counter",
+    "reason": "Source and map show this specific hand-authored cabinet/counter section. Its clean body or horizontal top, supported edges and native merchandise/register details already agree with adjoining pieces.",
+    "source_ordinal": 19,
+    "baseline_entry_sha256": "06bd7cdd77967e2db3a5bf03b1735649a0ffcc20c360b0476c0711ed887375b0",
+    "evidence": [
+      "inventory/building__shop/page-001.png",
+      "retail-residential-context/building__shop/page-002.png"
+    ]
+  },
+  "g3q/9046-9047-9048-9049": {
+    "label": "Retained display or service counter",
+    "family": "Retained display or service counter",
+    "reason": "Source and map show this specific hand-authored cabinet/counter section. Its clean body or horizontal top, supported edges and native merchandise/register details already agree with adjoining pieces.",
+    "source_ordinal": 20,
+    "baseline_entry_sha256": "06f7d24245f45d6d7c60ee3c7ef436e5ce5c39e8827e16dd8f120e1456b4ff49",
+    "evidence": [
+      "inventory/building__shop/page-001.png",
+      "retail-residential-context/building__shop/page-002.png"
+    ]
+  },
+  "g3q/9050-9051-9052-9053": {
+    "label": "Retained display or service counter",
+    "family": "Retained display or service counter",
+    "reason": "Source and map show this specific hand-authored cabinet/counter section. Its clean body or horizontal top, supported edges and native merchandise/register details already agree with adjoining pieces.",
+    "source_ordinal": 21,
+    "baseline_entry_sha256": "39a6485c3d75ac4ca2f9cd7999f0e5fb154077d89001c4d1e20e68d6a6052f86",
+    "evidence": [
+      "inventory/building__shop/page-001.png",
+      "retail-residential-context/building__shop/page-002.png"
+    ]
+  },
+  "g3q/9061-9062-9044-9045": {
+    "label": "Retained display or service counter",
+    "family": "Retained display or service counter",
+    "reason": "Source and map show this specific hand-authored cabinet/counter section. Its clean body or horizontal top, supported edges and native merchandise/register details already agree with adjoining pieces.",
+    "source_ordinal": 26,
+    "baseline_entry_sha256": "90afe81ba6d4bd0b020e35edd8d47ecf1b08dc722dece63b9c089233c5a2fb13",
+    "evidence": [
+      "inventory/building__shop/page-001.png",
+      "retail-residential-context/building__shop/page-002.png"
+    ]
+  },
+  "g3q/9063-9064-9065-9066": {
+    "label": "Retained display or service counter",
+    "family": "Retained display or service counter",
+    "reason": "Source and map show this specific hand-authored cabinet/counter section. Its clean body or horizontal top, supported edges and native merchandise/register details already agree with adjoining pieces.",
+    "source_ordinal": 27,
+    "baseline_entry_sha256": "f6f334e139a3238151a3908722a7da4349b6a5ebe965db65e7d84337f539774f",
+    "evidence": [
+      "inventory/building__shop/page-001.png",
+      "retail-residential-context/building__shop/page-002.png"
+    ]
+  },
+  "g3q/9067-9068-9069-9070": {
+    "label": "Retained display or service counter",
+    "family": "Retained display or service counter",
+    "reason": "Source and map show this specific hand-authored cabinet/counter section. Its clean body or horizontal top, supported edges and native merchandise/register details already agree with adjoining pieces.",
+    "source_ordinal": 28,
+    "baseline_entry_sha256": "587d5097b57a59de28accfb9b7961f751cfcacc6512660a0479314c192f10b13",
+    "evidence": [
+      "inventory/building__shop/page-001.png",
+      "retail-residential-context/building__shop/page-002.png"
+    ]
+  },
+  "g3q/9078-9079-9077-9080": {
+    "label": "Retained display or service counter",
+    "family": "Retained display or service counter",
+    "reason": "Source and map show this specific hand-authored cabinet/counter section. Its clean body or horizontal top, supported edges and native merchandise/register details already agree with adjoining pieces.",
+    "source_ordinal": 32,
+    "baseline_entry_sha256": "46f573e30520e75c363d19d1884cd176a16447a882a57b5a431fba8f888607a8",
+    "evidence": [
+      "inventory/building__shop/page-001.png",
+      "retail-residential-context/building__shop/page-002.png"
+    ]
+  },
+  "g3q/9081-9082-9083-9084": {
+    "label": "Retained display or service counter",
+    "family": "Retained display or service counter",
+    "reason": "Source and map show this specific hand-authored cabinet/counter section. Its clean body or horizontal top, supported edges and native merchandise/register details already agree with adjoining pieces.",
+    "source_ordinal": 33,
+    "baseline_entry_sha256": "7a13f061d9c018fa829422658dc25ddf4da1209c181c7827cd5f7f5e902cc64b",
+    "evidence": [
+      "inventory/building__shop/page-002.png",
+      "retail-residential-context/building__shop/page-003.png"
+    ]
+  },
+  "g3q/9115-9115-9227-9228": {
+    "label": "Retained display or service counter",
+    "family": "Retained display or service counter",
+    "reason": "Source and map show this specific hand-authored cabinet/counter section. Its clean body or horizontal top, supported edges and native merchandise/register details already agree with adjoining pieces.",
+    "source_ordinal": 80,
+    "baseline_entry_sha256": "95544fa24c3558e724d566dc205e8b87fbe1d79ab97f5da7df52e0fa464ceb65",
+    "evidence": [
+      "inventory/building__shop/page-003.png",
+      "retail-residential-context/building__shop/page-005.png"
+    ]
+  },
+  "g3q/9115-9115-9116-9229": {
+    "label": "Retained display or service counter",
+    "family": "Retained display or service counter",
+    "reason": "Source and map show this specific hand-authored cabinet/counter section. Its clean body or horizontal top, supported edges and native merchandise/register details already agree with adjoining pieces.",
+    "source_ordinal": 81,
+    "baseline_entry_sha256": "49a3255497a8ebab054aed1ef61d8e985b2e4c5bf1459205f64a42325c6eadba",
+    "evidence": [
+      "inventory/building__shop/page-003.png",
+      "retail-residential-context/building__shop/page-006.png"
+    ]
+  },
+  "g3q/9230-9136-9230-9136": {
+    "label": "Retained display or service counter",
+    "family": "Retained display or service counter",
+    "reason": "Source and map show this specific hand-authored cabinet/counter section. Its clean body or horizontal top, supported edges and native merchandise/register details already agree with adjoining pieces.",
+    "source_ordinal": 82,
+    "baseline_entry_sha256": "b9e70e0af94626d7998f49456e9dfdbad14043b636038433ffa59b7c48638fa7",
+    "evidence": [
+      "inventory/building__shop/page-003.png",
+      "retail-residential-context/building__shop/page-006.png"
+    ]
+  },
+  "g3q/9235-9236-9237-9237": {
+    "label": "Retained display or service counter",
+    "family": "Retained display or service counter",
+    "reason": "Source and map show this specific hand-authored cabinet/counter section. Its clean body or horizontal top, supported edges and native merchandise/register details already agree with adjoining pieces.",
+    "source_ordinal": 84,
+    "baseline_entry_sha256": "56745281cfe4e3a011a0508359005f02ead97b1699a066768253c1be79048586",
+    "evidence": [
+      "inventory/building__shop/page-003.png",
+      "retail-residential-context/building__shop/page-006.png"
+    ]
+  },
+  "g3q/9238-9238-9237-9237": {
+    "label": "Retained display or service counter",
+    "family": "Retained display or service counter",
+    "reason": "Source and map show this specific hand-authored cabinet/counter section. Its clean body or horizontal top, supported edges and native merchandise/register details already agree with adjoining pieces.",
+    "source_ordinal": 85,
+    "baseline_entry_sha256": "5a5a6e25f71bcfde2fa5bb738752edc0696ed8b23c89a66c16bd2debec64b391",
+    "evidence": [
+      "inventory/building__shop/page-003.png",
+      "retail-residential-context/building__shop/page-006.png"
+    ]
+  },
+  "g3q/9239-9240-9241-9242": {
+    "label": "Retained display or service counter",
+    "family": "Retained display or service counter",
+    "reason": "Source and map show this specific hand-authored cabinet/counter section. Its clean body or horizontal top, supported edges and native merchandise/register details already agree with adjoining pieces.",
+    "source_ordinal": 86,
+    "baseline_entry_sha256": "aca371e7bbefeb01c3e800d0011ce18d9dbe8742eb3d8a2b673038382f3401c3",
+    "evidence": [
+      "inventory/building__shop/page-003.png",
+      "retail-residential-context/building__shop/page-006.png"
+    ]
+  },
+  "g3q/9133-9243-9135-9136": {
+    "label": "Retained display or service counter",
+    "family": "Retained display or service counter",
+    "reason": "Source and map show this specific hand-authored cabinet/counter section. Its clean body or horizontal top, supported edges and native merchandise/register details already agree with adjoining pieces.",
+    "source_ordinal": 87,
+    "baseline_entry_sha256": "9c5d2df034f529a006b428d6a638809af4b830496b4e3e91d9ab02694e40f0ff",
+    "evidence": [
+      "inventory/building__shop/page-003.png",
+      "retail-residential-context/building__shop/page-006.png"
+    ]
+  },
+  "g3q/9230-9136-9230-9247": {
+    "label": "Retained display or service counter",
+    "family": "Retained display or service counter",
+    "reason": "Source and map show this specific hand-authored cabinet/counter section. Its clean body or horizontal top, supported edges and native merchandise/register details already agree with adjoining pieces.",
+    "source_ordinal": 88,
+    "baseline_entry_sha256": "54b9e90793048b3da03e51c1e89fd63c59d0ac84086dc0c8763b0b3318d0d03e",
+    "evidence": [
+      "inventory/building__shop/page-003.png",
+      "retail-residential-context/building__shop/page-006.png"
+    ]
+  },
+  "g3q/9230-9136-9135-9136": {
+    "label": "Retained display or service counter",
+    "family": "Retained display or service counter",
+    "reason": "Source and map show this specific hand-authored cabinet/counter section. Its clean body or horizontal top, supported edges and native merchandise/register details already agree with adjoining pieces.",
+    "source_ordinal": 89,
+    "baseline_entry_sha256": "cff7b490882ff056afa863e9b49131de46d966e5e39188dff2767507214d3626",
+    "evidence": [
+      "inventory/building__shop/page-003.png",
+      "retail-residential-context/building__shop/page-006.png"
+    ]
+  },
+  "g3q/9248-9249-9250-9237": {
+    "label": "Retained display or service counter",
+    "family": "Retained display or service counter",
+    "reason": "Source and map show this specific hand-authored cabinet/counter section. Its clean body or horizontal top, supported edges and native merchandise/register details already agree with adjoining pieces.",
+    "source_ordinal": 90,
+    "baseline_entry_sha256": "5aed25ed3789aaaa6a382aa0d02cf5be7ef46de44b98f3a07effb95f49a66dcc",
+    "evidence": [
+      "inventory/building__shop/page-003.png",
+      "retail-residential-context/building__shop/page-006.png"
+    ]
+  },
+  "g3q/9251-9252-9237-9253": {
+    "label": "Retained display or service counter",
+    "family": "Retained display or service counter",
+    "reason": "Source and map show this specific hand-authored cabinet/counter section. Its clean body or horizontal top, supported edges and native merchandise/register details already agree with adjoining pieces.",
+    "source_ordinal": 91,
+    "baseline_entry_sha256": "efdd0a54d2105d23912ee18ce0bf8c3f53c6cbe96129a09566b890fb0da025f0",
+    "evidence": [
+      "inventory/building__shop/page-003.png",
+      "retail-residential-context/building__shop/page-006.png"
+    ]
+  },
+  "g3q/9255-9256-9250-9237": {
+    "label": "Retained display or service counter",
+    "family": "Retained display or service counter",
+    "reason": "Source and map show this specific hand-authored cabinet/counter section. Its clean body or horizontal top, supported edges and native merchandise/register details already agree with adjoining pieces.",
+    "source_ordinal": 93,
+    "baseline_entry_sha256": "dd69d6f4a00c31317e4235ed49cbd8d8430650725c5f6f4ce7bfa4aaedde670a",
+    "evidence": [
+      "inventory/building__shop/page-003.png",
+      "retail-residential-context/building__shop/page-006.png"
+    ]
+  },
+  "g3q/9063-9064-9257-9258": {
+    "label": "Retained display or service counter",
+    "family": "Retained display or service counter",
+    "reason": "Source and map show this specific hand-authored cabinet/counter section. Its clean body or horizontal top, supported edges and native merchandise/register details already agree with adjoining pieces.",
+    "source_ordinal": 94,
+    "baseline_entry_sha256": "60df7be619f4cbb83d84fa8b267a67e2c23635b7f5ef7333baad79496f2232d8",
+    "evidence": [
+      "inventory/building__shop/page-003.png",
+      "retail-residential-context/building__shop/page-006.png"
+    ]
+  },
+  "g3q/9067-9068-9259-9260": {
+    "label": "Retained display or service counter",
+    "family": "Retained display or service counter",
+    "reason": "Source and map show this specific hand-authored cabinet/counter section. Its clean body or horizontal top, supported edges and native merchandise/register details already agree with adjoining pieces.",
+    "source_ordinal": 95,
+    "baseline_entry_sha256": "a37673d9159f56abd4cffbcbf09806e940cd7d0adf7330b547d2ed91c713c904",
+    "evidence": [
+      "inventory/building__shop/page-003.png",
+      "retail-residential-context/building__shop/page-006.png"
+    ]
+  },
+  "g3q/9255-9252-9250-9253": {
+    "label": "Retained display or service counter",
+    "family": "Retained display or service counter",
+    "reason": "Source and map show this specific hand-authored cabinet/counter section. Its clean body or horizontal top, supported edges and native merchandise/register details already agree with adjoining pieces.",
+    "source_ordinal": 105,
+    "baseline_entry_sha256": "96dc2e12c34f6fa6a8fd12c8e50149a298c2e4b46c4627d5b613caa5903caae5",
+    "evidence": [
+      "inventory/building__shop/page-004.png",
+      "retail-residential-context/building__shop/page-007.png"
+    ]
+  },
+  "g3q/9248-9249-9250-9253": {
+    "label": "Retained display or service counter",
+    "family": "Retained display or service counter",
+    "reason": "Source and map show this specific hand-authored cabinet/counter section. Its clean body or horizontal top, supported edges and native merchandise/register details already agree with adjoining pieces.",
+    "source_ordinal": 107,
+    "baseline_entry_sha256": "58eac2bea77fa6fab13e93914792f5673c8b77e7603883528e09d9def4101f9d",
+    "evidence": [
+      "inventory/building__shop/page-004.png",
+      "retail-residential-context/building__shop/page-007.png"
+    ]
+  },
+  "g3q/9327-9327-9227-9228": {
+    "label": "Retained display or service counter",
+    "family": "Retained display or service counter",
+    "reason": "Source and map show this specific hand-authored cabinet/counter section. Its clean body or horizontal top, supported edges and native merchandise/register details already agree with adjoining pieces.",
+    "source_ordinal": 116,
+    "baseline_entry_sha256": "0592b1d4eeb84cde567b37ac81246181051ab3050de1bbaacfe7750060fd9341",
+    "evidence": [
+      "inventory/building__shop/page-004.png",
+      "retail-residential-context/building__shop/page-008.png"
+    ]
+  },
+  "g3q/9327-9327-9116-9229": {
+    "label": "Retained display or service counter",
+    "family": "Retained display or service counter",
+    "reason": "Source and map show this specific hand-authored cabinet/counter section. Its clean body or horizontal top, supported edges and native merchandise/register details already agree with adjoining pieces.",
+    "source_ordinal": 117,
+    "baseline_entry_sha256": "67ba744c8ff2ba2a6fdc725b266d2b35841a5edbf2c3b4968865506bd41877e7",
+    "evidence": [
+      "inventory/building__shop/page-004.png",
+      "retail-residential-context/building__shop/page-008.png"
+    ]
+  },
+  "g3q/9393-9394-9076-9077": {
+    "label": "Retained display or service counter",
+    "family": "Retained display or service counter",
+    "reason": "Source and map show this specific hand-authored cabinet/counter section. Its clean body or horizontal top, supported edges and native merchandise/register details already agree with adjoining pieces.",
+    "source_ordinal": 135,
+    "baseline_entry_sha256": "ff7bddd100206d4b156a20c938f09ca047972163fda27a4dd1971754a1692f09",
+    "evidence": [
+      "inventory/building__shop/page-005.png",
+      "retail-residential-context/building__shop/page-009.png"
+    ]
+  },
+  "g3q/9105-9106-9107-9108": {
+    "label": "Retained stair or doorway surface",
+    "family": "Retained stair or doorway surface",
+    "reason": "Map identifies a warp/stair opening. Existing shallow steps or entrance plate follows the source and preserves the warp context without an obstructing new volume.",
+    "source_ordinal": 40,
+    "baseline_entry_sha256": "a9d5db2a9b5906911a5a0768e5c593619b9255b73adba6a00d32dc77be37d4c0",
+    "evidence": [
+      "inventory/building__shop/page-002.png",
+      "retail-residential-context/building__shop/page-003.png"
+    ]
+  },
+  "g3q/840-840-9109-9088": {
+    "label": "Retained stair or doorway surface",
+    "family": "Retained stair or doorway surface",
+    "reason": "Map identifies a warp/stair opening. Existing shallow steps or entrance plate follows the source and preserves the warp context without an obstructing new volume.",
+    "source_ordinal": 41,
+    "baseline_entry_sha256": "f6dc9e3c249ba8776e310b3120b47cbb1c0931ea325fa4c7ee19b92bcffed9c0",
+    "evidence": [
+      "inventory/building__shop/page-002.png",
+      "retail-residential-context/building__shop/page-003.png"
+    ]
+  },
+  "g3q/840-840-9132-9132": {
+    "label": "Retained stair or doorway surface",
+    "family": "Retained stair or doorway surface",
+    "reason": "Map identifies a warp/stair opening. Existing shallow steps or entrance plate follows the source and preserves the warp context without an obstructing new volume.",
+    "source_ordinal": 49,
+    "baseline_entry_sha256": "106170d55c83c0b6100b90bf4bf8edd55ae971afe22dd92806cccf9c2e0c29b7",
+    "evidence": [
+      "inventory/building__shop/page-002.png",
+      "retail-residential-context/building__shop/page-004.png"
+    ]
+  },
+  "g3q/9095-9095-9368-9368": {
+    "label": "Retained stair or doorway surface",
+    "family": "Retained stair or doorway surface",
+    "reason": "Map identifies a warp/stair opening. Existing shallow steps or entrance plate follows the source and preserves the warp context without an obstructing new volume.",
+    "source_ordinal": 124,
+    "baseline_entry_sha256": "e14e4a8b1ec12f0d7f99bec5659549b8a015a3321d23dd0153be6d1fb6accaad",
+    "evidence": [
+      "inventory/building__shop/page-004.png",
+      "retail-residential-context/building__shop/page-008.png"
+    ]
+  },
+  "g3q/9095-9095-9129-9130": {
+    "label": "Retained wall-terminal header",
+    "family": "Retained wall-terminal header",
+    "reason": "The source is the straight upper wall and top of a recessed PC terminal. The existing hand-authored bounded header preserves the native trim and does not extrude floor art.",
+    "source_ordinal": 47,
+    "baseline_entry_sha256": "4fcc7bf4b2dda1c743681311d3e01bef0fe7f69866e653f34d9506f3532b534d",
+    "evidence": [
+      "inventory/building__shop/page-002.png",
+      "retail-residential-context/building__shop/page-003.png"
+    ]
+  },
+  "g3q/8950-8951-9059-9060": {
+    "label": "Retained floor sign or counter border",
+    "family": "Retained floor sign or counter border",
+    "reason": "Source neighborhood places these pixels on the floor or at the low edge of a counter. Existing thin, horizontal projection is appropriate and excludes the surrounding patterned floor.",
+    "source_ordinal": 25,
+    "baseline_entry_sha256": "d3047db309de53ebb40fd4bd831777f78b4d902a5a5e86651cf13e12b4b4ceb6",
+    "evidence": [
+      "inventory/building__shop/page-001.png",
+      "retail-residential-context/building__shop/page-002.png"
+    ]
+  },
+  "g3q/9118-9205-9155-9206": {
+    "label": "Retained floor sign or counter border",
+    "family": "Retained floor sign or counter border",
+    "reason": "Source neighborhood places these pixels on the floor or at the low edge of a counter. Existing thin, horizontal projection is appropriate and excludes the surrounding patterned floor.",
+    "source_ordinal": 74,
+    "baseline_entry_sha256": "414ea0a305de78e658360c5318f73b43b6812ff50b58e7b7a873c2f7162905ec",
+    "evidence": [
+      "inventory/building__shop/page-003.png",
+      "retail-residential-context/building__shop/page-005.png"
+    ]
+  },
+  "g3q/9207-9119-9208-9156": {
+    "label": "Retained floor sign or counter border",
+    "family": "Retained floor sign or counter border",
+    "reason": "Source neighborhood places these pixels on the floor or at the low edge of a counter. Existing thin, horizontal projection is appropriate and excludes the surrounding patterned floor.",
+    "source_ordinal": 75,
+    "baseline_entry_sha256": "672c3bfac6007b5cadd64ca087abf24b23a0a4cadf41731a1f4382be64b6ff2b",
+    "evidence": [
+      "inventory/building__shop/page-003.png",
+      "retail-residential-context/building__shop/page-005.png"
+    ]
+  },
+  "g3q/8954-9217-8952-9218": {
+    "label": "Retained floor sign or counter border",
+    "family": "Retained floor sign or counter border",
+    "reason": "Source neighborhood places these pixels on the floor or at the low edge of a counter. Existing thin, horizontal projection is appropriate and excludes the surrounding patterned floor.",
+    "source_ordinal": 78,
+    "baseline_entry_sha256": "f7e351f2009d2c03deef42a9a552a5b64aa1f69a154a0d1eb1fee6b2ca1c56a9",
+    "evidence": [
+      "inventory/building__shop/page-003.png",
+      "retail-residential-context/building__shop/page-005.png"
+    ]
+  },
+  "g3q/9219-8955-9220-8953": {
+    "label": "Retained floor sign or counter border",
+    "family": "Retained floor sign or counter border",
+    "reason": "Source neighborhood places these pixels on the floor or at the low edge of a counter. Existing thin, horizontal projection is appropriate and excludes the surrounding patterned floor.",
+    "source_ordinal": 79,
+    "baseline_entry_sha256": "d96e1911de6a93c973e4690841beb2829ffd7f3b3831d0913e39c3995de4e2c4",
+    "evidence": [
+      "inventory/building__shop/page-003.png",
+      "retail-residential-context/building__shop/page-005.png"
+    ]
+  },
+  "g3q/9231-9232-9233-9234": {
+    "label": "Retained floor sign or counter border",
+    "family": "Retained floor sign or counter border",
+    "reason": "Source neighborhood places these pixels on the floor or at the low edge of a counter. Existing thin, horizontal projection is appropriate and excludes the surrounding patterned floor.",
+    "source_ordinal": 83,
+    "baseline_entry_sha256": "c74da392fec815732e89d871ac33048cef2aac43538412e8cc5ad32e917e256c",
+    "evidence": [
+      "inventory/building__shop/page-003.png",
+      "retail-residential-context/building__shop/page-006.png"
+    ]
+  },
+  "g3q/9254-9232-9245-9246": {
+    "label": "Retained floor sign or counter border",
+    "family": "Retained floor sign or counter border",
+    "reason": "Source neighborhood places these pixels on the floor or at the low edge of a counter. Existing thin, horizontal projection is appropriate and excludes the surrounding patterned floor.",
+    "source_ordinal": 92,
+    "baseline_entry_sha256": "22b596895f8c6a0e73cf2d6296d4358c14309e11f70475799f9a4f5edc450cd1",
+    "evidence": [
+      "inventory/building__shop/page-003.png",
+      "retail-residential-context/building__shop/page-006.png"
+    ]
+  },
+  "g3q/8954-8955-9391-9392": {
+    "label": "Retained floor sign or counter border",
+    "family": "Retained floor sign or counter border",
+    "reason": "Source neighborhood places these pixels on the floor or at the low edge of a counter. Existing thin, horizontal projection is appropriate and excludes the surrounding patterned floor.",
+    "source_ordinal": 134,
+    "baseline_entry_sha256": "65c16ee2de55944384f8f1306de14a5fae1a7d9c505313c8f87d03bb4a4b60e9",
+    "evidence": [
+      "inventory/building__shop/page-005.png",
+      "retail-residential-context/building__shop/page-009.png"
+    ]
+  },
+  "g3q/9337-9338-9329-9329": {
+    "label": "Complete retail window lower frame",
+    "family": "retail window",
+    "role": "panel",
+    "source_ordinal": 136,
+    "reason": "Exact source lower row completes the mounted window above. Preserve the native printed frame on a constant-depth wall panel.",
+    "baseline_entry_sha256": null,
+    "evidence": [
+      "retail/source-evidence.json"
+    ]
+  },
+  "g3q/9380-9381-9189-9189": {
+    "label": "Complete retail window lower frame",
+    "family": "retail window",
+    "role": "panel",
+    "source_ordinal": 137,
+    "reason": "Exact source lower row completes the mounted window above. Preserve the native printed frame on a constant-depth wall panel.",
+    "baseline_entry_sha256": null,
+    "evidence": [
+      "retail/source-evidence.json"
+    ]
+  }
+}

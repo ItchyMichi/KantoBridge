@@ -1,0 +1,705 @@
+{
+  "g3q/6724-6725-6726-6727": {
+    "source_ordinal": 1,
+    "baseline_entry_sha256": "6d082dc6ffebc528aaa029754d20e0af30a4045e855c8c521f0e0ed454652890",
+    "label": "Ground-floor stair surround and tread section",
+    "family": "stairs",
+    "reason": "The complete six-cell entrance has coherent stepped treads between matching wall shoulders. Preserve its existing depth, source wall/trim and warp behavior after whole source/front/side/angled review."
+  },
+  "g3q/6728-6728-3656-6729": {
+    "source_ordinal": 2,
+    "baseline_entry_sha256": "68ccc2019d03137bb031320e504b3eb4ebe4ec6f6943dfe849889e8775d04e2f",
+    "label": "Ground-floor stair surround and tread section",
+    "family": "stairs",
+    "reason": "The complete six-cell entrance has coherent stepped treads between matching wall shoulders. Preserve its existing depth, source wall/trim and warp behavior after whole source/front/side/angled review."
+  },
+  "g3q/6730-6724-6731-6726": {
+    "source_ordinal": 3,
+    "baseline_entry_sha256": "e39ebdff3fda0bbaf63618ecbf7de08b74cb4b0255483084246c52f9a281662f",
+    "label": "Ground-floor stair surround and tread section",
+    "family": "stairs",
+    "reason": "The complete six-cell entrance has coherent stepped treads between matching wall shoulders. Preserve its existing depth, source wall/trim and warp behavior after whole source/front/side/angled review."
+  },
+  "g3q/6735-6736-6737-6738": {
+    "source_ordinal": 4,
+    "baseline_entry_sha256": "cec55f585ae9b8b02112ad43a14b6e3617bc9ef5dcce5dbd22eff81f0f2c79d1",
+    "label": "Ground-floor stair surround and tread section",
+    "family": "stairs",
+    "reason": "The complete six-cell entrance has coherent stepped treads between matching wall shoulders. Preserve its existing depth, source wall/trim and warp behavior after whole source/front/side/angled review."
+  },
+  "g3q/6739-6740-6741-6742": {
+    "source_ordinal": 5,
+    "baseline_entry_sha256": "a9d5db2a9b5906911a5a0768e5c593619b9255b73adba6a00d32dc77be37d4c0",
+    "label": "Ground-floor stair surround and tread section",
+    "family": "stairs",
+    "reason": "The complete six-cell entrance has coherent stepped treads between matching wall shoulders. Preserve its existing depth, source wall/trim and warp behavior after whole source/front/side/angled review."
+  },
+  "g3q/6743-6735-6744-6737": {
+    "source_ordinal": 6,
+    "baseline_entry_sha256": "c0a4305a64c62c517f56fa5f65ce93e2446387771a795f553014aa0bdaefba5e",
+    "label": "Ground-floor stair surround and tread section",
+    "family": "stairs",
+    "reason": "The complete six-cell entrance has coherent stepped treads between matching wall shoulders. Preserve its existing depth, source wall/trim and warp behavior after whole source/front/side/angled review."
+  },
+  "g3q/6745-6746-6745-6746": {
+    "source_ordinal": 7,
+    "baseline_entry_sha256": "68023f32397e8da644861a3fba9399d2769c095b670ec82c2c1190a85b6d6445",
+    "label": "Cream reception counter or shared platform edge",
+    "family": "counter and platform",
+    "reason": "Whole reception-ring and relief-platform views show continuous top surfaces, chamfered outer corners and appropriate shallow depth. Preserve the shared source key, native COUNTER routing where present, and interaction metadata."
+  },
+  "g3q/6751-6752-6753-6754": {
+    "source_ordinal": 8,
+    "baseline_entry_sha256": "731d81c0cee88395f12afab65b1f65bfbf87784bffc08eab61d00435565a1555",
+    "label": "Lower museum partition-wall termination",
+    "family": "partition",
+    "reason": "Both source occurrences terminate straight cream room partitions. Existing edited shallow trim and pink skirting preserve the intended wall boundary without a freestanding prop interpretation."
+  },
+  "g3q/6763-6764-6765-6766": {
+    "source_ordinal": 9,
+    "baseline_entry_sha256": "b1325c858e149a17c39c094cc86ab8946bc9939f612b0e7a4b0591a8902e5726",
+    "role": "painting",
+    "width": 32,
+    "height": 32,
+    "crop": [
+      0,
+      3,
+      32,
+      22
+    ],
+    "x": 0,
+    "layer": 1,
+    "label": "Shallow gilt-framed blue painting",
+    "family": "wall painting",
+    "reason": "The complete source is one framed painting. Replace split deep extrusions with a three-voxel panel and raised frame, preserve exact native front pixels, exclude wall cornice/skirting, and join the source rows vertically where present.",
+    "added_on": "g3q/6793-6794-6737-6737"
+  },
+  "g3q/6767-6768-6769-6770": {
+    "source_ordinal": 10,
+    "baseline_entry_sha256": "30b6b88025393aa2c2bb81a30910fb2cd708e27384cfe963598da8e048b1ef56",
+    "role": "painting",
+    "width": 32,
+    "height": 32,
+    "crop": [
+      0,
+      3,
+      32,
+      22
+    ],
+    "x": 1,
+    "layer": 1,
+    "label": "Shallow gilt-framed blue painting",
+    "family": "wall painting",
+    "reason": "The complete source is one framed painting. Replace split deep extrusions with a three-voxel panel and raised frame, preserve exact native front pixels, exclude wall cornice/skirting, and join the source rows vertically where present.",
+    "added_on": "g3q/6795-6796-6737-6737"
+  },
+  "g3q/6771-6772-6773-6774": {
+    "source_ordinal": 11,
+    "baseline_entry_sha256": "3d2f7fead9b47a8ae27c0a55c535f3547358de13710e5fb9497cf70721a962a3",
+    "role": "painting",
+    "width": 32,
+    "height": 32,
+    "crop": [
+      0,
+      3,
+      32,
+      22
+    ],
+    "x": 0,
+    "layer": 1,
+    "label": "Shallow gilt-framed green painting",
+    "family": "wall painting",
+    "reason": "The complete source is one framed painting. Replace split deep extrusions with a three-voxel panel and raised frame, preserve exact native front pixels, exclude wall cornice/skirting, and join the source rows vertically where present.",
+    "added_on": "g3q/6797-6798-6737-6737"
+  },
+  "g3q/6775-6776-6777-6778": {
+    "source_ordinal": 12,
+    "baseline_entry_sha256": "5cba24ba2445a0f0b382d1c5141ffe87b2725ca9589c082f414c4e3b993e169a",
+    "role": "painting",
+    "width": 32,
+    "height": 32,
+    "crop": [
+      0,
+      3,
+      32,
+      22
+    ],
+    "x": 1,
+    "layer": 1,
+    "label": "Shallow gilt-framed green painting",
+    "family": "wall painting",
+    "reason": "The complete source is one framed painting. Replace split deep extrusions with a three-voxel panel and raised frame, preserve exact native front pixels, exclude wall cornice/skirting, and join the source rows vertically where present.",
+    "added_on": "g3q/6799-6800-6737-6737"
+  },
+  "g3q/6779-6780-6781-6782": {
+    "source_ordinal": 13,
+    "baseline_entry_sha256": "19ddfcfa9ebb8eddebd2255b2081e8816714c0ceb1ca912265470422b74e78a1",
+    "role": "painting",
+    "width": 16,
+    "height": 16,
+    "crop": [
+      0,
+      0,
+      16,
+      16
+    ],
+    "x": 0,
+    "layer": 0,
+    "label": "Shallow gilt-framed small-red painting",
+    "family": "wall painting",
+    "reason": "The complete source is one framed painting. Replace split deep extrusions with a three-voxel panel and raised frame, preserve exact native front pixels, exclude wall cornice/skirting, and join the source rows vertically where present."
+  },
+  "g3q/6783-6784-6785-6786": {
+    "source_ordinal": 14,
+    "baseline_entry_sha256": "f39149cc0c24c887a386d8ab40b590ea8bb2cc6fdfdc36664def943bb265e740",
+    "role": "painting",
+    "width": 16,
+    "height": 16,
+    "crop": [
+      0,
+      0,
+      16,
+      16
+    ],
+    "x": 0,
+    "layer": 0,
+    "label": "Shallow gilt-framed small-blue painting",
+    "family": "wall painting",
+    "reason": "The complete source is one framed painting. Replace split deep extrusions with a three-voxel panel and raised frame, preserve exact native front pixels, exclude wall cornice/skirting, and join the source rows vertically where present."
+  },
+  "g3q/6787-6788-6789-6790": {
+    "source_ordinal": 15,
+    "baseline_entry_sha256": "96bd61a956007f5473a6e450fc27083c9ed16e941b5b7c2b02b3874bfc759d0c",
+    "role": "painting",
+    "width": 32,
+    "height": 32,
+    "crop": [
+      2,
+      3,
+      22,
+      24
+    ],
+    "x": 0,
+    "layer": 1,
+    "label": "Shallow gilt-framed portrait painting",
+    "family": "wall painting",
+    "reason": "The complete source is one framed painting. Replace split deep extrusions with a three-voxel panel and raised frame, preserve exact native front pixels, exclude wall cornice/skirting, and join the source rows vertically where present.",
+    "added_on": "g3q/6801-6802-6737-6737"
+  },
+  "g3q/6791-6724-6792-6726": {
+    "source_ordinal": 16,
+    "baseline_entry_sha256": "6697d37024a7e3c99be1fd8da15f70faec78efee6c5ab8871bf17b6050d4b78d",
+    "role": "painting",
+    "width": 32,
+    "height": 32,
+    "crop": [
+      2,
+      3,
+      22,
+      24
+    ],
+    "x": 1,
+    "layer": 1,
+    "label": "Shallow gilt-framed portrait painting",
+    "family": "wall painting",
+    "reason": "The complete source is one framed painting. Replace split deep extrusions with a three-voxel panel and raised frame, preserve exact native front pixels, exclude wall cornice/skirting, and join the source rows vertically where present.",
+    "added_on": "g3q/6803-6735-6737-6737"
+  },
+  "g3q/6793-6794-6737-6737": {
+    "source_ordinal": 17,
+    "baseline_entry_sha256": "eb7bdba3f8c37e19ef184656ac41905bb5d24d3bc1bdfed742f759bd7e3d2aa1",
+    "role": "painting",
+    "width": 32,
+    "height": 32,
+    "crop": [
+      0,
+      3,
+      32,
+      22
+    ],
+    "x": 0,
+    "layer": 0,
+    "label": "Shallow gilt-framed blue painting",
+    "family": "wall painting",
+    "reason": "The complete source is one framed painting. Replace split deep extrusions with a three-voxel panel and raised frame, preserve exact native front pixels, exclude wall cornice/skirting, and join the source rows vertically where present."
+  },
+  "g3q/6795-6796-6737-6737": {
+    "source_ordinal": 18,
+    "baseline_entry_sha256": "b398b1e6c280f4bb62fb659564d067813e408aeae2f31db09736b2f982b4623e",
+    "role": "painting",
+    "width": 32,
+    "height": 32,
+    "crop": [
+      0,
+      3,
+      32,
+      22
+    ],
+    "x": 1,
+    "layer": 0,
+    "label": "Shallow gilt-framed blue painting",
+    "family": "wall painting",
+    "reason": "The complete source is one framed painting. Replace split deep extrusions with a three-voxel panel and raised frame, preserve exact native front pixels, exclude wall cornice/skirting, and join the source rows vertically where present."
+  },
+  "g3q/6797-6798-6737-6737": {
+    "source_ordinal": 19,
+    "baseline_entry_sha256": "3e5bef61cc88c45b8b4ea043f11c5ab94ccdcac6efbdf7bca2291ea822a37191",
+    "role": "painting",
+    "width": 32,
+    "height": 32,
+    "crop": [
+      0,
+      3,
+      32,
+      22
+    ],
+    "x": 0,
+    "layer": 0,
+    "label": "Shallow gilt-framed green painting",
+    "family": "wall painting",
+    "reason": "The complete source is one framed painting. Replace split deep extrusions with a three-voxel panel and raised frame, preserve exact native front pixels, exclude wall cornice/skirting, and join the source rows vertically where present."
+  },
+  "g3q/6799-6800-6737-6737": {
+    "source_ordinal": 20,
+    "baseline_entry_sha256": "cd757e42bbdf2f509a8918c43e046b18392b3100ee7e15b4a101e482e2b8c21a",
+    "role": "painting",
+    "width": 32,
+    "height": 32,
+    "crop": [
+      0,
+      3,
+      32,
+      22
+    ],
+    "x": 1,
+    "layer": 0,
+    "label": "Shallow gilt-framed green painting",
+    "family": "wall painting",
+    "reason": "The complete source is one framed painting. Replace split deep extrusions with a three-voxel panel and raised frame, preserve exact native front pixels, exclude wall cornice/skirting, and join the source rows vertically where present."
+  },
+  "g3q/6801-6802-6737-6737": {
+    "source_ordinal": 21,
+    "baseline_entry_sha256": "98f173ad2105848a89510dc3a8600693126f570ac45762c340ad99bb79f728c3",
+    "role": "painting",
+    "width": 32,
+    "height": 32,
+    "crop": [
+      2,
+      3,
+      22,
+      24
+    ],
+    "x": 0,
+    "layer": 0,
+    "label": "Shallow gilt-framed portrait painting",
+    "family": "wall painting",
+    "reason": "The complete source is one framed painting. Replace split deep extrusions with a three-voxel panel and raised frame, preserve exact native front pixels, exclude wall cornice/skirting, and join the source rows vertically where present."
+  },
+  "g3q/6803-6735-6737-6737": {
+    "source_ordinal": 22,
+    "baseline_entry_sha256": "5ae17cf84681ab8c8dadf69830746072c97c377b794983102f12276871421f39",
+    "role": "painting",
+    "width": 32,
+    "height": 32,
+    "crop": [
+      2,
+      3,
+      22,
+      24
+    ],
+    "x": 1,
+    "layer": 0,
+    "label": "Shallow gilt-framed portrait painting",
+    "family": "wall painting",
+    "reason": "The complete source is one framed painting. Replace split deep extrusions with a three-voxel panel and raised frame, preserve exact native front pixels, exclude wall cornice/skirting, and join the source rows vertically where present."
+  },
+  "g3q/6804-6805-6806-6807": {
+    "source_ordinal": 23,
+    "baseline_entry_sha256": "6a28ef200bff9575f12db44fe24cc753066c1aae65668705686d528b0a4da512",
+    "label": "Carved relief and its cream display platform",
+    "family": "relief platform",
+    "reason": "Whole five-by-three source review shows a coherent raised green relief on the broad cream platform. Keep the existing joined sculpture/platform geometry and source-local top detailing."
+  },
+  "g3q/6808-6809-6810-6811": {
+    "source_ordinal": 24,
+    "baseline_entry_sha256": "5fafb89bfd6b7d086d37c3d4d14ed92bb07e083257133d4fe67ed3626b081d8f",
+    "label": "Carved relief and its cream display platform",
+    "family": "relief platform",
+    "reason": "Whole five-by-three source review shows a coherent raised green relief on the broad cream platform. Keep the existing joined sculpture/platform geometry and source-local top detailing."
+  },
+  "g3q/6812-6813-6814-6815": {
+    "source_ordinal": 25,
+    "baseline_entry_sha256": "49b3a75249f8a557f30c0bebde8883dd9fabe4dbc27f755ed6e227bbbe5b8e6a",
+    "label": "Carved relief and its cream display platform",
+    "family": "relief platform",
+    "reason": "Whole five-by-three source review shows a coherent raised green relief on the broad cream platform. Keep the existing joined sculpture/platform geometry and source-local top detailing."
+  },
+  "g3q/6816-6817-6818-6819": {
+    "source_ordinal": 26,
+    "baseline_entry_sha256": "e62f0fbc8d42dfd26b6714b5e75041b58e0ee6c2721920eaf607107400f03652",
+    "role": "figurine",
+    "layer": 1,
+    "mirror": false,
+    "label": "Carved green curved-neck figurine on a plinth",
+    "family": "museum sculpture",
+    "reason": "Author one supported curved body, neck, head, crest and curled tail above a square plinth, then slice the existing true stack. Native green sculpture materials replace wall-colored backing and horizontal stripe extrusion; all original source links and collision flags are retained."
+  },
+  "g3q/6820-6821-6822-6823": {
+    "source_ordinal": 27,
+    "baseline_entry_sha256": "6df4f6831bd89e17c9ca7f86e5d62ae552dd0c5363b7510cd085e31a824b5d89",
+    "role": "round_exhibit",
+    "label": "Round carved green exhibit on a square pedestal",
+    "family": "museum sculpture",
+    "reason": "Replace the deep stepped source extrusion with a supported circular carved face and raised rim on a square plinth; use native green materials and exclude navy background."
+  },
+  "g3q/6824-6825-6826-6827": {
+    "source_ordinal": 28,
+    "baseline_entry_sha256": "bfe541647fe143a307230cb6fa6e50ef696a4184e78dfe449faa66e39ab1efbf",
+    "role": "painting",
+    "width": 32,
+    "height": 32,
+    "crop": [
+      1,
+      1,
+      23,
+      24
+    ],
+    "x": 0,
+    "layer": 1,
+    "label": "Shallow gilt-framed white painting",
+    "family": "wall painting",
+    "reason": "The complete source is one framed painting. Replace split deep extrusions with a three-voxel panel and raised frame, preserve exact native front pixels, exclude wall cornice/skirting, and join the source rows vertically where present.",
+    "added_on": "g3q/6844-6845-6737-6737"
+  },
+  "g3q/6828-6724-6829-6726": {
+    "source_ordinal": 29,
+    "baseline_entry_sha256": "3064be14404a6448d664b36662ac1c1118653172e08b211d52f3237d703b3eac",
+    "role": "painting",
+    "width": 32,
+    "height": 32,
+    "crop": [
+      1,
+      1,
+      23,
+      24
+    ],
+    "x": 1,
+    "layer": 1,
+    "label": "Shallow gilt-framed white painting",
+    "family": "wall painting",
+    "reason": "The complete source is one framed painting. Replace split deep extrusions with a three-voxel panel and raised frame, preserve exact native front pixels, exclude wall cornice/skirting, and join the source rows vertically where present.",
+    "added_on": "g3q/6846-6735-6737-6737"
+  },
+  "g3q/6830-6831-6832-6833": {
+    "source_ordinal": 30,
+    "baseline_entry_sha256": "2ce4e468b6866f0e8d3d57a02eb296dffc88f62cfb8f0f1696234e573b3f220f",
+    "role": "painting",
+    "width": 16,
+    "height": 32,
+    "crop": [
+      0,
+      0,
+      16,
+      24
+    ],
+    "x": 0,
+    "layer": 1,
+    "label": "Shallow gilt-framed gold painting",
+    "family": "wall painting",
+    "reason": "The complete source is one framed painting. Replace split deep extrusions with a three-voxel panel and raised frame, preserve exact native front pixels, exclude wall cornice/skirting, and join the source rows vertically where present.",
+    "added_on": "g3q/6847-6848-6737-6737"
+  },
+  "g3q/6834-6835-6836-6836": {
+    "source_ordinal": 31,
+    "baseline_entry_sha256": "8bf010b52e5094bf128796d09f93c804d8e1a4c310824c580eac13d837d5e5bb",
+    "label": "Carved relief and its cream display platform",
+    "family": "relief platform",
+    "reason": "Whole five-by-three source review shows a coherent raised green relief on the broad cream platform. Keep the existing joined sculpture/platform geometry and source-local top detailing."
+  },
+  "g3q/6835-6835-6836-6836": {
+    "source_ordinal": 32,
+    "baseline_entry_sha256": "e2327fb4aad3297f15060b5133789b79e6b7a05c2500ae0262a04f67dca1c914",
+    "label": "Carved relief and its cream display platform",
+    "family": "relief platform",
+    "reason": "Whole five-by-three source review shows a coherent raised green relief on the broad cream platform. Keep the existing joined sculpture/platform geometry and source-local top detailing."
+  },
+  "g3q/6835-6837-6836-6836": {
+    "source_ordinal": 33,
+    "baseline_entry_sha256": "50f288a74418e6ea473f54b4030923387b009153ad380338e17aec4f3e83665a",
+    "label": "Carved relief and its cream display platform",
+    "family": "relief platform",
+    "reason": "Whole five-by-three source review shows a coherent raised green relief on the broad cream platform. Keep the existing joined sculpture/platform geometry and source-local top detailing."
+  },
+  "g3q/6838-6839-6840-6841": {
+    "source_ordinal": 34,
+    "baseline_entry_sha256": "fbabfe532dd96c83701102775c9ffe4586acfed9ecc74c0cd40671f78abf427c",
+    "role": "figurine",
+    "layer": 0,
+    "mirror": false,
+    "label": "Carved green curved-neck figurine on a plinth",
+    "family": "museum sculpture",
+    "reason": "Author one supported curved body, neck, head, crest and curled tail above a square plinth, then slice the existing true stack. Native green sculpture materials replace wall-colored backing and horizontal stripe extrusion; all original source links and collision flags are retained."
+  },
+  "g3q/6844-6845-6737-6737": {
+    "source_ordinal": 35,
+    "baseline_entry_sha256": "3718583bb50d77113dbb8757edfded0078fde34b255584c5faa642a77e196e78",
+    "role": "painting",
+    "width": 32,
+    "height": 32,
+    "crop": [
+      1,
+      1,
+      23,
+      24
+    ],
+    "x": 0,
+    "layer": 0,
+    "label": "Shallow gilt-framed white painting",
+    "family": "wall painting",
+    "reason": "The complete source is one framed painting. Replace split deep extrusions with a three-voxel panel and raised frame, preserve exact native front pixels, exclude wall cornice/skirting, and join the source rows vertically where present."
+  },
+  "g3q/6846-6735-6737-6737": {
+    "source_ordinal": 36,
+    "baseline_entry_sha256": "00fc37613264703d59796ef8713da8c000d043b51a5d67ce9408d3d42b867fc0",
+    "role": "painting",
+    "width": 32,
+    "height": 32,
+    "crop": [
+      1,
+      1,
+      23,
+      24
+    ],
+    "x": 1,
+    "layer": 0,
+    "label": "Shallow gilt-framed white painting",
+    "family": "wall painting",
+    "reason": "The complete source is one framed painting. Replace split deep extrusions with a three-voxel panel and raised frame, preserve exact native front pixels, exclude wall cornice/skirting, and join the source rows vertically where present."
+  },
+  "g3q/6847-6848-6737-6737": {
+    "source_ordinal": 37,
+    "baseline_entry_sha256": "ba5fe0b7af443916433fce0e06c9ae1789289dce57b0b15b659e90aa7a86ec2c",
+    "role": "painting",
+    "width": 16,
+    "height": 32,
+    "crop": [
+      0,
+      0,
+      16,
+      24
+    ],
+    "x": 0,
+    "layer": 0,
+    "label": "Shallow gilt-framed gold painting",
+    "family": "wall painting",
+    "reason": "The complete source is one framed painting. Replace split deep extrusions with a three-voxel panel and raised frame, preserve exact native front pixels, exclude wall cornice/skirting, and join the source rows vertically where present."
+  },
+  "g3q/6745-6746-6745-6849": {
+    "source_ordinal": 38,
+    "baseline_entry_sha256": "b682cf845dc33e8e1bfd04205ea48ecd992fe7def2c6c28203e5d206281ec8c3",
+    "label": "Cream reception counter or shared platform edge",
+    "family": "counter and platform",
+    "reason": "Whole reception-ring and relief-platform views show continuous top surfaces, chamfered outer corners and appropriate shallow depth. Preserve the shared source key, native COUNTER routing where present, and interaction metadata."
+  },
+  "g3q/6745-6746-6850-6746": {
+    "source_ordinal": 39,
+    "baseline_entry_sha256": "25334c4cd86d3f2c6c9e646053b13a081b7e24c58a52036311db1e265fa7234b",
+    "label": "Cream reception counter or shared platform edge",
+    "family": "counter and platform",
+    "reason": "Whole reception-ring and relief-platform views show continuous top surfaces, chamfered outer corners and appropriate shallow depth. Preserve the shared source key, native COUNTER routing where present, and interaction metadata."
+  },
+  "g3q/6854-6855-6856-6856": {
+    "source_ordinal": 40,
+    "baseline_entry_sha256": "7aab8094fad19fc5980818cae019eda493624ff5ca2b1cf31a4d2c6377c20412",
+    "label": "Cream reception counter or shared platform edge",
+    "family": "counter and platform",
+    "reason": "Whole reception-ring and relief-platform views show continuous top surfaces, chamfered outer corners and appropriate shallow depth. Preserve the shared source key, native COUNTER routing where present, and interaction metadata."
+  },
+  "g3q/6854-6857-6856-6856": {
+    "source_ordinal": 41,
+    "baseline_entry_sha256": "19d11e00c40d6cfb5b25850009a1614091ca59ee5c203bfeacb84700d471bb8e",
+    "label": "Cream reception counter or shared platform edge",
+    "family": "counter and platform",
+    "reason": "Whole reception-ring and relief-platform views show continuous top surfaces, chamfered outer corners and appropriate shallow depth. Preserve the shared source key, native COUNTER routing where present, and interaction metadata."
+  },
+  "g3q/6858-6836-6745-6836": {
+    "source_ordinal": 42,
+    "baseline_entry_sha256": "2c353dca24679827ce6d9abf130f23dd1d1d7811b45bd2d075e0a5cff4ef1753",
+    "label": "Carved relief and its cream display platform",
+    "family": "relief platform",
+    "reason": "Whole five-by-three source review shows a coherent raised green relief on the broad cream platform. Keep the existing joined sculpture/platform geometry and source-local top detailing."
+  },
+  "g3q/6836-6859-6836-6746": {
+    "source_ordinal": 43,
+    "baseline_entry_sha256": "fd4fc429460735c21d476ca854ab1f7f1feb5b709c657047458fc8d8794ab99a",
+    "label": "Carved relief and its cream display platform",
+    "family": "relief platform",
+    "reason": "Whole five-by-three source review shows a coherent raised green relief on the broad cream platform. Keep the existing joined sculpture/platform geometry and source-local top detailing."
+  },
+  "g3q/6858-6836-6745-6746": {
+    "source_ordinal": 44,
+    "baseline_entry_sha256": "caef921dc08238ec1dfe1b9b073f5b4856f699e9b8a90aace2b233118e861638",
+    "label": "Cream reception counter or shared platform edge",
+    "family": "counter and platform",
+    "reason": "Whole reception-ring and relief-platform views show continuous top surfaces, chamfered outer corners and appropriate shallow depth. Preserve the shared source key, native COUNTER routing where present, and interaction metadata."
+  },
+  "g3q/6836-6859-6745-6746": {
+    "source_ordinal": 45,
+    "baseline_entry_sha256": "24a786018e320fa38e428cffbd642ec24a0b965cc678566700f50a4dc15ed215",
+    "label": "Cream reception counter or shared platform edge",
+    "family": "counter and platform",
+    "reason": "Whole reception-ring and relief-platform views show continuous top surfaces, chamfered outer corners and appropriate shallow depth. Preserve the shared source key, native COUNTER routing where present, and interaction metadata."
+  },
+  "g3q/6745-6836-6745-6836": {
+    "source_ordinal": 46,
+    "baseline_entry_sha256": "3f59a239eee8cbf718db890b4992d705085dd88885af3b89a7463d74349f8ece",
+    "label": "Carved relief and its cream display platform",
+    "family": "relief platform",
+    "reason": "Whole five-by-three source review shows a coherent raised green relief on the broad cream platform. Keep the existing joined sculpture/platform geometry and source-local top detailing."
+  },
+  "g3q/6836-6746-6836-6746": {
+    "source_ordinal": 47,
+    "baseline_entry_sha256": "fecee18732e1e83ec55331e00128b29eb4768ccb0b33adf9282924f9627c87bb",
+    "label": "Carved relief and its cream display platform",
+    "family": "relief platform",
+    "reason": "Whole five-by-three source review shows a coherent raised green relief on the broad cream platform. Keep the existing joined sculpture/platform geometry and source-local top detailing."
+  },
+  "g3q/6862-6855-6863-6856": {
+    "source_ordinal": 48,
+    "baseline_entry_sha256": "08cef6ab7fc262fd569d1a828ec638bcab1509627ef34567f43c0dbbd3d20bdc",
+    "label": "Cream reception counter or shared platform edge",
+    "family": "counter and platform",
+    "reason": "Whole reception-ring and relief-platform views show continuous top surfaces, chamfered outer corners and appropriate shallow depth. Preserve the shared source key, native COUNTER routing where present, and interaction metadata."
+  },
+  "g3q/6855-6855-6856-6856": {
+    "source_ordinal": 49,
+    "baseline_entry_sha256": "dc17bb4f669d1df0e266d97a02588a811cae0cbb3c12149a50b9761fb95f4a64",
+    "label": "Cream reception counter or shared platform edge",
+    "family": "counter and platform",
+    "reason": "Whole reception-ring and relief-platform views show continuous top surfaces, chamfered outer corners and appropriate shallow depth. Preserve the shared source key, native COUNTER routing where present, and interaction metadata."
+  },
+  "g3q/6855-6864-6856-6865": {
+    "source_ordinal": 50,
+    "baseline_entry_sha256": "276a0574b887192383609062bb5923f7357d03b2d37252b9f3e17ca83f35d7b5",
+    "label": "Cream reception counter or shared platform edge",
+    "family": "counter and platform",
+    "reason": "Whole reception-ring and relief-platform views show continuous top surfaces, chamfered outer corners and appropriate shallow depth. Preserve the shared source key, native COUNTER routing where present, and interaction metadata."
+  },
+  "g3q/6866-6867-6868-6869": {
+    "source_ordinal": 51,
+    "baseline_entry_sha256": "c771c088ef9436f36ee367596062605c42057d3179d50612ef995ac3856e7d11",
+    "label": "Upper gallery display wall with framed art slot",
+    "family": "display wall",
+    "reason": "All five exact four-by-two display assemblies were inspected. Their green wall, pale cap and shallow gilt-framed blank art slots already join coherently. Preserve source addresses so supplied picture art remains native, and keep the original interaction kinds."
+  },
+  "g3q/6867-6870-6869-6871": {
+    "source_ordinal": 52,
+    "baseline_entry_sha256": "7dc5f09c0742f32234ac1e08107549b3dae5184597403ff2d9404ca3627b7659",
+    "label": "Upper gallery display wall with framed art slot",
+    "family": "display wall",
+    "reason": "All five exact four-by-two display assemblies were inspected. Their green wall, pale cap and shallow gilt-framed blank art slots already join coherently. Preserve source addresses so supplied picture art remains native, and keep the original interaction kinds."
+  },
+  "g3q/6923-6924-6925-6926": {
+    "source_ordinal": 53,
+    "baseline_entry_sha256": "3b860f384024e5efd4eacf66d8132ea5d72610e3be583295bed0f3d89066c7be",
+    "label": "Upper-floor stair doorway and green wall surround",
+    "family": "stairs",
+    "reason": "The complete six-cell doorway retains its consistent green surround, dark stair recess and native warp tread. Its source movement remains unchanged; gallery appearance is not a collision claim."
+  },
+  "g3q/6927-6927-3656-3656": {
+    "source_ordinal": 54,
+    "baseline_entry_sha256": "0a4c79c9c419e2bf7f6f23e7ac9a9651b34a2c170cf95d4b31511eb11717e897",
+    "label": "Upper-floor stair doorway and green wall surround",
+    "family": "stairs",
+    "reason": "The complete six-cell doorway retains its consistent green surround, dark stair recess and native warp tread. Its source movement remains unchanged; gallery appearance is not a collision claim."
+  },
+  "g3q/6928-6929-6930-6931": {
+    "source_ordinal": 55,
+    "baseline_entry_sha256": "8796547127601ecf946218afb416451f82ec31c72752d57dd7589312e13a2a60",
+    "label": "Upper-floor stair doorway and green wall surround",
+    "family": "stairs",
+    "reason": "The complete six-cell doorway retains its consistent green surround, dark stair recess and native warp tread. Its source movement remains unchanged; gallery appearance is not a collision claim."
+  },
+  "g3q/6932-6932-6933-6933": {
+    "source_ordinal": 56,
+    "baseline_entry_sha256": "1e2e70d692e6c0e21690d93d715446f44587ec42dd6a89dd52bc868aa0b086e3",
+    "label": "Upper gallery display wall with framed art slot",
+    "family": "display wall",
+    "reason": "All five exact four-by-two display assemblies were inspected. Their green wall, pale cap and shallow gilt-framed blank art slots already join coherently. Preserve source addresses so supplied picture art remains native, and keep the original interaction kinds."
+  },
+  "g3q/6932-6934-6933-6935": {
+    "source_ordinal": 57,
+    "baseline_entry_sha256": "0818255c3ff06b5e5e7d15a2d8b9db2b2ba0468279d802c819aa3df913d2aa72",
+    "label": "Upper gallery display wall with framed art slot",
+    "family": "display wall",
+    "reason": "All five exact four-by-two display assemblies were inspected. Their green wall, pale cap and shallow gilt-framed blank art slots already join coherently. Preserve source addresses so supplied picture art remains native, and keep the original interaction kinds."
+  },
+  "g3q/6925-6926-6944-6945": {
+    "source_ordinal": 58,
+    "baseline_entry_sha256": "46aea33e08b91d4474727651242915d4cc8adbb947243343b8f82e64f4104021",
+    "label": "Upper-floor stair doorway and green wall surround",
+    "family": "stairs",
+    "reason": "The complete six-cell doorway retains its consistent green surround, dark stair recess and native warp tread. Its source movement remains unchanged; gallery appearance is not a collision claim."
+  },
+  "g3q/3656-3656-6946-6947": {
+    "source_ordinal": 59,
+    "baseline_entry_sha256": "f6dc9e3c249ba8776e310b3120b47cbb1c0931ea325fa4c7ee19b92bcffed9c0",
+    "label": "Upper-floor stair doorway and green wall surround",
+    "family": "stairs",
+    "reason": "The complete six-cell doorway retains its consistent green surround, dark stair recess and native warp tread. Its source movement remains unchanged; gallery appearance is not a collision claim."
+  },
+  "g3q/6930-6931-6948-6949": {
+    "source_ordinal": 60,
+    "baseline_entry_sha256": "985cad71a2269164a59ec7dd03a6ccd0034a7624ec7f62544c326d859e268849",
+    "label": "Upper-floor stair doorway and green wall surround",
+    "family": "stairs",
+    "reason": "The complete six-cell doorway retains its consistent green surround, dark stair recess and native warp tread. Its source movement remains unchanged; gallery appearance is not a collision claim."
+  },
+  "g3q/6961-6962-6963-6964": {
+    "source_ordinal": 61,
+    "baseline_entry_sha256": "9a2758187f779387f388b7a0b0acdc67f3c029c4bcf9e09fc2c8a2454b81bda4",
+    "role": "figurine",
+    "layer": 1,
+    "mirror": false,
+    "label": "Carved green curved-neck figurine on a plinth",
+    "family": "museum sculpture",
+    "reason": "Author one supported curved body, neck, head, crest and curled tail above a square plinth, then slice the existing true stack. Native green sculpture materials replace wall-colored backing and horizontal stripe extrusion; all original source links and collision flags are retained."
+  },
+  "g3q/6965-6966-6967-6968": {
+    "source_ordinal": 62,
+    "baseline_entry_sha256": "d7b4247bfcef983eaf0c8cc9b30cc4e1e4af34ddc80c9c97969739fbf3c8bb6e",
+    "role": "figurine",
+    "layer": 1,
+    "mirror": true,
+    "label": "Carved green curved-neck figurine on a plinth",
+    "family": "museum sculpture",
+    "reason": "Author one supported curved body, neck, head, crest and curled tail above a square plinth, then slice the existing true stack. Native green sculpture materials replace wall-colored backing and horizontal stripe extrusion; all original source links and collision flags are retained."
+  },
+  "g3q/6969-6932-6970-6933": {
+    "source_ordinal": 63,
+    "baseline_entry_sha256": "65b2e4d596bd06d55d83388ea8f01bc28959a4f1c51b032f4d241e726af5298c",
+    "label": "Upper gallery display wall with framed art slot",
+    "family": "display wall",
+    "reason": "All five exact four-by-two display assemblies were inspected. Their green wall, pale cap and shallow gilt-framed blank art slots already join coherently. Preserve source addresses so supplied picture art remains native, and keep the original interaction kinds."
+  },
+  "g3q/6974-6975-6840-6841": {
+    "source_ordinal": 64,
+    "baseline_entry_sha256": "e2951bf98bdc39536b742df31d4a78ade717645ced6cef0b40f41e9318229b48",
+    "role": "figurine",
+    "layer": 0,
+    "mirror": false,
+    "label": "Carved green curved-neck figurine on a plinth",
+    "family": "museum sculpture",
+    "reason": "Author one supported curved body, neck, head, crest and curled tail above a square plinth, then slice the existing true stack. Native green sculpture materials replace wall-colored backing and horizontal stripe extrusion; all original source links and collision flags are retained."
+  },
+  "g3q/6976-6977-6978-6979": {
+    "source_ordinal": 65,
+    "baseline_entry_sha256": "7eb73bdc9475b60b1cc3f79912032191469c3ec9c116097d950b0fb1eec8d8f4",
+    "role": "figurine",
+    "layer": 0,
+    "mirror": true,
+    "label": "Carved green curved-neck figurine on a plinth",
+    "family": "museum sculpture",
+    "reason": "Author one supported curved body, neck, head, crest and curled tail above a square plinth, then slice the existing true stack. Native green sculpture materials replace wall-colored backing and horizontal stripe extrusion; all original source links and collision flags are retained."
+  }
+}

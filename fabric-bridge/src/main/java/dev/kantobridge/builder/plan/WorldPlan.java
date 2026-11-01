@@ -1417,6 +1417,16 @@ public final class WorldPlan {
 				}
 				column = blocks;
 				taken |= (1L << Math.min(blocks, 62)) - 1;
+				// Explicit Emerald fitted counters keep their one-block collider.
+				// A raised lip/display in voxel rows8..15 rides on decor above it.
+				if (model.kind(cx, cy) == MapModel.Kind.COUNTER && "emerald".equals(this.game) && planned != null
+						&& blocks == 1 && (shaped & 1) != 0 && planned.decor()[planIndex] == 2
+						&& planned.open()[planIndex] != null && planned.open()[planIndex].length == 2
+						&& planned.open()[planIndex][1].kind() == dev.kantobridge.builder.shape.ShapeKey.Kind.CELL) {
+					sink.set(x, feet + 1, z, BlockCode.decor(false));
+					column = 2;
+					taken |= 2L;
+				}
 			}
 		}
 		// Where a story block stands, a level above the feet on a ramp's steps (CAVES_3D_PLAN §3.4), and its code.

@@ -252,6 +252,23 @@ class ShapeTableTest {
 			}
 		}
 		assertTrue(quads > 10, "the house's blocks were compared");
+		// The build's report (ShapeReport): templates one at a time as a client's, each kept as its summary only.
+		ShapeTable summary = ShapeTable.build(many, BandsTest.art(true), ShapeTable.NO_OVERRIDES, ShapeOverrides.NONE, ShapeTable.Keep.SUMMARY);
+		TemplateRule.Template whole = full.template(BandsTest.ATLAS, sig);
+		TemplateRule.Template kept = summary.template(BandsTest.ATLAS, sig);
+		assertNotNull(kept, "the report reads each template's kind and scores");
+		assertEquals(whole.kind(), kept.kind());
+		assertEquals(whole.failed(), kept.failed());
+		assertEquals(whole.match(), kept.match());
+		assertEquals(whole.maxQuads(), kept.maxQuads());
+		assertEquals(whole.roofRows(), kept.roofRows());
+		assertTrue(kept.blocks().isEmpty(), "no quads kept");
+		assertNull(kept.voxels(), "no voxels kept");
+		for (int id = 1; id <= many.size(); id++) {
+			ShapeMesh a = full.mesh(id);
+			ShapeMesh b = summary.mesh(id);
+			assertEquals(a == null ? -1 : a.size(), b == null ? -1 : b.size(), "the same meshes");
+		}
 	}
 
 	@Test

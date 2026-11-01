@@ -1,0 +1,352 @@
+{
+  "schema": 1,
+  "inspection": "All16 source and geometry cards, six actual room maps and six whole assemblies manually inspected; runtime review pending.",
+  "entries": [
+    {
+      "key": "g3q/3742-3742-3782-3783",
+      "group": "building__contest",
+      "label": "Contest terminal upper housing",
+      "family": "terminal",
+      "recipe": "terminal_cap",
+      "reason": "The black upper band and surrounding lobby wall are source background. Replace the extracted mass with a bounded pale terminal cap above the shared monitor.",
+      "baseline_entry_sha256": "a2f08ae3ef03a475c9a74e06c774befb21ac4fbd4d9c7d11f1bcabda08e3df1c",
+      "source_contact": "../inventory/building__contest/page-001.png",
+      "source_card": 1,
+      "assemblies": [
+        "emerald_public_contest_terminal"
+      ],
+      "added_on": "g3q/9-10-11-12"
+    },
+    {
+      "key": "g3q/3794-3795-3723-3722",
+      "group": "building__contest",
+      "label": "Contest terminal projected foot on tan floor",
+      "family": "projected floor",
+      "recipe": "terminal_floor",
+      "reason": "This is the walkable floor cell below the PC. The vent pixels project from the PC above; show only the native lower tan floor pixels on a thin horizontal surface.",
+      "baseline_entry_sha256": "6664dd83c0140fda5de1dba153477d4fc78a89460770e305ecc0081da14c833b",
+      "source_contact": "../inventory/building__contest/page-001.png",
+      "source_card": 2,
+      "assemblies": []
+    },
+    {
+      "key": "g3q/4952-4953-4954-4955",
+      "group": "building__facility",
+      "label": "Devon president glass display upper half",
+      "family": "glass display",
+      "recipe": null,
+      "reason": "Retain the bounded upright glass face and chamfered narrow sides; joined to its existing lower half, the blue reflection remains on the front and the carpet stays outside the occupied footprint.",
+      "baseline_entry_sha256": "2167bbed9ddd3c7d022aebec7021cbe0418ed60e828cf4f794cf19a3792c950e",
+      "source_contact": "../inventory/building__facility/page-001.png",
+      "source_card": 1,
+      "assemblies": [
+        "emerald_public_devon_glass_case"
+      ]
+    },
+    {
+      "key": "g3q/4567-4568-4569-4570",
+      "group": "building__facility",
+      "label": "Devon president glass display lower half",
+      "family": "glass display",
+      "recipe": null,
+      "reason": "Retain the supported display body, separate gold lower band and two feet with air between them; the existing cap-to-base pair forms one tall glass case in both Devon3F placements.",
+      "baseline_entry_sha256": "5774d12130aa573c8153c04f7b1c74946bf4968ee9e1d30fb8dea21d6700a412",
+      "source_contact": "../inventory/building__facility/page-001.png",
+      "source_card": 2,
+      "assemblies": [
+        "emerald_public_devon_glass_case"
+      ]
+    },
+    {
+      "key": "g3q/4621-4622-4623-4624",
+      "group": "building__facility",
+      "label": "Devon entry glass pedestal",
+      "family": "glass pedestal",
+      "recipe": null,
+      "reason": "Retain the rounded glass shell above a separate ochre pedestal, with outer carpet corners omitted. The source wall frieze behind it belongs to a different shared cell and is recorded for separate false-stack correction.",
+      "baseline_entry_sha256": "434bd8fc1610055633dca3c08933934ade6d1a576989f91312e80840db47d748",
+      "source_contact": "../inventory/building__facility/page-001.png",
+      "source_card": 3,
+      "assemblies": [
+        "emerald_public_devon_glass_pedestal"
+      ]
+    },
+    {
+      "key": "g3q/2729-2730-2742-2743",
+      "group": "building__battle_tent",
+      "label": "Battle Tent terminal upper housing",
+      "family": "terminal",
+      "recipe": "terminal_cap",
+      "reason": "Remove the purple surrounding wall/floor mass from the PC cap. The small pale housing joins the existing shared-PC support while retaining its established on link.",
+      "baseline_entry_sha256": "7e56ebd107e97716d037d68e05d7aa9b310036a84a04a1236bf94383caf7ad04",
+      "source_contact": "../inventory/building__battle_tent/page-001.png",
+      "source_card": 1,
+      "assemblies": [
+        "emerald_public_tent_terminal"
+      ]
+    },
+    {
+      "key": "g3q/2773-2774-2775-2776",
+      "group": "building__battle_tent",
+      "label": "Battle Tent projected terminal foot",
+      "family": "projected floor",
+      "recipe": "terminal_floor",
+      "reason": "All three lobby occurrences place this source below the PC on walkable purple floor. Exclude the projected vent from the physical surface and map native lower purple pixels horizontally.",
+      "baseline_entry_sha256": "0c324810993ba6ed339a440a5ed57d4c34bd1394925ff2665e24f5c8af0a5c8d",
+      "source_contact": "../inventory/building__battle_tent/page-001.png",
+      "source_card": 2,
+      "assemblies": []
+    },
+    {
+      "key": "g3q/734-2842-415-2843",
+      "group": "building__battle_tent",
+      "label": "Battle Tent registration console left side",
+      "family": "registration console",
+      "recipe": null,
+      "reason": "Retain the left green frame, pale inset body and adjoining yellow counter section; the actual three-cell console has a continuous top and discrete upright controls.",
+      "baseline_entry_sha256": "402ee4584dc0e2a081a2128dcfd44180ee021c7ef408569c4fd29dd95e2e8e39",
+      "source_contact": "../inventory/building__battle_tent/page-001.png",
+      "source_card": 3,
+      "assemblies": [
+        "emerald_public_tent_registration_console"
+      ]
+    },
+    {
+      "key": "g3q/2844-2845-203-204",
+      "group": "building__battle_tent",
+      "label": "Battle Tent registration console controls",
+      "family": "registration console",
+      "recipe": null,
+      "reason": "Retain the central pale key/display panels inside the green casing, with a separate raised top badge; its side profile has real depth and joins the two matching counter sections.",
+      "baseline_entry_sha256": "578ecf046178de56a58de4d273086921b55807beccfdcae7668e3c5565075004",
+      "source_contact": "../inventory/building__battle_tent/page-001.png",
+      "source_card": 4,
+      "assemblies": [
+        "emerald_public_tent_registration_console"
+      ]
+    },
+    {
+      "key": "g3q/2846-375-2847-2848",
+      "group": "building__battle_tent",
+      "label": "Battle Tent registration console right side",
+      "family": "registration console",
+      "recipe": null,
+      "reason": "Retain the right green upright, pale side bracket and yellow counter end; the whole three-cell assembly keeps an open underside rather than extruding the nearby floor.",
+      "baseline_entry_sha256": "a40a5259698543c9b5144f953c4caa055049588787e99e3d31b5b0134ba9e46a",
+      "source_contact": "../inventory/building__battle_tent/page-001.png",
+      "source_card": 5,
+      "assemblies": [
+        "emerald_public_tent_registration_console"
+      ]
+    },
+    {
+      "key": "g3q/10567-10567-10568-10570",
+      "group": "building__union_room",
+      "label": "Union wall display upper left",
+      "family": "wall display",
+      "recipe": "union_0_1",
+      "reason": "Replace the disconnected rear strip with the upper-left slice of one shallow wall, preserving pale trim over the red lower panel and cropping surrounding empty space.",
+      "baseline_entry_sha256": "6f84c137450a5e97a02abed721cca307854a56476e25fe95e375c442a4bceafe",
+      "source_contact": "../inventory/building__union_room/page-001.png",
+      "source_card": 1,
+      "assemblies": [
+        "emerald_public_union_wall_display"
+      ],
+      "added_on": "g3q/10587-10590-10589-10591"
+    },
+    {
+      "key": "g3q/10567-10567-10571-10572",
+      "group": "building__union_room",
+      "label": "Union wall display upper centre",
+      "family": "wall display",
+      "recipe": "union_1_1",
+      "reason": "Join the pale upper trim and gold sign-frame top into the same two-row wall assembly; source green display pixels remain on its front only.",
+      "baseline_entry_sha256": "858f4de0d44d987e23fe0a28e53f71558ac7b4c4f79532ace2bf27207f0f9aed",
+      "source_contact": "../inventory/building__union_room/page-001.png",
+      "source_card": 2,
+      "assemblies": [
+        "emerald_public_union_wall_display"
+      ],
+      "added_on": "g3q/10592-10593-10594-10595"
+    },
+    {
+      "key": "g3q/10587-10590-10589-10591",
+      "group": "building__union_room",
+      "label": "Union wall display lower left",
+      "family": "wall display",
+      "recipe": "union_0_0",
+      "reason": "Replace the stepped extracted wedge with the left red wall panel of the complete shallow wall, continuous with the central display surround.",
+      "baseline_entry_sha256": "e302741ffc554073bffa513777b72f11e62d167ce07d738289f10b7df2495999",
+      "source_contact": "../inventory/building__union_room/page-001.png",
+      "source_card": 3,
+      "assemblies": [
+        "emerald_public_union_wall_display"
+      ]
+    },
+    {
+      "key": "g3q/10592-10593-10594-10595",
+      "group": "building__union_room",
+      "label": "Union wall display controls",
+      "family": "wall display",
+      "recipe": "union_1_0",
+      "reason": "Give the green display a thin recessed face within a projecting gold rectangular frame, mounted on the continuous red wall instead of a broad yellow roof-like lump.",
+      "baseline_entry_sha256": "5ebbce37a47f332521e09ad0e488e1639d2ae23662c1f34d408f7cbeff569c0a",
+      "source_contact": "../inventory/building__union_room/page-001.png",
+      "source_card": 4,
+      "assemblies": [
+        "emerald_public_union_wall_display"
+      ]
+    },
+    {
+      "key": "g3q/10567-10567-10631-10569",
+      "group": "building__union_room",
+      "label": "Union wall display upper right",
+      "family": "wall display",
+      "recipe": "union_2_1",
+      "reason": "Join the right pale wall trim to the complete two-row panel; rear and side materials exclude the green controls from the central cell.",
+      "baseline_entry_sha256": "e4fbf8a3cab732017455a3236081bc2151f355d31dfbf7f5289208ebe281aabf",
+      "source_contact": "../inventory/building__union_room/page-001.png",
+      "source_card": 5,
+      "assemblies": [
+        "emerald_public_union_wall_display"
+      ],
+      "added_on": "g3q/10648-10588-10649-10589"
+    },
+    {
+      "key": "g3q/10648-10588-10649-10589",
+      "group": "building__union_room",
+      "label": "Union wall display lower right",
+      "family": "wall display",
+      "recipe": "union_2_0",
+      "reason": "Retain the right red-panel drawing on the front of a shallow shared wall, eliminating the separate wedge and keeping the yellow frame at the actual display edge.",
+      "baseline_entry_sha256": "937c24c2acd2b41e43c920fa1f4cf021eb9c89d4393806abeb533bbc06d78c40",
+      "source_contact": "../inventory/building__union_room/page-001.png",
+      "source_card": 6,
+      "assemblies": [
+        "emerald_public_union_wall_display"
+      ]
+    }
+  ],
+  "assemblies": [
+    {
+      "id": "emerald_public_contest_terminal",
+      "map": "EM_LILYCOVE_CITY_CONTEST_LOBBY",
+      "rect": [
+        19,
+        0,
+        1,
+        2
+      ],
+      "kind": "stack (model as one)",
+      "note": "Pale terminal cap and shared PC body; lower source cell is projected walkable floor.",
+      "source_layout": [
+        [
+          "g3q/3742-3742-3782-3783"
+        ],
+        [
+          "g3q/9-10-11-12"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_public_tent_terminal",
+      "map": "EM_FALLARBOR_TOWN_BATTLE_TENT_LOBBY",
+      "rect": [
+        11,
+        3,
+        1,
+        2
+      ],
+      "kind": "stack (model as one)",
+      "note": "Battle Tent cap and shared PC form the existing locally matching pair; the PC alternate-base link is absent here.",
+      "source_layout": [
+        [
+          "g3q/2729-2730-2742-2743"
+        ],
+        [
+          "g3q/9-10-11-12"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_public_devon_glass_case",
+      "map": "EM_RUSTBORO_CITY_DEVON_CORP_3F",
+      "rect": [
+        1,
+        4,
+        1,
+        2
+      ],
+      "kind": "stack (model as one)",
+      "note": "Complete glass display with gold base and two feet, repeated twice in the president office.",
+      "source_layout": [
+        [
+          "g3q/4952-4953-4954-4955"
+        ],
+        [
+          "g3q/4567-4568-4569-4570"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_public_devon_glass_pedestal",
+      "map": "EM_RUSTBORO_CITY_DEVON_CORP_1F",
+      "rect": [
+        3,
+        2,
+        1,
+        1
+      ],
+      "kind": "object (model as one)",
+      "note": "Glass pedestal alone; the wall frieze behind it is not a glass-object cap.",
+      "source_layout": [
+        [
+          "g3q/4621-4622-4623-4624"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_public_union_wall_display",
+      "map": "EM_UNION_ROOM",
+      "rect": [
+        1,
+        0,
+        3,
+        2
+      ],
+      "kind": "stack (model as one)",
+      "note": "Complete three-wide, two-row wall panel and gold-framed green display; repeated in Union Room Plaza.",
+      "source_layout": [
+        [
+          "g3q/10567-10567-10568-10570",
+          "g3q/10567-10567-10571-10572",
+          "g3q/10567-10567-10631-10569"
+        ],
+        [
+          "g3q/10587-10590-10589-10591",
+          "g3q/10592-10593-10594-10595",
+          "g3q/10648-10588-10649-10589"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_public_tent_registration_console",
+      "map": "EM_FALLARBOR_TOWN_BATTLE_TENT_LOBBY",
+      "rect": [
+        3,
+        5,
+        3,
+        1
+      ],
+      "kind": "object (model as one)",
+      "note": "Three adjoining cells of the registration computer/counter in the actual tent lobby.",
+      "source_layout": [
+        [
+          "g3q/734-2842-415-2843",
+          "g3q/2844-2845-203-204",
+          "g3q/2846-375-2847-2848"
+        ]
+      ]
+    }
+  ]
+}

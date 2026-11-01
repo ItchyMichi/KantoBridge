@@ -1,0 +1,1441 @@
+{
+  "schema": 1,
+  "entries": [
+    {
+      "key": "g3q/5341-5342-5337-5338",
+      "group": "building__fortree_gym",
+      "label": "Bamboo cap at a maze corner",
+      "family": "Fortree gym fixture",
+      "recipe": "bamboo_cap",
+      "reason": "Rounded green culm and pale cut top replace the source silhouette slab; omit yellow paving from the post.",
+      "baseline_entry_sha256": "8514cf36f03fbec2f9da24dff2f749a814b6c9c19afc5aaa90b06edf03cb5c97",
+      "source_contact": "../inventory/building__fortree_gym/page-001.png",
+      "source_card": 1,
+      "assemblies": [
+        "emerald_fortree_west_posts",
+        "emerald_fortree_east_joints"
+      ]
+    },
+    {
+      "key": "g3q/5343-5344-5332-5328",
+      "group": "building__fortree_gym",
+      "label": "South-facing bamboo-room ledge left edge",
+      "family": "Fortree gym fixture",
+      "recipe": "ledge",
+      "reason": "A four-voxel jump step keeps its dark front and thin native-green upper edge; room-floor paint is excluded from vertical faces.",
+      "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+      "source_contact": "../inventory/building__fortree_gym/page-001.png",
+      "source_card": 2,
+      "assemblies": [
+        "emerald_fortree_south_ledge"
+      ]
+    },
+    {
+      "key": "g3q/5344-5344-5327-5328",
+      "group": "building__fortree_gym",
+      "label": "South-facing bamboo-room ledge repeat",
+      "family": "Fortree gym fixture",
+      "recipe": "ledge",
+      "reason": "Same continuous low step section joins the left edge across five actual collision-163 cells.",
+      "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+      "source_contact": "../inventory/building__fortree_gym/page-001.png",
+      "source_card": 3,
+      "assemblies": [
+        "emerald_fortree_south_ledge"
+      ]
+    },
+    {
+      "key": "g3q/5350-5351-5352-5353",
+      "group": "building__fortree_gym",
+      "label": "Bamboo post lower isolated end",
+      "family": "Fortree gym fixture",
+      "recipe": "bamboo_body",
+      "reason": "Round green shaft, raised joint collars and a narrow native highlight replace the hollowed source extrusion.",
+      "baseline_entry_sha256": "28a33f644e0de301143f61e6d99a652f3efec88e981495513253a8647ffac23a",
+      "source_contact": "../inventory/building__fortree_gym/page-001.png",
+      "source_card": 4,
+      "assemblies": [
+        "emerald_fortree_west_posts"
+      ]
+    },
+    {
+      "key": "g3q/5354-5355-5352-5353",
+      "group": "building__fortree_gym",
+      "label": "Bamboo post lower stack support",
+      "family": "Fortree gym fixture",
+      "recipe": "bamboo_body",
+      "reason": "Continuous cylindrical lower culm shares a centered seam with existing on-linked upper section; metadata remains exact.",
+      "baseline_entry_sha256": "a6632c8c6a602c0e4e63977288baaa555eba9418479204c703222ee8c8958ee3",
+      "source_contact": "../inventory/building__fortree_gym/page-001.png",
+      "source_card": 5,
+      "assemblies": [
+        "emerald_fortree_bamboo_pair_projections",
+        "emerald_fortree_east_joints"
+      ]
+    },
+    {
+      "key": "g3q/5361-5362-5337-5338",
+      "group": "building__fortree_gym",
+      "label": "Bamboo post round top",
+      "family": "Fortree gym fixture",
+      "recipe": "bamboo_cap",
+      "reason": "A pale circular cut top caps a closed green culm; no dark silhouette sheet or yellow room background.",
+      "baseline_entry_sha256": "b9472e564b8f505cc003f00f9da84b0705290ffd1d83985c54afbc5ecb821bff",
+      "source_contact": "../inventory/building__fortree_gym/page-001.png",
+      "source_card": 6,
+      "assemblies": [
+        "emerald_fortree_west_posts"
+      ]
+    },
+    {
+      "key": "g3q/5350-5351-5363-5364",
+      "group": "building__fortree_gym",
+      "label": "Bamboo joint with partial lower cut",
+      "family": "Fortree gym fixture",
+      "recipe": "bamboo_body",
+      "reason": "Two native joint collars articulate a closed round culm; the projected pale crescent is interpreted as a node instead of a carved cavity.",
+      "baseline_entry_sha256": "b90eed01dd4e6654c16e09dba7ccfe7d4716f43afdd720e29c003244f2944bc2",
+      "source_contact": "../inventory/building__fortree_gym/page-001.png",
+      "source_card": 7,
+      "assemblies": [
+        "emerald_fortree_east_joints"
+      ]
+    },
+    {
+      "key": "g3q/5337-5338-5361-5362",
+      "group": "building__fortree_gym",
+      "label": "Bamboo on-linked upper joint",
+      "family": "Fortree gym fixture",
+      "recipe": "bamboo_cap",
+      "reason": "Keep the exact existing lower-base link; centered round upper culm and pale end close the former hourglass-shaped seam.",
+      "baseline_entry_sha256": "9800731b2f931e8210b8ae791c1c21f7515f61cf92a6202fdfde4e9fa570528c",
+      "source_contact": "../inventory/building__fortree_gym/page-001.png",
+      "source_card": 8,
+      "assemblies": [
+        "emerald_fortree_bamboo_pair_projections",
+        "emerald_fortree_east_joints"
+      ]
+    },
+    {
+      "key": "g3q/5365-5366-5367-5368",
+      "group": "building__fortree_gym",
+      "label": "Arena northwest curved rim",
+      "family": "Fortree gym fixture",
+      "recipe": null,
+      "reason": "Coherent low rounded corner rises above the pale floor and meets the southern curved return; actual complete dais has a shallow inset, not a detached pillar.",
+      "baseline_entry_sha256": "e960118e16515fa41734fc4f53eaac5c5a65e3563d36f47a7546377f17b3a742",
+      "source_contact": "../inventory/building__fortree_gym/page-001.png",
+      "source_card": 9,
+      "assemblies": [
+        "emerald_fortree_dais"
+      ]
+    },
+    {
+      "key": "g3q/5369-5370-5371-5372",
+      "group": "building__fortree_gym",
+      "label": "Arena north-left mat border",
+      "family": "Fortree gym fixture",
+      "recipe": "walk_platform",
+      "reason": "Retain the existing low green mat border; all source occurrences are WALK0, so add walk rendering to make this raised inset appear on noncolliding decor carriers.",
+      "baseline_entry_sha256": "f4c1cc06a7854a457812ad2894cb3c975e00ff3df6d486e2660ecba353ee3ccc",
+      "source_contact": "../inventory/building__fortree_gym/page-001.png",
+      "source_card": 10,
+      "assemblies": [
+        "emerald_fortree_dais"
+      ]
+    },
+    {
+      "key": "g3q/5373-5373-5374-5374",
+      "group": "building__fortree_gym",
+      "label": "Arena green mat center",
+      "family": "Fortree gym fixture",
+      "recipe": "walk_platform",
+      "reason": "Retain its coherent shallow horizontal mat; explicit walk rendering makes the actual WALK0 center visible without adding collision.",
+      "baseline_entry_sha256": "a38b845b8125b95459279f96081d828002a2e41e3cd2e0aad060c0550a13a9fa",
+      "source_contact": "../inventory/building__fortree_gym/page-001.png",
+      "source_card": 11,
+      "assemblies": [
+        "emerald_fortree_dais"
+      ]
+    },
+    {
+      "key": "g3q/5375-5369-5376-5371",
+      "group": "building__fortree_gym",
+      "label": "Arena north-right mat border",
+      "family": "Fortree gym fixture",
+      "recipe": "walk_platform",
+      "reason": "Retain the mirrored low mat edge and add walk rendering at its single WALK0 source occurrence.",
+      "baseline_entry_sha256": "62753059e458ff30be4eab2b2b76c9381c7f5e9a3cfcd4587327a0fc684b076f",
+      "source_contact": "../inventory/building__fortree_gym/page-001.png",
+      "source_card": 12,
+      "assemblies": [
+        "emerald_fortree_dais"
+      ]
+    },
+    {
+      "key": "g3q/5366-5377-5368-5378",
+      "group": "building__fortree_gym",
+      "label": "Arena northeast curved rim",
+      "family": "Fortree gym fixture",
+      "recipe": null,
+      "reason": "Low pale curved corner with white circular motifs joins the eastern and rear rim of the complete arena.",
+      "baseline_entry_sha256": "dbf6c29541b2039bd9c64445c40dee46f09253da9ccc2cd5f3c98c46f4370902",
+      "source_contact": "../inventory/building__fortree_gym/page-001.png",
+      "source_card": 13,
+      "assemblies": [
+        "emerald_fortree_dais"
+      ]
+    },
+    {
+      "key": "g3q/5331-5326-5339-5340",
+      "group": "building__fortree_gym",
+      "label": "Bamboo cap projection over walkable paving",
+      "family": "Fortree gym fixture",
+      "recipe": null,
+      "reason": "All four occurrences lie immediately south of the solid bamboo wall. The small pale cap is a source projection over WALK0 paving, with no on/walk flag; retain this unclaimed projection and do not turn it into an upright obstacle.",
+      "baseline_entry_sha256": "23eee87823a192ba10ad7c42fc74ab9cf5e0fd7e3f61c17e2368a7b96030b6f1",
+      "source_contact": "../inventory/building__fortree_gym/page-001.png",
+      "source_card": 14,
+      "assemblies": [
+        "emerald_fortree_bamboo_pair_projections"
+      ]
+    },
+    {
+      "key": "g3q/5381-5382-3262-3263",
+      "group": "building__fortree_gym",
+      "label": "Fortree entrance statue globe",
+      "family": "Fortree gym fixture",
+      "recipe": "statue_1",
+      "reason": "Use the same complete native stone globe/collar/plinth construction verified for the other gym variants; remove the flat-backed extrusion and yellow room corners.",
+      "baseline_entry_sha256": "fb5f20a044fc32123bd62e61b3711d085a3c539636d2def5e764cac2dc24fd08",
+      "source_contact": "../inventory/building__fortree_gym/page-001.png",
+      "source_card": 15,
+      "assemblies": [
+        "emerald_fortree_statue"
+      ]
+    },
+    {
+      "key": "g3q/5383-5383-5384-5385",
+      "group": "building__fortree_gym",
+      "label": "Turnstile lower end section",
+      "family": "Fortree gym fixture",
+      "recipe": "rail_end",
+      "reason": "Two rounded bamboo rails and cross ties follow the north/south source footprint, finishing with closed lower ends; remove the old disconnected upright slab.",
+      "baseline_entry_sha256": "2c82449523f9ac8c951f4d206ac4ffef4152d100037871aa70eba7e490c47386",
+      "source_contact": "../inventory/building__fortree_gym/page-001.png",
+      "source_card": 16,
+      "assemblies": [
+        "emerald_fortree_long_turnstile",
+        "emerald_fortree_three_turnstiles"
+      ]
+    },
+    {
+      "key": "g3q/5354-5355-5363-5364",
+      "group": "building__fortree_gym",
+      "label": "Bamboo post isolated shaft joint",
+      "family": "Fortree gym fixture",
+      "recipe": "bamboo_body",
+      "reason": "A closed round culm with two joint bands gives the single-cell maze barrier consistent depth.",
+      "baseline_entry_sha256": "00b4a0069fa2c8d53be3d0ebf523a313a4a5fc2e26c8ae3d3435cb5372cc60f6",
+      "source_contact": "../inventory/building__fortree_gym/page-001.png",
+      "source_card": 17,
+      "assemblies": []
+    },
+    {
+      "key": "g3q/3267-3268-5388-5389",
+      "group": "building__fortree_gym",
+      "label": "Fortree entrance statue pedestal",
+      "family": "Fortree gym fixture",
+      "recipe": "statue_0",
+      "reason": "Native gray plaque, stepped foot and continuous upper plinth support the repaired globe without yellow room-floor stains.",
+      "baseline_entry_sha256": "f130be3ecfa0d27aa0728d1de5a8083061ddd5143bbd8d24739d85782cbe53ab",
+      "source_contact": "../inventory/building__fortree_gym/page-001.png",
+      "source_card": 18,
+      "assemblies": [
+        "emerald_fortree_statue"
+      ]
+    },
+    {
+      "key": "g3q/5383-5383-5383-5383",
+      "group": "building__fortree_gym",
+      "label": "Turnstile repeating center rails",
+      "family": "Fortree gym fixture",
+      "recipe": "rail_middle",
+      "reason": "Continuous north/south rails cross the cell boundaries and two native pale nodes repeat along them; neighboring sections no longer leave gaps.",
+      "baseline_entry_sha256": "7137d489109e2b1bdb25054ec5420bf70465f0b8402dd0396c2cd3eb896d4132",
+      "source_contact": "../inventory/building__fortree_gym/page-001.png",
+      "source_card": 19,
+      "assemblies": [
+        "emerald_fortree_long_turnstile",
+        "emerald_fortree_three_turnstiles"
+      ]
+    },
+    {
+      "key": "g3q/5391-5392-5337-5338",
+      "group": "building__fortree_gym",
+      "label": "Bamboo corner post below wall trim",
+      "family": "Fortree gym fixture",
+      "recipe": "bamboo_cap",
+      "reason": "A self-contained round capped culm excludes the straight green room-wall trim behind its source drawing.",
+      "baseline_entry_sha256": "b179dc149f006a6bd2d021f567afafe34b33820be7253f4ba2abd066acd55f30",
+      "source_contact": "../inventory/building__fortree_gym/page-001.png",
+      "source_card": 20,
+      "assemblies": [
+        "emerald_fortree_west_posts"
+      ]
+    },
+    {
+      "key": "g3q/5397-5398-5390-5390",
+      "group": "building__fortree_gym",
+      "label": "Short two-rail turnstile",
+      "family": "Fortree gym fixture",
+      "recipe": "rail_short",
+      "reason": "Closed ends and two cross ties form one short supported bamboo turnstile in its one-cell source footprint.",
+      "baseline_entry_sha256": "91118436ae7623d96b3b87d9f3efee873d8cd053d9f990edd6a1076647c1d3a9",
+      "source_contact": "../inventory/building__fortree_gym/page-001.png",
+      "source_card": 21,
+      "assemblies": [
+        "emerald_fortree_short_turnstile"
+      ]
+    },
+    {
+      "key": "g3q/5397-5398-5383-5383",
+      "group": "building__fortree_gym",
+      "label": "Turnstile upper rail ends",
+      "family": "Fortree gym fixture",
+      "recipe": "rail_start",
+      "reason": "Rounded north ends start the continuous paired rails; top paint uses only bamboo materials.",
+      "baseline_entry_sha256": "bb2334076d968dd01c4827d9df50733f794ebb42d9f9f01b6fe691995ef99aa6",
+      "source_contact": "../inventory/building__fortree_gym/page-001.png",
+      "source_card": 22,
+      "assemblies": [
+        "emerald_fortree_long_turnstile",
+        "emerald_fortree_three_turnstiles"
+      ]
+    },
+    {
+      "key": "g3q/5397-5398-5384-5385",
+      "group": "building__fortree_gym",
+      "label": "Turnstile short lower-capped variant",
+      "family": "Fortree gym fixture",
+      "recipe": "rail_short",
+      "reason": "The source shows both the upper ends and lower joint in one cell; keep a complete short pair of connected rails.",
+      "baseline_entry_sha256": "f37291679498624fda295033cf3fe2078c28eaa070770acb6060fa6f0c82822e",
+      "source_contact": "../inventory/building__fortree_gym/page-001.png",
+      "source_card": 23,
+      "assemblies": [
+        "emerald_fortree_double_short_turnstile"
+      ]
+    },
+    {
+      "key": "g3q/5405-5368-5406-5407",
+      "group": "building__fortree_gym",
+      "label": "Arena southwest curved stair",
+      "family": "Fortree gym fixture",
+      "recipe": null,
+      "reason": "Rounded rim terminates at a shallow stone entry step; source pale floor remains horizontal and joins its northern corner.",
+      "baseline_entry_sha256": "3c6c32df4a821ab1a684bcab947017abd73e5247ff69d96069e381f4f58499ac",
+      "source_contact": "../inventory/building__fortree_gym/page-001.png",
+      "source_card": 24,
+      "assemblies": [
+        "emerald_fortree_dais"
+      ]
+    },
+    {
+      "key": "g3q/5371-5371-5408-5409",
+      "group": "building__fortree_gym",
+      "label": "Arena south-left entry step",
+      "family": "Fortree gym fixture",
+      "recipe": "walk_platform",
+      "reason": "Retain the shallow source-painted step and add walk rendering at its single actual WALK0 cell.",
+      "baseline_entry_sha256": "50ac186aff76fcb81c7afcb5b65c2413b32cd0d3eec2bae725bd14705df3287b",
+      "source_contact": "../inventory/building__fortree_gym/page-001.png",
+      "source_card": 25,
+      "assemblies": [
+        "emerald_fortree_dais"
+      ]
+    },
+    {
+      "key": "g3q/5371-5371-5409-5409",
+      "group": "building__fortree_gym",
+      "label": "Arena southern center step",
+      "family": "Fortree gym fixture",
+      "recipe": "walk_platform",
+      "reason": "Retain the low two-band central entry strip; explicit noncolliding walk rendering completes the dais entrance.",
+      "baseline_entry_sha256": "67747f6fc194c8cd3fd2bceacfdedb55d36f21477912c88077f5365eeb1a0d01",
+      "source_contact": "../inventory/building__fortree_gym/page-001.png",
+      "source_card": 26,
+      "assemblies": [
+        "emerald_fortree_dais"
+      ]
+    },
+    {
+      "key": "g3q/5371-5371-5409-5410",
+      "group": "building__fortree_gym",
+      "label": "Arena south-right entry step",
+      "family": "Fortree gym fixture",
+      "recipe": "walk_platform",
+      "reason": "Retain the matching low right step and add walk rendering at its single WALK0 location.",
+      "baseline_entry_sha256": "f7bc559a7ea547eb816e12d85666bbc1dce827c6f38467a02ae65251313dc7e5",
+      "source_contact": "../inventory/building__fortree_gym/page-001.png",
+      "source_card": 27,
+      "assemblies": [
+        "emerald_fortree_dais"
+      ]
+    },
+    {
+      "key": "g3q/5368-5411-5407-5412",
+      "group": "building__fortree_gym",
+      "label": "Arena southeast curved stair",
+      "family": "Fortree gym fixture",
+      "recipe": null,
+      "reason": "The curved stone return and pale top agree with the complete arena; no room-floor block or vertical sign plane is present.",
+      "baseline_entry_sha256": "93fe91335d63516a7331cfc5b404dc158e91aac24bf92579ff90b2f48724d668",
+      "source_contact": "../inventory/building__fortree_gym/page-001.png",
+      "source_card": 28,
+      "assemblies": [
+        "emerald_fortree_dais"
+      ]
+    }
+  ],
+  "assemblies": [
+    {
+      "id": "emerald_fortree_dais",
+      "map": "EM_FORTREE_CITY_GYM",
+      "rect": [
+        13,
+        2,
+        5,
+        2
+      ],
+      "kind": "platform (model as one)",
+      "note": "Actual Fortree dais; source adjacency and existing stack relationships preserved.",
+      "source_layout": [
+        [
+          "g3q/5365-5366-5367-5368",
+          "g3q/5369-5370-5371-5372",
+          "g3q/5373-5373-5374-5374",
+          "g3q/5375-5369-5376-5371",
+          "g3q/5366-5377-5368-5378"
+        ],
+        [
+          "g3q/5405-5368-5406-5407",
+          "g3q/5371-5371-5408-5409",
+          "g3q/5371-5371-5409-5409",
+          "g3q/5371-5371-5409-5410",
+          "g3q/5368-5411-5407-5412"
+        ]
+      ],
+      "placements": [
+        {
+          "source": [
+            0,
+            0
+          ],
+          "offset": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "source": [
+            1,
+            0
+          ],
+          "offset": [
+            1,
+            0,
+            0
+          ]
+        },
+        {
+          "source": [
+            2,
+            0
+          ],
+          "offset": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "source": [
+            3,
+            0
+          ],
+          "offset": [
+            3,
+            0,
+            0
+          ]
+        },
+        {
+          "source": [
+            4,
+            0
+          ],
+          "offset": [
+            4,
+            0,
+            0
+          ]
+        },
+        {
+          "source": [
+            0,
+            1
+          ],
+          "offset": [
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "source": [
+            1,
+            1
+          ],
+          "offset": [
+            1,
+            0,
+            1
+          ]
+        },
+        {
+          "source": [
+            2,
+            1
+          ],
+          "offset": [
+            2,
+            0,
+            1
+          ]
+        },
+        {
+          "source": [
+            3,
+            1
+          ],
+          "offset": [
+            3,
+            0,
+            1
+          ]
+        },
+        {
+          "source": [
+            4,
+            1
+          ],
+          "offset": [
+            4,
+            0,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "emerald_fortree_statue",
+      "map": "EM_FORTREE_CITY_GYM",
+      "rect": [
+        14,
+        20,
+        1,
+        2
+      ],
+      "kind": "stack (model as one)",
+      "note": "Actual Fortree statue; source adjacency and existing stack relationships preserved.",
+      "source_layout": [
+        [
+          "g3q/5381-5382-3262-3263"
+        ],
+        [
+          "g3q/3267-3268-5388-5389"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_fortree_long_turnstile",
+      "map": "EM_FORTREE_CITY_GYM",
+      "rect": [
+        3,
+        3,
+        1,
+        4
+      ],
+      "kind": "rail (model as one)",
+      "note": "Actual Fortree long turnstile; source adjacency and existing stack relationships preserved.",
+      "source_layout": [
+        [
+          "g3q/5397-5398-5383-5383"
+        ],
+        [
+          "g3q/5383-5383-5383-5383"
+        ],
+        [
+          "g3q/5383-5383-5383-5383"
+        ],
+        [
+          "g3q/5383-5383-5384-5385"
+        ]
+      ],
+      "placements": [
+        {
+          "source": [
+            0,
+            0
+          ],
+          "offset": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "source": [
+            0,
+            1
+          ],
+          "offset": [
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "source": [
+            0,
+            2
+          ],
+          "offset": [
+            0,
+            0,
+            2
+          ]
+        },
+        {
+          "source": [
+            0,
+            3
+          ],
+          "offset": [
+            0,
+            0,
+            3
+          ]
+        }
+      ]
+    },
+    {
+      "id": "emerald_fortree_three_turnstiles",
+      "map": "EM_FORTREE_CITY_GYM",
+      "rect": [
+        8,
+        15,
+        2,
+        5
+      ],
+      "kind": "rail (model as one)",
+      "note": "Actual Fortree three turnstiles; source adjacency and existing stack relationships preserved.",
+      "source_layout": [
+        [
+          "g3q/5329-5330-5327-5328",
+          "g3q/5397-5398-5383-5383"
+        ],
+        [
+          "g3q/5329-5330-5327-5328",
+          "g3q/5383-5383-5383-5383"
+        ],
+        [
+          "g3q/5397-5398-5383-5383",
+          "g3q/5383-5383-5383-5383"
+        ],
+        [
+          "g3q/5383-5383-5383-5383",
+          "g3q/5383-5383-5383-5383"
+        ],
+        [
+          "g3q/5383-5383-5384-5385",
+          "g3q/5383-5383-5384-5385"
+        ]
+      ],
+      "placements": [
+        {
+          "source": [
+            1,
+            0
+          ],
+          "offset": [
+            1,
+            0,
+            0
+          ]
+        },
+        {
+          "source": [
+            1,
+            1
+          ],
+          "offset": [
+            1,
+            0,
+            1
+          ]
+        },
+        {
+          "source": [
+            0,
+            2
+          ],
+          "offset": [
+            0,
+            0,
+            2
+          ]
+        },
+        {
+          "source": [
+            1,
+            2
+          ],
+          "offset": [
+            1,
+            0,
+            2
+          ]
+        },
+        {
+          "source": [
+            0,
+            3
+          ],
+          "offset": [
+            0,
+            0,
+            3
+          ]
+        },
+        {
+          "source": [
+            1,
+            3
+          ],
+          "offset": [
+            1,
+            0,
+            3
+          ]
+        },
+        {
+          "source": [
+            0,
+            4
+          ],
+          "offset": [
+            0,
+            0,
+            4
+          ]
+        },
+        {
+          "source": [
+            1,
+            4
+          ],
+          "offset": [
+            1,
+            0,
+            4
+          ]
+        }
+      ],
+      "model_layout": [
+        [
+          null,
+          "g3q/5397-5398-5383-5383"
+        ],
+        [
+          null,
+          "g3q/5383-5383-5383-5383"
+        ],
+        [
+          "g3q/5397-5398-5383-5383",
+          "g3q/5383-5383-5383-5383"
+        ],
+        [
+          "g3q/5383-5383-5383-5383",
+          "g3q/5383-5383-5383-5383"
+        ],
+        [
+          "g3q/5383-5383-5384-5385",
+          "g3q/5383-5383-5384-5385"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_fortree_short_turnstile",
+      "map": "EM_FORTREE_CITY_GYM",
+      "rect": [
+        6,
+        17,
+        1,
+        1
+      ],
+      "kind": "rail (model as one)",
+      "note": "Actual Fortree short turnstile; source adjacency and existing stack relationships preserved.",
+      "source_layout": [
+        [
+          "g3q/5397-5398-5390-5390"
+        ]
+      ],
+      "placements": [
+        {
+          "source": [
+            0,
+            0
+          ],
+          "offset": [
+            0,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "emerald_fortree_double_short_turnstile",
+      "map": "EM_FORTREE_CITY_GYM",
+      "rect": [
+        6,
+        19,
+        2,
+        1
+      ],
+      "kind": "rail (model as one)",
+      "note": "Actual Fortree double short turnstile; source adjacency and existing stack relationships preserved.",
+      "source_layout": [
+        [
+          "g3q/5397-5398-5384-5385",
+          "g3q/5397-5398-5384-5385"
+        ]
+      ],
+      "placements": [
+        {
+          "source": [
+            0,
+            0
+          ],
+          "offset": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "source": [
+            1,
+            0
+          ],
+          "offset": [
+            1,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "emerald_fortree_west_posts",
+      "map": "EM_FORTREE_CITY_GYM",
+      "rect": [
+        0,
+        1,
+        2,
+        5
+      ],
+      "kind": "maze (model as one)",
+      "note": "Actual Fortree west posts; source adjacency and existing stack relationships preserved.",
+      "source_layout": [
+        [
+          "g3q/5345-5345-5357-5357",
+          "g3q/5391-5392-5337-5338"
+        ],
+        [
+          "g3q/5341-5342-5337-5338",
+          "g3q/5361-5362-5337-5338"
+        ],
+        [
+          "g3q/5361-5362-5337-5338",
+          "g3q/5361-5362-5337-5338"
+        ],
+        [
+          "g3q/5361-5362-5337-5338",
+          "g3q/5361-5362-5337-5338"
+        ],
+        [
+          "g3q/5361-5362-5337-5338",
+          "g3q/5350-5351-5352-5353"
+        ]
+      ],
+      "placements": [
+        {
+          "source": [
+            1,
+            0
+          ],
+          "offset": [
+            1,
+            0,
+            0
+          ]
+        },
+        {
+          "source": [
+            0,
+            1
+          ],
+          "offset": [
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "source": [
+            1,
+            1
+          ],
+          "offset": [
+            1,
+            0,
+            1
+          ]
+        },
+        {
+          "source": [
+            0,
+            2
+          ],
+          "offset": [
+            0,
+            0,
+            2
+          ]
+        },
+        {
+          "source": [
+            1,
+            2
+          ],
+          "offset": [
+            1,
+            0,
+            2
+          ]
+        },
+        {
+          "source": [
+            0,
+            3
+          ],
+          "offset": [
+            0,
+            0,
+            3
+          ]
+        },
+        {
+          "source": [
+            1,
+            3
+          ],
+          "offset": [
+            1,
+            0,
+            3
+          ]
+        },
+        {
+          "source": [
+            0,
+            4
+          ],
+          "offset": [
+            0,
+            0,
+            4
+          ]
+        },
+        {
+          "source": [
+            1,
+            4
+          ],
+          "offset": [
+            1,
+            0,
+            4
+          ]
+        }
+      ],
+      "model_layout": [
+        [
+          null,
+          "g3q/5391-5392-5337-5338"
+        ],
+        [
+          "g3q/5341-5342-5337-5338",
+          "g3q/5361-5362-5337-5338"
+        ],
+        [
+          "g3q/5361-5362-5337-5338",
+          "g3q/5361-5362-5337-5338"
+        ],
+        [
+          "g3q/5361-5362-5337-5338",
+          "g3q/5361-5362-5337-5338"
+        ],
+        [
+          "g3q/5361-5362-5337-5338",
+          "g3q/5350-5351-5352-5353"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_fortree_bamboo_pair_projections",
+      "map": "EM_FORTREE_CITY_GYM",
+      "rect": [
+        6,
+        2,
+        4,
+        3
+      ],
+      "kind": "maze (model as one)",
+      "note": "Actual Fortree bamboo pair projections; source adjacency and existing stack relationships preserved.",
+      "source_layout": [
+        [
+          "g3q/5337-5338-5361-5362",
+          "g3q/5337-5338-5361-5362",
+          "g3q/5337-5338-5361-5362",
+          "g3q/5337-5338-5361-5362"
+        ],
+        [
+          "g3q/5354-5355-5352-5353",
+          "g3q/5354-5355-5352-5353",
+          "g3q/5354-5355-5352-5353",
+          "g3q/5354-5355-5352-5353"
+        ],
+        [
+          "g3q/5325-5326-5339-5340",
+          "g3q/5331-5326-5339-5340",
+          "g3q/5331-5326-5339-5340",
+          "g3q/5331-5326-5339-5340"
+        ]
+      ],
+      "placements": [
+        {
+          "source": [
+            0,
+            0
+          ],
+          "offset": [
+            0,
+            1,
+            1
+          ]
+        },
+        {
+          "source": [
+            1,
+            0
+          ],
+          "offset": [
+            1,
+            1,
+            1
+          ]
+        },
+        {
+          "source": [
+            2,
+            0
+          ],
+          "offset": [
+            2,
+            1,
+            1
+          ]
+        },
+        {
+          "source": [
+            3,
+            0
+          ],
+          "offset": [
+            3,
+            1,
+            1
+          ]
+        },
+        {
+          "source": [
+            0,
+            1
+          ],
+          "offset": [
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "source": [
+            1,
+            1
+          ],
+          "offset": [
+            1,
+            0,
+            1
+          ]
+        },
+        {
+          "source": [
+            2,
+            1
+          ],
+          "offset": [
+            2,
+            0,
+            1
+          ]
+        },
+        {
+          "source": [
+            3,
+            1
+          ],
+          "offset": [
+            3,
+            0,
+            1
+          ]
+        }
+      ],
+      "model_layout": [
+        [
+          "g3q/5337-5338-5361-5362",
+          "g3q/5337-5338-5361-5362",
+          "g3q/5337-5338-5361-5362",
+          "g3q/5337-5338-5361-5362"
+        ],
+        [
+          "g3q/5354-5355-5352-5353",
+          "g3q/5354-5355-5352-5353",
+          "g3q/5354-5355-5352-5353",
+          "g3q/5354-5355-5352-5353"
+        ],
+        [
+          null,
+          null,
+          null,
+          null
+        ]
+      ]
+    },
+    {
+      "id": "emerald_fortree_east_joints",
+      "map": "EM_FORTREE_CITY_GYM",
+      "rect": [
+        10,
+        8,
+        3,
+        5
+      ],
+      "kind": "maze (model as one)",
+      "note": "Actual Fortree east joints; source adjacency and existing stack relationships preserved.",
+      "source_layout": [
+        [
+          "g3q/5354-5355-5352-5353",
+          "g3q/5341-5342-5337-5338",
+          "g3q/5337-5338-5361-5362"
+        ],
+        [
+          "g3q/5325-5326-5327-5328",
+          "g3q/5350-5351-5363-5364",
+          "g3q/5337-5338-5361-5362"
+        ],
+        [
+          "g3q/5329-5330-5339-5340",
+          "g3q/5354-5355-5352-5353",
+          "g3q/5337-5338-5361-5362"
+        ],
+        [
+          "g3q/5337-5338-5361-5362",
+          "g3q/5341-5342-5337-5338",
+          "g3q/5337-5338-5361-5362"
+        ],
+        [
+          "g3q/5337-5338-5361-5362",
+          "g3q/5350-5351-5363-5364",
+          "g3q/5337-5338-5361-5362"
+        ]
+      ],
+      "placements": [
+        {
+          "source": [
+            0,
+            0
+          ],
+          "offset": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "source": [
+            1,
+            0
+          ],
+          "offset": [
+            1,
+            0,
+            0
+          ]
+        },
+        {
+          "source": [
+            2,
+            0
+          ],
+          "offset": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "source": [
+            1,
+            1
+          ],
+          "offset": [
+            1,
+            0,
+            1
+          ]
+        },
+        {
+          "source": [
+            2,
+            1
+          ],
+          "offset": [
+            2,
+            0,
+            1
+          ]
+        },
+        {
+          "source": [
+            1,
+            2
+          ],
+          "offset": [
+            1,
+            0,
+            2
+          ]
+        },
+        {
+          "source": [
+            2,
+            2
+          ],
+          "offset": [
+            2,
+            0,
+            2
+          ]
+        },
+        {
+          "source": [
+            0,
+            3
+          ],
+          "offset": [
+            0,
+            0,
+            3
+          ]
+        },
+        {
+          "source": [
+            1,
+            3
+          ],
+          "offset": [
+            1,
+            0,
+            3
+          ]
+        },
+        {
+          "source": [
+            2,
+            3
+          ],
+          "offset": [
+            2,
+            0,
+            3
+          ]
+        },
+        {
+          "source": [
+            0,
+            4
+          ],
+          "offset": [
+            0,
+            0,
+            4
+          ]
+        },
+        {
+          "source": [
+            1,
+            4
+          ],
+          "offset": [
+            1,
+            0,
+            4
+          ]
+        },
+        {
+          "source": [
+            2,
+            4
+          ],
+          "offset": [
+            2,
+            0,
+            4
+          ]
+        }
+      ],
+      "model_layout": [
+        [
+          "g3q/5354-5355-5352-5353",
+          "g3q/5341-5342-5337-5338",
+          "g3q/5337-5338-5361-5362"
+        ],
+        [
+          null,
+          "g3q/5350-5351-5363-5364",
+          "g3q/5337-5338-5361-5362"
+        ],
+        [
+          null,
+          "g3q/5354-5355-5352-5353",
+          "g3q/5337-5338-5361-5362"
+        ],
+        [
+          "g3q/5337-5338-5361-5362",
+          "g3q/5341-5342-5337-5338",
+          "g3q/5337-5338-5361-5362"
+        ],
+        [
+          "g3q/5337-5338-5361-5362",
+          "g3q/5350-5351-5363-5364",
+          "g3q/5337-5338-5361-5362"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_fortree_south_ledge",
+      "map": "EM_FORTREE_CITY_GYM",
+      "rect": [
+        13,
+        6,
+        5,
+        1
+      ],
+      "kind": "ledge (model as one)",
+      "note": "Actual Fortree south ledge; source adjacency and existing stack relationships preserved.",
+      "source_layout": [
+        [
+          "g3q/5343-5344-5332-5328",
+          "g3q/5344-5344-5327-5328",
+          "g3q/5344-5344-5327-5328",
+          "g3q/5344-5344-5327-5328",
+          "g3q/5344-5344-5327-5328"
+        ]
+      ],
+      "placements": [
+        {
+          "source": [
+            0,
+            0
+          ],
+          "offset": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "source": [
+            1,
+            0
+          ],
+          "offset": [
+            1,
+            0,
+            0
+          ]
+        },
+        {
+          "source": [
+            2,
+            0
+          ],
+          "offset": [
+            2,
+            0,
+            0
+          ]
+        },
+        {
+          "source": [
+            3,
+            0
+          ],
+          "offset": [
+            3,
+            0,
+            0
+          ]
+        },
+        {
+          "source": [
+            4,
+            0
+          ],
+          "offset": [
+            4,
+            0,
+            0
+          ]
+        }
+      ]
+    }
+  ]
+}

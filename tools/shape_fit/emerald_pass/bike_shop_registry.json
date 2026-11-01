@@ -1,0 +1,1196 @@
+{
+  "g3q/13708-13708-13715-13716": {
+    "label": "handlebar display upper frame A",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 1,
+    "reason": "Replace the pinched display silhouette with a straight shallow continuous wall panel. Existing verified on links join upper and lower source art; black out-of-room pixels never become wall volume.",
+    "baseline_entry_sha256": "f6f94af04428c51f815ac4547af15da55a7746c84e115c560449df43f04c905c",
+    "evidence": [
+      "general__bike_shop/page-001.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-001.png"
+    ],
+    "role": "wall",
+    "layer": 1
+  },
+  "g3q/13708-13708-13717-13718": {
+    "label": "handlebar display upper frame B",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 2,
+    "reason": "Replace the pinched display silhouette with a straight shallow continuous wall panel. Existing verified on links join upper and lower source art; black out-of-room pixels never become wall volume.",
+    "baseline_entry_sha256": "fb9e5fcb41314d204c70ae76ca2212e513bb67ceeea8293e2970c9d1bc77c1eb",
+    "evidence": [
+      "general__bike_shop/page-001.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-001.png"
+    ],
+    "role": "wall",
+    "layer": 1
+  },
+  "g3q/13719-13720-13721-13722": {
+    "label": "blue bicycle west half",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 3,
+    "reason": "Author a complete bicycle with two hollow tires, metal spokes, connected triangular frame, saddle, handlebars and pedals before splitting across its exact two solid source cells. Native body-color variants and floor-free wheel material replace disconnected sprite slivers.",
+    "baseline_entry_sha256": "0105d5285297dddcbf875ea41f2e9b58bbd77fec823aa49aa9a75cb2aaea9385",
+    "evidence": [
+      "general__bike_shop/page-001.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-001.png"
+    ],
+    "role": "bicycle",
+    "x": 0,
+    "accent": [
+      70,
+      100,
+      230
+    ]
+  },
+  "g3q/13723-13724-13725-13726": {
+    "label": "blue bicycle east wheel",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 4,
+    "reason": "Author a complete bicycle with two hollow tires, metal spokes, connected triangular frame, saddle, handlebars and pedals before splitting across its exact two solid source cells. Native body-color variants and floor-free wheel material replace disconnected sprite slivers.",
+    "baseline_entry_sha256": "4a69010dc5bcb5d554ccdda1d92877e82d166adb0bba6f40d7b8347e99987260",
+    "evidence": [
+      "general__bike_shop/page-001.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-001.png"
+    ],
+    "role": "bicycle",
+    "x": 1,
+    "accent": [
+      70,
+      100,
+      230
+    ]
+  },
+  "g3q/13727-13728-13729-13730": {
+    "label": "parts shelf upper left",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 5,
+    "reason": "Straight shelf side and three open parts rows join the adjacent right half; original hand-authored shelves remain connected.",
+    "baseline_entry_sha256": "5ed7aa95342f02d026ce55e774967575976b4a9d35a7b8eb9dd65baf164bc331",
+    "evidence": [
+      "general__bike_shop/page-001.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-001.png"
+    ]
+  },
+  "g3q/13731-13732-13733-13734": {
+    "label": "parts shelf upper right",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 6,
+    "reason": "Matching straight shelf side and native parts trays complete the two-cell cabinet without floor extrusion.",
+    "baseline_entry_sha256": "0a0071fb1cbce74b706c9a6a3be6e9a9ea8352cad4c05e9ddccc2033ba077890",
+    "evidence": [
+      "general__bike_shop/page-001.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-001.png"
+    ]
+  },
+  "g3q/13735-13736-13737-13738": {
+    "label": "cash register and rear wall",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 7,
+    "reason": "The source combines a cash register and rear shop partition. Existing separate pale register face and thin wall profile are retained with the complete counter context.",
+    "baseline_entry_sha256": "a1c56c785b2cad406d21ffc6cdd28ec17c3edecf48a2693a98bdf545ef9fb6b1",
+    "evidence": [
+      "general__bike_shop/page-001.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-001.png"
+    ]
+  },
+  "g3q/13739-13740-13741-13742": {
+    "label": "handlebar display lower frame A",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 8,
+    "reason": "Replace the pinched display silhouette with a straight shallow continuous wall panel. Existing verified on links join upper and lower source art; black out-of-room pixels never become wall volume.",
+    "baseline_entry_sha256": "772edcdb1cea09e953728f3d73d780e85a5706362c3e7f6597241601a23557a1",
+    "evidence": [
+      "general__bike_shop/page-001.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-001.png"
+    ],
+    "role": "wall",
+    "layer": 0
+  },
+  "g3q/13743-13744-13741-13742": {
+    "label": "handlebar display lower frame B",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 9,
+    "reason": "Replace the pinched display silhouette with a straight shallow continuous wall panel. Existing verified on links join upper and lower source art; black out-of-room pixels never become wall volume.",
+    "baseline_entry_sha256": "61c901dc8ed315ab5ad9bd7df2ef6b42322c7649051acd8dd0d29aa2406ad80b",
+    "evidence": [
+      "general__bike_shop/page-001.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-001.png"
+    ],
+    "role": "wall",
+    "layer": 0
+  },
+  "g3q/13719-13720-13745-13745": {
+    "label": "blue bicycle last west half",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 10,
+    "reason": "Author a complete bicycle with two hollow tires, metal spokes, connected triangular frame, saddle, handlebars and pedals before splitting across its exact two solid source cells. Native body-color variants and floor-free wheel material replace disconnected sprite slivers.",
+    "baseline_entry_sha256": "18e0a9c6ee6260c3e69f98ff755f1c77fa741edbfa1efaf29a48eb60d0c9f403",
+    "evidence": [
+      "general__bike_shop/page-001.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-001.png"
+    ],
+    "role": "bicycle",
+    "x": 0,
+    "accent": [
+      70,
+      100,
+      230
+    ]
+  },
+  "g3q/13723-13724-13746-13726": {
+    "label": "blue bicycle last east wheel",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 11,
+    "reason": "Author a complete bicycle with two hollow tires, metal spokes, connected triangular frame, saddle, handlebars and pedals before splitting across its exact two solid source cells. Native body-color variants and floor-free wheel material replace disconnected sprite slivers.",
+    "baseline_entry_sha256": "151ec85d6ad481cc3137f14b117b265d471ce38d2dea1eb93cad9a41353956bf",
+    "evidence": [
+      "general__bike_shop/page-001.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-001.png"
+    ],
+    "role": "bicycle",
+    "x": 1,
+    "accent": [
+      70,
+      100,
+      230
+    ]
+  },
+  "g3q/13749-13750-13751-13752": {
+    "label": "parts shelf lower left with handlebar projection",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 12,
+    "reason": "Original lower drawer trays join the parts shelf above. The bottom handlebar belongs to the separate bicycle display, so no new support or stack relation is inferred.",
+    "baseline_entry_sha256": "fb2dacee92b69e649f094303c0417a5e721678b752368bf25932fe4c2272c56c",
+    "evidence": [
+      "general__bike_shop/page-001.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-001.png"
+    ]
+  },
+  "g3q/13753-13754-13755-13756": {
+    "label": "parts shelf lower right",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 13,
+    "reason": "Matching lower shelf doors preserve the existing open trays and straight side frame.",
+    "baseline_entry_sha256": "0b328ca877e517d9de0b37b3f5e088286cd6fde02681cd0ccbb4180004f12625",
+    "evidence": [
+      "general__bike_shop/page-001.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-001.png"
+    ]
+  },
+  "g3q/13757-13758-13759-13760": {
+    "label": "register counter north return",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 14,
+    "reason": "Existing wooden counter return has a horizontal worktop and distinct register detail at the north end, verified in the complete L-shaped shop counter.",
+    "baseline_entry_sha256": "4c026d07bb6cbadc0d1648376c9d03a264d1b24340ab99cb608c40ce7e431b83",
+    "evidence": [
+      "general__bike_shop/page-001.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-001.png"
+    ]
+  },
+  "g3q/13770-13771-13721-13722": {
+    "label": "yellow bicycle west half A",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 15,
+    "reason": "Author a complete bicycle with two hollow tires, metal spokes, connected triangular frame, saddle, handlebars and pedals before splitting across its exact two solid source cells. Native body-color variants and floor-free wheel material replace disconnected sprite slivers.",
+    "baseline_entry_sha256": "22181a09a27d39540cbc05fa54355418b92bd476cc35d79604df4e3963d0741e",
+    "evidence": [
+      "general__bike_shop/page-001.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-001.png"
+    ],
+    "role": "bicycle",
+    "x": 0,
+    "accent": [
+      235,
+      220,
+      35
+    ]
+  },
+  "g3q/13772-13773-13725-13726": {
+    "label": "yellow bicycle east wheel A",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 16,
+    "reason": "Author a complete bicycle with two hollow tires, metal spokes, connected triangular frame, saddle, handlebars and pedals before splitting across its exact two solid source cells. Native body-color variants and floor-free wheel material replace disconnected sprite slivers.",
+    "baseline_entry_sha256": "e56a486f6dfdbeee9975a0ddb0cf63948651f46458b6b24a9820ae8e25155069",
+    "evidence": [
+      "general__bike_shop/page-001.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-001.png"
+    ],
+    "role": "bicycle",
+    "x": 1,
+    "accent": [
+      235,
+      220,
+      35
+    ]
+  },
+  "g3q/13759-13774-13775-13776": {
+    "label": "wooden counter west corner",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 17,
+    "reason": "Existing wood worktop and blue cabinet meet the north return and front counter middle without a seam.",
+    "baseline_entry_sha256": "6ca31e1dab2646a179a774076299caf858f0f69e737086585011416e592263b0",
+    "evidence": [
+      "general__bike_shop/page-001.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-002.png"
+    ]
+  },
+  "g3q/13774-13774-13776-13776": {
+    "label": "wooden counter front middle",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 18,
+    "reason": "The source is an actual raw144 counter cell. Keep its current low native counter routing and source hand-model fallback; no new solid or decorative height is inferred.",
+    "baseline_entry_sha256": "4e70ba17ddd8aa9404c113a068b597bfe9b3ce4855fb3e0d253090da0edf7de8",
+    "evidence": [
+      "general__bike_shop/page-001.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-002.png"
+    ]
+  },
+  "g3q/13774-13777-13776-13778": {
+    "label": "wooden counter front east",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 19,
+    "reason": "The east raw144 counter section joins the wooden front worktop and existing low native talk-through counter.",
+    "baseline_entry_sha256": "360705b0cec4d21f88cb2508bb8c137a621d8e3b732e97ae4b4dfd35d7c87dc9",
+    "evidence": [
+      "general__bike_shop/page-001.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-002.png"
+    ]
+  },
+  "g3q/13779-13777-13780-13781": {
+    "label": "wooden counter hinged flap",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 20,
+    "reason": "The narrower hinged wooden raw144 flap retains its shallow hand model and native counter passage behavior.",
+    "baseline_entry_sha256": "92ada81d18a13c6656e6196bd966b0c6c76b4df3cb8636d370de55676dc9ef21",
+    "evidence": [
+      "general__bike_shop/page-001.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-002.png"
+    ]
+  },
+  "g3q/13770-13771-13721-13786": {
+    "label": "yellow bicycle west half B",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 21,
+    "reason": "Author a complete bicycle with two hollow tires, metal spokes, connected triangular frame, saddle, handlebars and pedals before splitting across its exact two solid source cells. Native body-color variants and floor-free wheel material replace disconnected sprite slivers.",
+    "baseline_entry_sha256": "f81d3822ae3160082d833bb524c3af43fa3396d64f53f21d4d3da8bb2a0584f9",
+    "evidence": [
+      "general__bike_shop/page-001.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-002.png"
+    ],
+    "role": "bicycle",
+    "x": 0,
+    "accent": [
+      235,
+      220,
+      35
+    ]
+  },
+  "g3q/13772-13724-13725-13726": {
+    "label": "yellow bicycle east wheel B",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 22,
+    "reason": "Author a complete bicycle with two hollow tires, metal spokes, connected triangular frame, saddle, handlebars and pedals before splitting across its exact two solid source cells. Native body-color variants and floor-free wheel material replace disconnected sprite slivers.",
+    "baseline_entry_sha256": "70ea3dc5b84dcd7b073c02d24da961e00ad6230f27c3cb6fa900f1da93e1e5b4",
+    "evidence": [
+      "general__bike_shop/page-001.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-002.png"
+    ],
+    "role": "bicycle",
+    "x": 1,
+    "accent": [
+      235,
+      220,
+      35
+    ]
+  },
+  "g3q/13795-13796-13797-13798": {
+    "label": "green floor switch",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 23,
+    "reason": "Native WALK0 floor switch remains a flat source floor tile; no walk opt-in or raised obstruction is introduced.",
+    "baseline_entry_sha256": "207f4359b1d001b891ce443a50bce424869c2d2ba39f6e9e5d6d154e83497fdc",
+    "evidence": [
+      "general__bike_shop/page-001.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-002.png"
+    ]
+  },
+  "g3q/13800-13801-13802-13803": {
+    "label": "window-side desk left",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 24,
+    "reason": "Construct each two-cell window desk whole with four grounded legs, checkerboard worktop, separate raised red book and papers, and its attached shallow source window. Complete the previously absent left half of the second desk; remove the right half's hourglass background.",
+    "baseline_entry_sha256": "7741fe36087f469ccae5338e5bec5fe9b8667f94232f9bf05022f181385f63d6",
+    "evidence": [
+      "general__bike_shop/page-001.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-002.png"
+    ],
+    "role": "book_desk",
+    "x": 0
+  },
+  "g3q/13804-13805-13806-13807": {
+    "label": "red book desk right",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 25,
+    "reason": "Construct each two-cell window desk whole with four grounded legs, checkerboard worktop, separate raised red book and papers, and its attached shallow source window. Complete the previously absent left half of the second desk; remove the right half's hourglass background.",
+    "baseline_entry_sha256": "7bcc9694b5ba633ac30d8b2e350645ae3bca2190811bdaaebc863004b93106aa",
+    "evidence": [
+      "general__bike_shop/page-001.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-002.png"
+    ],
+    "role": "book_desk",
+    "x": 1
+  },
+  "g3q/13810-13811-13806-13807": {
+    "label": "red book desk variant",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 26,
+    "reason": "Construct each two-cell window desk whole with four grounded legs, checkerboard worktop, separate raised red book and papers, and its attached shallow source window. Complete the previously absent left half of the second desk; remove the right half's hourglass background.",
+    "baseline_entry_sha256": "2160d4c6cdcb652aeea8e360c54c36dbaae078f74a40ed7e96007ff54ba654fb",
+    "evidence": [
+      "general__bike_shop/page-001.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-002.png"
+    ],
+    "role": "book_desk",
+    "x": 1
+  },
+  "g3q/13812-13813-13814-13815": {
+    "label": "blue floor switch",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 27,
+    "reason": "Native WALK0 blue floor switch remains flat and preserves its source story behavior.",
+    "baseline_entry_sha256": "207f4359b1d001b891ce443a50bce424869c2d2ba39f6e9e5d6d154e83497fdc",
+    "evidence": [
+      "general__bike_shop/page-001.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-002.png"
+    ]
+  },
+  "g3q/13825-13826-13827-13828": {
+    "label": "red floor switch",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 28,
+    "reason": "Native WALK0 red floor switch remains flat; raised industrial lever is a separate solid source cell.",
+    "baseline_entry_sha256": "207f4359b1d001b891ce443a50bce424869c2d2ba39f6e9e5d6d154e83497fdc",
+    "evidence": [
+      "general__bike_shop/page-001.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-002.png"
+    ]
+  },
+  "g3q/13833-13834-13835-13836": {
+    "label": "east display yellow bicycle west wheel",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 29,
+    "reason": "Author a complete bicycle with two hollow tires, metal spokes, connected triangular frame, saddle, handlebars and pedals before splitting across its exact two solid source cells. Native body-color variants and floor-free wheel material replace disconnected sprite slivers.",
+    "baseline_entry_sha256": "7002ffef63b95669ec7ce6b9e1e37250f2bbca21dd46a718978dfb76e105229a",
+    "evidence": [
+      "general__bike_shop/page-001.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-002.png"
+    ],
+    "role": "bicycle",
+    "x": 0,
+    "accent": [
+      235,
+      220,
+      35
+    ]
+  },
+  "g3q/13837-13838-13839-13840": {
+    "label": "east display yellow bicycle east half",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 30,
+    "reason": "Author a complete bicycle with two hollow tires, metal spokes, connected triangular frame, saddle, handlebars and pedals before splitting across its exact two solid source cells. Native body-color variants and floor-free wheel material replace disconnected sprite slivers.",
+    "baseline_entry_sha256": "c25d33798d33ebb5bbd5a78cb9ea1bee46dd1d4a3827042f1fe7efd8be34cde7",
+    "evidence": [
+      "general__bike_shop/page-001.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-002.png"
+    ],
+    "role": "bicycle",
+    "x": 1,
+    "accent": [
+      235,
+      220,
+      35
+    ]
+  },
+  "g3q/13854-13856-13857-13858": {
+    "label": "east display red bicycle west wheel",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 31,
+    "reason": "Author a complete bicycle with two hollow tires, metal spokes, connected triangular frame, saddle, handlebars and pedals before splitting across its exact two solid source cells. Native body-color variants and floor-free wheel material replace disconnected sprite slivers.",
+    "baseline_entry_sha256": "6f0cdc19986275aef3ac964a111b0a1fc97bcbb853debe643029f2b50fd436c7",
+    "evidence": [
+      "general__bike_shop/page-001.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-002.png"
+    ],
+    "role": "bicycle",
+    "x": 0,
+    "accent": [
+      235,
+      70,
+      65
+    ]
+  },
+  "g3q/13859-13860-13861-13862": {
+    "label": "east display red bicycle east half",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 32,
+    "reason": "Author a complete bicycle with two hollow tires, metal spokes, connected triangular frame, saddle, handlebars and pedals before splitting across its exact two solid source cells. Native body-color variants and floor-free wheel material replace disconnected sprite slivers.",
+    "baseline_entry_sha256": "b6fedf2e81952aaaa7a89f9423013fd4e14832a5858fcbdd140419b51c7b48f7",
+    "evidence": [
+      "general__bike_shop/page-001.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-002.png"
+    ],
+    "role": "bicycle",
+    "x": 1,
+    "accent": [
+      235,
+      70,
+      65
+    ]
+  },
+  "g3q/13865-13866-13867-13868": {
+    "label": "red industrial lever",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 33,
+    "reason": "Replace the red hourglass extrusion with a grounded switch housing and an attached inclined red lever, preserving its solid source cell.",
+    "baseline_entry_sha256": "786f48f6e8378444c3f9b21b17bc0934c71ef55b672d573dddf1f0059cd27e13",
+    "evidence": [
+      "general__bike_shop/page-002.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-003.png"
+    ],
+    "role": "switch"
+  },
+  "g3q/0-0-13882-13883": {
+    "label": "New Mauville stair upper lip",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 34,
+    "reason": "The upper stair mouth is an intentionally thin lip beneath the dark source boundary; retaining it avoids filling the passage.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "evidence": [
+      "general__bike_shop/page-002.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-003.png"
+    ]
+  },
+  "g3q/13882-13883-13882-13883": {
+    "label": "New Mauville descending warp steps",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 35,
+    "reason": "Existing open descending stair profile and walk:true warp flag preserve the only entrance path.",
+    "baseline_entry_sha256": "a9d5db2a9b5906911a5a0768e5c593619b9255b73adba6a00d32dc77be37d4c0",
+    "evidence": [
+      "general__bike_shop/page-002.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-003.png"
+    ]
+  },
+  "g3q/13829-13877-13845-13847": {
+    "label": "partition southern end",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 36,
+    "reason": "Retain the narrow cream partition end and brown foot, which close the continuous source wall without an isolated pillar.",
+    "baseline_entry_sha256": "f5d9cacdc8818f03a67189f0d8987c0fc00b851fe933400842da2fda55fa5d97",
+    "evidence": [
+      "general__bike_shop/page-002.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-003.png"
+    ]
+  },
+  "g3q/13901-13763-13896-13774": {
+    "label": "workbench upper-left floor projection",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 37,
+    "reason": "This WALK0 row is the projected wooden worktop of the blue bench below; current actual placement remains native floor, with the full bench authored on its solid lower row.",
+    "baseline_entry_sha256": "0ad96dbf8211ad090148de38dcc42a1f86ba468a80584ad34f9ae8a59a5bf8b2",
+    "evidence": [
+      "general__bike_shop/page-002.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-003.png"
+    ]
+  },
+  "g3q/13762-13902-13774-13777": {
+    "label": "workbench upper-right floor projection",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 38,
+    "reason": "Matching WALK0 worktop projection remains source reference for the complete bench, with no new raised floor geometry.",
+    "baseline_entry_sha256": "e2463c75c924490167ca1acb6b8fd06660b1f3f21fe12ccac674f68ee04063c1",
+    "evidence": [
+      "general__bike_shop/page-002.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-003.png"
+    ]
+  },
+  "g3q/13749-13750-13789-13756": {
+    "label": "parts shelf left foot projection",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 39,
+    "reason": "WALK0 source row is the visual foot of the shelf above. Keep native floor routing and existing fallback; no extra solid shelf foot is added.",
+    "baseline_entry_sha256": "92ba51167d3ec89fbddc5b99c397a307ced0301ef1f93bb5ac80438cf6acd065",
+    "evidence": [
+      "general__bike_shop/page-002.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-003.png"
+    ]
+  },
+  "g3q/13753-13754-13756-13756": {
+    "label": "parts shelf right foot projection",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 40,
+    "reason": "Matching WALK0 shelf foot remains native floor and is inspected with the upper cabinet.",
+    "baseline_entry_sha256": "deabdae9d21e6df6e328da3bd830682244d337bfc23839bcd648dac30eaa264c",
+    "evidence": [
+      "general__bike_shop/page-002.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-003.png"
+    ]
+  },
+  "g3q/13905-13776-13787-13788": {
+    "label": "workbench blue lower west",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 41,
+    "reason": "Construct the complete blue workbench as a single two-cell supported cabinet with a wooden worktop and continuous crossbar, replacing the existing asymmetric side wedge.",
+    "baseline_entry_sha256": "6d57e510a941961756e5684406e838bc8e7a2824810196d29acb56cd1892ceff",
+    "evidence": [
+      "general__bike_shop/page-002.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-003.png"
+    ],
+    "role": "bench",
+    "x": 0
+  },
+  "g3q/13776-13906-13788-13907": {
+    "label": "workbench blue lower east",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 42,
+    "reason": "Construct the complete blue workbench as a single two-cell supported cabinet with a wooden worktop and continuous crossbar, replacing the existing asymmetric side wedge.",
+    "baseline_entry_sha256": "8e6349fe5fc7a1984df96ece5762a3ad6d1091350371ec58269458cf0806155f",
+    "evidence": [
+      "general__bike_shop/page-002.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-003.png"
+    ],
+    "role": "bench",
+    "x": 1
+  },
+  "g3q/13910-13911-13912-13913": {
+    "label": "supply rack with gold crate left",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 43,
+    "reason": "Retain the hand-authored cream supply rack and gold top crate: connected shelf planes and source-native trim remain clear in side and top views.",
+    "baseline_entry_sha256": "b9b69b0ddfc60f21935005c2e6846f076e2352946e5844fe5aa077cbe357bd3f",
+    "evidence": [
+      "general__bike_shop/page-002.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-003.png"
+    ]
+  },
+  "g3q/13914-13915-13916-13917": {
+    "label": "supply rack right",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 44,
+    "reason": "Matching right rack has clean separated horizontal shelves and joins the left rack.",
+    "baseline_entry_sha256": "aa9f0b86705da52d3100c14e69b852baaa5d258f89a6374f58cd75fc4c3f3afe",
+    "evidence": [
+      "general__bike_shop/page-002.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-003.png"
+    ]
+  },
+  "g3q/13735-13736-13918-13919": {
+    "label": "wall-side closed gold crate",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 45,
+    "reason": "Construct a grounded gold storage crate with a raised lid, binding band and dark foot, excluding surrounding floor or wall background. All source occurrences are SOLID7 above WALK0: remove the false on link and keep the complete crate on its actual upper solid cell.",
+    "baseline_entry_sha256": "2fce172aac594d76b01b675a2314afe8add3ef07c2a255273535b80a441c0a66",
+    "evidence": [
+      "general__bike_shop/page-002.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-003.png"
+    ],
+    "role": "crate",
+    "metadata": {
+      "on": null
+    }
+  },
+  "g3q/13735-13736-13920-13919": {
+    "label": "wall-side open gold crate",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 46,
+    "reason": "Construct an open gold storage crate with supported side walls and raised folded lid. The actual recess remains empty; surrounding green floor and beige wall are excluded from box material. All source occurrences are SOLID7 above WALK0: remove the false on link and keep the complete crate on its actual upper solid cell.",
+    "baseline_entry_sha256": "d99863ab66862099a25e25a7efeccc9cff80776ed32db850af87459290820bfc",
+    "evidence": [
+      "general__bike_shop/page-002.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-003.png"
+    ],
+    "role": "open_crate",
+    "metadata": {
+      "on": null
+    }
+  },
+  "g3q/13921-13915-13922-13917": {
+    "label": "single supply rack",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 47,
+    "reason": "Single rack retains its hand-authored shallow shelves and pale upper panel.",
+    "baseline_entry_sha256": "43787cef89a40c8392196e6b7ec239d3ab270d06a4abe78155ebb60ca0ba8a27",
+    "evidence": [
+      "general__bike_shop/page-002.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-003.png"
+    ]
+  },
+  "g3q/13928-13844-13748-13747": {
+    "label": "closed wall crate floor projection",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 48,
+    "reason": "WALK0 crate shadow and lower face are a projection from the actual solid crate cell above. Full replacement crate belongs to that upper cell; this lower source cell remains native floor.",
+    "baseline_entry_sha256": "20ac00263243277d939a5ac2ba829e2ad313dfcd61bdd96cd15944e67a682a1a",
+    "evidence": [
+      "general__bike_shop/page-002.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-003.png"
+    ]
+  },
+  "g3q/13843-13844-13748-13747": {
+    "label": "open wall crate floor projection",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 49,
+    "reason": "WALK0 open-crate lower projection stays native floor after removing the false upper stack link.",
+    "baseline_entry_sha256": "ac50e2c5f73b6c49fc7e2100324e9abdcc903a8f399ba011506ffff8ed68b2a6",
+    "evidence": [
+      "general__bike_shop/page-002.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-004.png"
+    ]
+  },
+  "g3q/13925-13927-13789-13756": {
+    "label": "single rack floor projection",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 50,
+    "reason": "WALK0 shelf foot projection stays native floor; its unchanged fallback is not a freestanding approved object.",
+    "baseline_entry_sha256": "75a6a6b4ce64bca637ac96948279b5a3980e8fbea940391ee3dc0ee6348a01fd",
+    "evidence": [
+      "general__bike_shop/page-002.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-004.png"
+    ]
+  },
+  "g3q/13929-13736-13929-13742": {
+    "label": "green state-dependent gate",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 51,
+    "reason": "Use a thin straight source-painted gate panel instead of an hourglass fallback. Actual New Mauville changing gates retain the existing native per-player story renderer; this fitted fallback does not alter state selection, passage or collision.",
+    "baseline_entry_sha256": "9702c05865b1476bf5a78edf2b9023611a5cccd129c9c6ce3d4c8eb3c38fc5a5",
+    "evidence": [
+      "general__bike_shop/page-002.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-004.png"
+    ],
+    "role": "gate"
+  },
+  "g3q/13930-13736-13930-13742": {
+    "label": "blue state-dependent gate",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 52,
+    "reason": "Use a thin straight source-painted gate panel instead of an hourglass fallback. Actual New Mauville changing gates retain the existing native per-player story renderer; this fitted fallback does not alter state selection, passage or collision.",
+    "baseline_entry_sha256": "dc18e8e725be0bae9d0fd554933c8e57ee8e479d1475a477afd8301e9d72b20d",
+    "evidence": [
+      "general__bike_shop/page-002.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-004.png"
+    ],
+    "role": "gate"
+  },
+  "g3q/13931-13932-13928-13844": {
+    "label": "closed gold crate",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 53,
+    "reason": "Construct a grounded gold storage crate with a raised lid, binding band and dark foot, excluding surrounding floor or wall background.",
+    "baseline_entry_sha256": "1ebb0e2d4a633bbd399ff3f2444bfd59cc894ff45167e6beb4e09e9a19f1ca31",
+    "evidence": [
+      "general__bike_shop/page-002.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-004.png"
+    ],
+    "role": "crate"
+  },
+  "g3q/13933-13932-13843-13844": {
+    "label": "open gold crate",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 54,
+    "reason": "Construct an open gold storage crate with supported side walls and raised folded lid. The actual recess remains empty; surrounding green floor and beige wall are excluded from box material.",
+    "baseline_entry_sha256": "35a3fdc980b4e1ce425bf79b917751438cf5db2ab1d5f1b72b84e7c98523c67e",
+    "evidence": [
+      "general__bike_shop/page-002.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-004.png"
+    ],
+    "role": "open_crate"
+  },
+  "g3q/13934-13932-13928-13844": {
+    "label": "closed gold crate wall variant",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 55,
+    "reason": "Construct a grounded gold storage crate with a raised lid, binding band and dark foot, excluding surrounding floor or wall background.",
+    "baseline_entry_sha256": "d623dcd2d1dca9de7f5e7ec464e83891fee840482248e28599b8bbd24959ace9",
+    "evidence": [
+      "general__bike_shop/page-002.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-004.png"
+    ],
+    "role": "crate"
+  },
+  "g3q/13841-13932-13843-13844": {
+    "label": "open gold crate wall variant",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 56,
+    "reason": "Construct an open gold storage crate with supported side walls and raised folded lid. The actual recess remains empty; surrounding green floor and beige wall are excluded from box material.",
+    "baseline_entry_sha256": "585f6f540881369a8cc32e217ef40fe301716fb7c1d191eda3772cc0b12c9d41",
+    "evidence": [
+      "general__bike_shop/page-002.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-004.png"
+    ],
+    "role": "open_crate"
+  },
+  "g3q/13935-13936-13937-13938": {
+    "label": "pale green workshop stool",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 57,
+    "reason": "Build a pale green cushioned round workshop stool with a metal stem and broad grounded foot; retain the existing seat interaction.",
+    "baseline_entry_sha256": "3927f1e2eb0904d4cda939efde5f4c738b044f46920da54a949751a3b383e954",
+    "evidence": [
+      "general__bike_shop/page-002.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-004.png"
+    ],
+    "role": "stool"
+  },
+  "g3q/13735-13941-13942-13943": {
+    "label": "generator base northwest",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 58,
+    "reason": "Build the complete four-by-four generator as one grounded machine with cream mounting plate, ribbed cylindrical body, stepped rounded shoulder, actual hollow top collar and green front indicator. Split the shared geometry only after construction; native copper materials exclude room-wall and floor fragments.",
+    "baseline_entry_sha256": "3acdf2b87f6f36f0d8ed03e9692825cc7bc0376cc1c6d05697bce77269b85676",
+    "evidence": [
+      "general__bike_shop/page-002.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-004.png"
+    ],
+    "role": "generator",
+    "x": 0,
+    "z": 0
+  },
+  "g3q/13944-13945-13946-13947": {
+    "label": "generator upper west crown",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 59,
+    "reason": "Build the complete four-by-four generator as one grounded machine with cream mounting plate, ribbed cylindrical body, stepped rounded shoulder, actual hollow top collar and green front indicator. Split the shared geometry only after construction; native copper materials exclude room-wall and floor fragments.",
+    "baseline_entry_sha256": "15fafb387274ae20b1e26762ca63779f76441ccc9cf059db39f9236038cf687d",
+    "evidence": [
+      "general__bike_shop/page-002.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-004.png"
+    ],
+    "role": "generator",
+    "x": 1,
+    "z": 0
+  },
+  "g3q/13948-13949-13950-13951": {
+    "label": "generator upper east crown",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 60,
+    "reason": "Build the complete four-by-four generator as one grounded machine with cream mounting plate, ribbed cylindrical body, stepped rounded shoulder, actual hollow top collar and green front indicator. Split the shared geometry only after construction; native copper materials exclude room-wall and floor fragments.",
+    "baseline_entry_sha256": "69c6604ddc8f7bfbb0ec84f9f96dc8cf72a67d702ac5d00db97850d2d8d28ff1",
+    "evidence": [
+      "general__bike_shop/page-002.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-004.png"
+    ],
+    "role": "generator",
+    "x": 2,
+    "z": 0
+  },
+  "g3q/13952-13736-13953-13954": {
+    "label": "generator base northeast",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 61,
+    "reason": "Build the complete four-by-four generator as one grounded machine with cream mounting plate, ribbed cylindrical body, stepped rounded shoulder, actual hollow top collar and green front indicator. Split the shared geometry only after construction; native copper materials exclude room-wall and floor fragments.",
+    "baseline_entry_sha256": "e757825de7dd464d3026723c1e3ad54a806dd9f5b4688cfd34dcd3375804a461",
+    "evidence": [
+      "general__bike_shop/page-002.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-004.png"
+    ],
+    "role": "generator",
+    "x": 3,
+    "z": 0
+  },
+  "g3q/13735-13955-13956-13957": {
+    "label": "compressor rear west cap",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 62,
+    "reason": "Author the complete two-by-three compressor as one supported cylindrical green tank, rounded lid, connected cream duct, rear couplings, vented plinth and control cabinet. Whole source occupancy is solid; original matching and collision metadata are preserved.",
+    "baseline_entry_sha256": "78c9afd5518e5cc9ca5ccf8799dba740e54c43e64424f943094c667853f1225d",
+    "evidence": [
+      "general__bike_shop/page-002.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-004.png"
+    ],
+    "role": "compressor",
+    "x": 0,
+    "z": 0
+  },
+  "g3q/13958-13736-13959-13960": {
+    "label": "compressor rear east cap",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 63,
+    "reason": "Author the complete two-by-three compressor as one supported cylindrical green tank, rounded lid, connected cream duct, rear couplings, vented plinth and control cabinet. Whole source occupancy is solid; original matching and collision metadata are preserved.",
+    "baseline_entry_sha256": "d1f75e2e08a244189db2d04b6b7f4465ed5cdabb22c2c84b885de20627b2ff9e",
+    "evidence": [
+      "general__bike_shop/page-002.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-004.png"
+    ],
+    "role": "compressor",
+    "x": 1,
+    "z": 0
+  },
+  "g3q/13961-13962-13963-13964": {
+    "label": "pale control terminal",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 64,
+    "reason": "Pale terminal already has a straight framed cabinet, native green display and visible control row in its solid source cell. Keep the whole upper cabinet with its lower source projection as reference.",
+    "baseline_entry_sha256": "1f43bc4d7dbab73714e360f1a9abd81482f7c346c40a46ce7c3f9560ae8764a5",
+    "evidence": [
+      "general__bike_shop/page-002.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-004.png"
+    ]
+  },
+  "g3q/13965-13966-13967-13968": {
+    "label": "brown control terminal",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 65,
+    "reason": "Brown terminal already forms a grounded rectangular source-colored cabinet with green display and key panel; retain it with its lower WALK projection.",
+    "baseline_entry_sha256": "1dac194f34daf418e370d212c23b78906d600d69bb8af008282ac2470a6a480d",
+    "evidence": [
+      "general__bike_shop/page-003.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-005.png"
+    ]
+  },
+  "g3q/13969-13970-13969-13971": {
+    "label": "generator west mid rim",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 66,
+    "reason": "Build the complete four-by-four generator as one grounded machine with cream mounting plate, ribbed cylindrical body, stepped rounded shoulder, actual hollow top collar and green front indicator. Split the shared geometry only after construction; native copper materials exclude room-wall and floor fragments.",
+    "baseline_entry_sha256": "517418f72b4106dd57c136518a5fdc33d7732111a29ac8a8baea6ca065a41103",
+    "evidence": [
+      "general__bike_shop/page-003.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-005.png"
+    ],
+    "role": "generator",
+    "x": 0,
+    "z": 1
+  },
+  "g3q/13972-13973-13974-13975": {
+    "label": "generator west shoulder",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 67,
+    "reason": "Build the complete four-by-four generator as one grounded machine with cream mounting plate, ribbed cylindrical body, stepped rounded shoulder, actual hollow top collar and green front indicator. Split the shared geometry only after construction; native copper materials exclude room-wall and floor fragments.",
+    "baseline_entry_sha256": "c777ca5d1b79a1d6456a7adfc67a1d2d4b5d0aec803defeb0d047cc01a28b6c4",
+    "evidence": [
+      "general__bike_shop/page-003.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-005.png"
+    ],
+    "role": "generator",
+    "x": 1,
+    "z": 1
+  },
+  "g3q/13976-13977-13978-13979": {
+    "label": "generator east shoulder",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 68,
+    "reason": "Build the complete four-by-four generator as one grounded machine with cream mounting plate, ribbed cylindrical body, stepped rounded shoulder, actual hollow top collar and green front indicator. Split the shared geometry only after construction; native copper materials exclude room-wall and floor fragments.",
+    "baseline_entry_sha256": "1a3d259fffebd6ad3d6f6977103a3e83724d9f24db655c1b2b34ab934ae6d1ad",
+    "evidence": [
+      "general__bike_shop/page-003.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-005.png"
+    ],
+    "role": "generator",
+    "x": 2,
+    "z": 1
+  },
+  "g3q/13980-13981-13982-13981": {
+    "label": "generator east mid rim",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 69,
+    "reason": "Build the complete four-by-four generator as one grounded machine with cream mounting plate, ribbed cylindrical body, stepped rounded shoulder, actual hollow top collar and green front indicator. Split the shared geometry only after construction; native copper materials exclude room-wall and floor fragments.",
+    "baseline_entry_sha256": "431aaf5cf3a9b32842ba3305f92f7dbb229bea9164dd461cb010455360e748f1",
+    "evidence": [
+      "general__bike_shop/page-003.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-005.png"
+    ],
+    "role": "generator",
+    "x": 3,
+    "z": 1
+  },
+  "g3q/13983-13984-13985-13986": {
+    "label": "compressor west duct",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 70,
+    "reason": "Author the complete two-by-three compressor as one supported cylindrical green tank, rounded lid, connected cream duct, rear couplings, vented plinth and control cabinet. Whole source occupancy is solid; original matching and collision metadata are preserved.",
+    "baseline_entry_sha256": "4be4e05bc520c3696c2a0897eab2774f5a2f763befb6dd71c8698331a98e4d5e",
+    "evidence": [
+      "general__bike_shop/page-003.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-005.png"
+    ],
+    "role": "compressor",
+    "x": 0,
+    "z": 1
+  },
+  "g3q/13987-13988-13989-13990": {
+    "label": "compressor east junction",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 71,
+    "reason": "Author the complete two-by-three compressor as one supported cylindrical green tank, rounded lid, connected cream duct, rear couplings, vented plinth and control cabinet. Whole source occupancy is solid; original matching and collision metadata are preserved.",
+    "baseline_entry_sha256": "ae22eae02f10c6c145ef95a2dc3755905b8ee478bba7f24618082a3311adf112",
+    "evidence": [
+      "general__bike_shop/page-003.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-005.png"
+    ],
+    "role": "compressor",
+    "x": 1,
+    "z": 1
+  },
+  "g3q/13991-13992-13756-13756": {
+    "label": "pale terminal lower floor projection",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 72,
+    "reason": "The pale terminal lower panel is projected into a WALK0 cell; preserve native floor routing without fitting a separate floating control panel.",
+    "baseline_entry_sha256": "843dd00c05092b39a6e15e22201f5215e2fd7925067514f7a082901443f1e354",
+    "evidence": [
+      "general__bike_shop/page-003.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-005.png"
+    ]
+  },
+  "g3q/13993-13994-13756-13756": {
+    "label": "brown terminal lower floor projection",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 73,
+    "reason": "Brown terminal foot is a WALK0 projection; preserve native floor routing and the distinct solid cabinet above.",
+    "baseline_entry_sha256": "2803861fd13824050849425bcc7f9912af8a2458dd604f4b6dd34c2f0abe5bdc",
+    "evidence": [
+      "general__bike_shop/page-003.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-005.png"
+    ]
+  },
+  "g3q/13995-13996-13969-13997": {
+    "label": "generator west lower rim",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 74,
+    "reason": "Build the complete four-by-four generator as one grounded machine with cream mounting plate, ribbed cylindrical body, stepped rounded shoulder, actual hollow top collar and green front indicator. Split the shared geometry only after construction; native copper materials exclude room-wall and floor fragments.",
+    "baseline_entry_sha256": "d8ce37d3f97b5ee4fd4aa4e8bffd6265659593ff7d8327202e5102c53a8667c0",
+    "evidence": [
+      "general__bike_shop/page-003.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-005.png"
+    ],
+    "role": "generator",
+    "x": 0,
+    "z": 2
+  },
+  "g3q/13998-13999-14000-14001": {
+    "label": "generator southwest body",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 75,
+    "reason": "Build the complete four-by-four generator as one grounded machine with cream mounting plate, ribbed cylindrical body, stepped rounded shoulder, actual hollow top collar and green front indicator. Split the shared geometry only after construction; native copper materials exclude room-wall and floor fragments.",
+    "baseline_entry_sha256": "485db672d44a7e36007228f47ecf9e73d7d55837afae8b57418895f47687cee3",
+    "evidence": [
+      "general__bike_shop/page-003.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-005.png"
+    ],
+    "role": "generator",
+    "x": 1,
+    "z": 2
+  },
+  "g3q/14002-14003-14004-14005": {
+    "label": "generator southeast body",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 76,
+    "reason": "Build the complete four-by-four generator as one grounded machine with cream mounting plate, ribbed cylindrical body, stepped rounded shoulder, actual hollow top collar and green front indicator. Split the shared geometry only after construction; native copper materials exclude room-wall and floor fragments.",
+    "baseline_entry_sha256": "6a6f19efdaa2d1b8e5e84094430b9396b48405a7e8e59a97598540019885f59c",
+    "evidence": [
+      "general__bike_shop/page-003.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-005.png"
+    ],
+    "role": "generator",
+    "x": 2,
+    "z": 2
+  },
+  "g3q/14006-14007-14008-13981": {
+    "label": "generator east lower rim",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 77,
+    "reason": "Build the complete four-by-four generator as one grounded machine with cream mounting plate, ribbed cylindrical body, stepped rounded shoulder, actual hollow top collar and green front indicator. Split the shared geometry only after construction; native copper materials exclude room-wall and floor fragments.",
+    "baseline_entry_sha256": "82a120d0a8f41252288d32729d6f1b4d4e16f88490d61502ffc776532bb284e7",
+    "evidence": [
+      "general__bike_shop/page-003.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-005.png"
+    ],
+    "role": "generator",
+    "x": 3,
+    "z": 2
+  },
+  "g3q/14009-14010-14011-14012": {
+    "label": "compressor front vent plinth",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 78,
+    "reason": "Author the complete two-by-three compressor as one supported cylindrical green tank, rounded lid, connected cream duct, rear couplings, vented plinth and control cabinet. Whole source occupancy is solid; original matching and collision metadata are preserved.",
+    "baseline_entry_sha256": "178b0e602e5d772b7efe45afdbaa1c4cd13d7ffb60c18619f662c1f66664c6e5",
+    "evidence": [
+      "general__bike_shop/page-003.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-005.png"
+    ],
+    "role": "compressor",
+    "x": 0,
+    "z": 2
+  },
+  "g3q/14013-14014-14015-14016": {
+    "label": "compressor front control cabinet",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 79,
+    "reason": "Author the complete two-by-three compressor as one supported cylindrical green tank, rounded lid, connected cream duct, rear couplings, vented plinth and control cabinet. Whole source occupancy is solid; original matching and collision metadata are preserved.",
+    "baseline_entry_sha256": "915fe55e18db80de126ffa5b291c73e751afeec5d87200f0f7fb4c00a9a20f49",
+    "evidence": [
+      "general__bike_shop/page-003.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-005.png"
+    ],
+    "role": "compressor",
+    "x": 1,
+    "z": 2
+  },
+  "g3q/14017-14018-14019-14020": {
+    "label": "generator base southwest corner",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 80,
+    "reason": "Build the complete four-by-four generator as one grounded machine with cream mounting plate, ribbed cylindrical body, stepped rounded shoulder, actual hollow top collar and green front indicator. Split the shared geometry only after construction; native copper materials exclude room-wall and floor fragments.",
+    "baseline_entry_sha256": "e6c9a37535e674c7352664e5ce4130a9f2529da907ee5f1925979b5026b0acf1",
+    "evidence": [
+      "general__bike_shop/page-003.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-005.png"
+    ],
+    "role": "generator",
+    "x": 0,
+    "z": 3
+  },
+  "g3q/14021-14022-14020-14023": {
+    "label": "generator lower west foot",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 81,
+    "reason": "Build the complete four-by-four generator as one grounded machine with cream mounting plate, ribbed cylindrical body, stepped rounded shoulder, actual hollow top collar and green front indicator. Split the shared geometry only after construction; native copper materials exclude room-wall and floor fragments.",
+    "baseline_entry_sha256": "318e0a0c022cdd3fa4a7e2f466cf20c466683e08ec37ef147b96a8598101b785",
+    "evidence": [
+      "general__bike_shop/page-003.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-006.png"
+    ],
+    "role": "generator",
+    "x": 1,
+    "z": 3
+  },
+  "g3q/14024-14025-14026-14020": {
+    "label": "generator lower east foot",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 82,
+    "reason": "Build the complete four-by-four generator as one grounded machine with cream mounting plate, ribbed cylindrical body, stepped rounded shoulder, actual hollow top collar and green front indicator. Split the shared geometry only after construction; native copper materials exclude room-wall and floor fragments.",
+    "baseline_entry_sha256": "4907ec9c92dd4ea6a9dd73e344d6468c99ce634288d3cd77e5863a7b785c2425",
+    "evidence": [
+      "general__bike_shop/page-003.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-006.png"
+    ],
+    "role": "generator",
+    "x": 2,
+    "z": 3
+  },
+  "g3q/14027-14028-14020-14029": {
+    "label": "generator base southeast corner",
+    "family": "bike-shop-new-mauville",
+    "group": "general__bike_shop",
+    "ordinal": 83,
+    "reason": "Build the complete four-by-four generator as one grounded machine with cream mounting plate, ribbed cylindrical body, stepped rounded shoulder, actual hollow top collar and green front indicator. Split the shared geometry only after construction; native copper materials exclude room-wall and floor fragments.",
+    "baseline_entry_sha256": "8f8988a49b0fac5e053d97e522fa66b42d1459660dff240cff257d6936e8e7a1",
+    "evidence": [
+      "general__bike_shop/page-003.png",
+      "local/model-gallery/emerald-pass-study/towns/general__bike_shop/contexts/page-006.png"
+    ],
+    "role": "generator",
+    "x": 3,
+    "z": 3
+  },
+  "g3q/13808-13809-13802-13803": {
+    "label": "second window desk missing left half",
+    "family": "bike-shop-new-mauville",
+    "group": "source addition",
+    "ordinal": 84,
+    "reason": "Construct each two-cell window desk whole with four grounded legs, checkerboard worktop, separate raised red book and papers, and its attached shallow source window. Complete the previously absent left half of the second desk; remove the right half's hourglass background.",
+    "baseline_entry_sha256": null,
+    "baseline_absent": true,
+    "role": "book_desk",
+    "x": 0,
+    "evidence": [
+      "local/model-gallery/emerald-pass-study/bike-shop-study/EM_MAUVILLE_CITY_BIKE_SHOP-numbered.png"
+    ]
+  }
+}

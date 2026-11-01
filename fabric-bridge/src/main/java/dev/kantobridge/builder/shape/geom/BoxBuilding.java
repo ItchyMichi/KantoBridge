@@ -91,17 +91,19 @@ public final class BoxBuilding {
 			doors.add(door);
 		}
 		Map<Integer, List<ShapeQuad>> blocks = new TreeMap<>();
+		int[] carrierHeights = carrierHeights(entry);
 		VoxelGrid grid;
 		if (box.has("parts") && (long) w * PartsBuilding.height(box) * d > WHOLE_VOXELS) {
 			// a big landscape model, a window at a time: Hoenn's rock masses reach 800 x 160 x 1,600 voxels, gigabytes
 			// as one grid (2026-10-23); no grid is kept, so the pack's reference model leaves it out
-			if (!windows(box, texel, w, d, px, tiles, blocks)) {
+			if (!windows(box, texel, w, d, px, tiles, blocks, carrierHeights)) {
 				return columns;
 			}
 			grid = null;
 		} else {
 			// a building described as parts (docs/specs/BUILDING_PARTS.md) instead of the detected cube and roof
-			grid = box.has("parts") ? PartsBuilding.voxels(box, texel, w, d, px) : voxels(shade, texel, w, d, px, box, doors);
+			grid = box.has("parts") ? PartsBuilding.voxels(box, texel, w, d, px, 0, 0, w, d, carrierHeights)
+					: voxels(shade, texel, w, d, px, box, doors);
 			if (grid == null) {
 				return columns;
 			}
@@ -126,12 +128,30 @@ public final class BoxBuilding {
 	/** Blocks a window of a big parts model spans along x and z, its margin aside. */
 	static final int WINDOW_BLOCKS = 8;
 
+	private static int[] carrierHeights(Templates.Entry entry) {
+		JsonObject hull = entry.hull();
+		if (hull == null || !hull.has("solid") || !hull.has("air")) return null;
+		JsonArray solid = hull.getAsJsonArray("solid"), air = hull.getAsJsonArray("air");
+		int count = entry.w() * entry.d();
+		if (solid.size() != count || air.size() != count) {
+			throw new IllegalArgumentException("carrier dimensions differ from building template");
+		}
+		int[] heights = new int[count];
+		for (int i = 0; i < count; i++) heights[i] = Math.max(solid.get(i).getAsInt(), air.get(i).getAsInt());
+		return heights;
+	}
+
 	/**
 	 * A big parts model's blocks, built a window of {@link #WINDOW_BLOCKS} blocks at a time with a block of margin
 	 * round it (a voxel's paint and faces look at its neighbours only; quads never cross a block), into {@code blocks}.
 	 * False when the spec has no parts.
 	 */
 	static boolean windows(JsonObject box, int[] texel, int w, int d, int px, List<Integer> tiles, Map<Integer, List<ShapeQuad>> blocks) {
+		return windows(box, texel, w, d, px, tiles, blocks, null);
+	}
+
+	static boolean windows(JsonObject box, int[] texel, int w, int d, int px, List<Integer> tiles, Map<Integer, List<ShapeQuad>> blocks,
+			int[] carrierHeights) {
 		int bw = w / px;
 		int bd = d / px;
 		for (int bz = 0; bz < bd; bz += WINDOW_BLOCKS) {
@@ -140,7 +160,8 @@ public final class BoxBuilding {
 				int mz0 = Math.max(0, bz - 1);
 				int mx1 = Math.min(bw, bx + WINDOW_BLOCKS + 1);
 				int mz1 = Math.min(bd, bz + WINDOW_BLOCKS + 1);
-				VoxelGrid grid = PartsBuilding.voxels(box, texel, w, d, px, mx0 * px, mz0 * px, (mx1 - mx0) * px, (mz1 - mz0) * px);
+				VoxelGrid grid = PartsBuilding.voxels(box, texel, w, d, px, mx0 * px, mz0 * px, (mx1 - mx0) * px, (mz1 - mz0) * px,
+						carrierHeights);
 				if (grid == null) {
 					return false;
 				}

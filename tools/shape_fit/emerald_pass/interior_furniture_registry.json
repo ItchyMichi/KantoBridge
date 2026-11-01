@@ -1,0 +1,908 @@
+{
+  "g3q/3734-3735-3736-3737": {
+    "role": "armchair",
+    "label": "Contest side-facing upholstered chair",
+    "family": "armchair",
+    "reason": "The adjacent north/south source cells form one side-facing chair on the floor. Author back, cushion, two arms and grounded legs across the two-cell footprint; exclude the surrounding carpet. The Contest Hall upper-cell on link is removed where present because it incorrectly stacks the upper half instead of preserving the map footprint.",
+    "baseline_entry_sha256": "4bb55fcaa2755833a16710ff44721427ff00f2ea5cd432422fe751b68910d215",
+    "contact_position": 122,
+    "evidence": [
+      "inventory/shared-building/page-004.png",
+      "interiors/seating-statues-source.png"
+    ],
+    "section": 0,
+    "mirror": false
+  },
+  "g3q/3753-3754-3755-3756": {
+    "role": "armchair",
+    "label": "Contest side-facing upholstered chair",
+    "family": "armchair",
+    "reason": "The adjacent north/south source cells form one side-facing chair on the floor. Author back, cushion, two arms and grounded legs across the two-cell footprint; exclude the surrounding carpet. The Contest Hall upper-cell on link is removed where present because it incorrectly stacks the upper half instead of preserving the map footprint.",
+    "baseline_entry_sha256": "7d0a406aec16b977e0278d9715c75b03237dc7c7cc39ec610745564c4f17b04d",
+    "contact_position": 143,
+    "evidence": [
+      "inventory/shared-building/page-005.png",
+      "interiors/seating-statues-source.png"
+    ],
+    "section": 1,
+    "mirror": false
+  },
+  "g3q/3738-3739-3740-3741": {
+    "role": "armchair",
+    "label": "Contest side-facing upholstered chair",
+    "family": "armchair",
+    "reason": "The adjacent north/south source cells form one side-facing chair on the floor. Author back, cushion, two arms and grounded legs across the two-cell footprint; exclude the surrounding carpet. The Contest Hall upper-cell on link is removed where present because it incorrectly stacks the upper half instead of preserving the map footprint.",
+    "baseline_entry_sha256": "b1b0c7307b8094c02c05c01fe813aba8811e565cdf710af0c0585877d7bfd078",
+    "contact_position": 125,
+    "evidence": [
+      "inventory/shared-building/page-004.png",
+      "interiors/seating-statues-source.png"
+    ],
+    "section": 0,
+    "mirror": true
+  },
+  "g3q/3757-3758-3759-3760": {
+    "role": "armchair",
+    "label": "Contest side-facing upholstered chair",
+    "family": "armchair",
+    "reason": "The adjacent north/south source cells form one side-facing chair on the floor. Author back, cushion, two arms and grounded legs across the two-cell footprint; exclude the surrounding carpet. The Contest Hall upper-cell on link is removed where present because it incorrectly stacks the upper half instead of preserving the map footprint.",
+    "baseline_entry_sha256": "8663a7828e1ae86ebc95b13e563cecc81a3f44e00d9a7a9ee033d2e52ea685ce",
+    "contact_position": 146,
+    "evidence": [
+      "inventory/shared-building/page-005.png",
+      "interiors/seating-statues-source.png"
+    ],
+    "section": 1,
+    "mirror": true
+  },
+  "g3q/3773-3774-3736-3775": {
+    "role": "armchair",
+    "label": "Contest side-facing upholstered chair",
+    "family": "armchair",
+    "reason": "The adjacent north/south source cells form one side-facing chair on the floor. Author back, cushion, two arms and grounded legs across the two-cell footprint; exclude the surrounding carpet. The Contest Hall upper-cell on link is removed where present because it incorrectly stacks the upper half instead of preserving the map footprint.",
+    "baseline_entry_sha256": "4134276570473201ebdf616621c7980aaa60ae6211bd971a07696704a1f7f623",
+    "contact_position": 165,
+    "evidence": [
+      "inventory/shared-building/page-006.png",
+      "interiors/seating-statues-source.png"
+    ],
+    "section": 0,
+    "mirror": false,
+    "remove_on": "g3q/3753-3754-3784-3756"
+  },
+  "g3q/3753-3754-3784-3756": {
+    "role": "armchair",
+    "label": "Contest side-facing upholstered chair",
+    "family": "armchair",
+    "reason": "The adjacent north/south source cells form one side-facing chair on the floor. Author back, cushion, two arms and grounded legs across the two-cell footprint; exclude the surrounding carpet. The Contest Hall upper-cell on link is removed where present because it incorrectly stacks the upper half instead of preserving the map footprint.",
+    "baseline_entry_sha256": "bb8706d95dcb707650b36e26d6db24b08ea00e1d1d680998cd527f970f37adca",
+    "contact_position": 182,
+    "evidence": [
+      "inventory/shared-building/page-006.png",
+      "interiors/seating-statues-source.png"
+    ],
+    "section": 1,
+    "mirror": false
+  },
+  "g3q/3738-3776-3777-3741": {
+    "role": "armchair",
+    "label": "Contest side-facing upholstered chair",
+    "family": "armchair",
+    "reason": "The adjacent north/south source cells form one side-facing chair on the floor. Author back, cushion, two arms and grounded legs across the two-cell footprint; exclude the surrounding carpet. The Contest Hall upper-cell on link is removed where present because it incorrectly stacks the upper half instead of preserving the map footprint.",
+    "baseline_entry_sha256": "0171969dfcc6ab94607ce2118cef94a14d6cd98a82901cdeffb9c6c55ba67a43",
+    "contact_position": 167,
+    "evidence": [
+      "inventory/shared-building/page-006.png",
+      "interiors/seating-statues-source.png"
+    ],
+    "section": 0,
+    "mirror": true,
+    "remove_on": "g3q/3757-3758-3759-3785"
+  },
+  "g3q/3757-3758-3759-3785": {
+    "role": "armchair",
+    "label": "Contest side-facing upholstered chair",
+    "family": "armchair",
+    "reason": "The adjacent north/south source cells form one side-facing chair on the floor. Author back, cushion, two arms and grounded legs across the two-cell footprint; exclude the surrounding carpet. The Contest Hall upper-cell on link is removed where present because it incorrectly stacks the upper half instead of preserving the map footprint.",
+    "baseline_entry_sha256": "137d61995e90489d1623af034dc13abc7c7fa4dc92adf70d4bcd4b763b986785",
+    "contact_position": 184,
+    "evidence": [
+      "inventory/shared-building/page-006.png",
+      "interiors/seating-statues-source.png"
+    ],
+    "section": 1,
+    "mirror": true
+  },
+  "g3q/1314-1315-1201-1202": {
+    "role": "bench",
+    "label": "Battle Tower long upholstered bench",
+    "family": "bench",
+    "reason": "Tower lobby map places these three source cells north-to-south along the room side. Model a continuous supported seat and high side back, end arms and a central foot pair across that floor footprint.",
+    "baseline_entry_sha256": "dc70f932489fffcb68162f9c4c2a1b07c97f0e03db2076398278ac8f00561286",
+    "contact_position": 92,
+    "evidence": [
+      "inventory/shared-building/page-003.png",
+      "interiors/seating-statues-source.png"
+    ],
+    "section": 0,
+    "mirror": true
+  },
+  "g3q/1201-1202-1201-1202": {
+    "role": "bench",
+    "label": "Battle Tower long upholstered bench",
+    "family": "bench",
+    "reason": "Tower lobby map places these three source cells north-to-south along the room side. Model a continuous supported seat and high side back, end arms and a central foot pair across that floor footprint.",
+    "baseline_entry_sha256": "c826c41b68b89185146080bd57b1d54cacd6e108c025d402befbeb845536dc3f",
+    "contact_position": 103,
+    "evidence": [
+      "inventory/shared-building/page-004.png",
+      "interiors/seating-statues-source.png"
+    ],
+    "section": 1,
+    "mirror": true
+  },
+  "g3q/1201-1202-1333-1334": {
+    "role": "bench",
+    "label": "Battle Tower long upholstered bench",
+    "family": "bench",
+    "reason": "Tower lobby map places these three source cells north-to-south along the room side. Model a continuous supported seat and high side back, end arms and a central foot pair across that floor footprint.",
+    "baseline_entry_sha256": "e1e24101c668c3edbfa686f2ec94cb23a7f09a293307f4e5eb65dcdb6c21a62e",
+    "contact_position": 120,
+    "evidence": [
+      "inventory/shared-building/page-004.png",
+      "interiors/seating-statues-source.png"
+    ],
+    "section": 2,
+    "mirror": true
+  },
+  "g3q/5020-5021-5026-5027": {
+    "role": "sofa",
+    "label": "Devon president office side-facing sofa",
+    "family": "sofa",
+    "reason": "The Devon 3F map has a three-cell dark sofa at each side of the office. Build one cushioned seat with high side back, arms and legs before slicing it. Leave the projected pink-carpet area empty and use only local dark upholstery pixels.",
+    "baseline_entry_sha256": "6aaba2038aa4bc428b87360989107986555db325464d90a4daf8a43b1fb3afe9",
+    "contact_position": 394,
+    "evidence": [
+      "inventory/shared-building/page-013.png",
+      "interiors/seating-statues-source.png"
+    ],
+    "section": 0,
+    "mirror": true
+  },
+  "g3q/5038-4618-5039-4620": {
+    "role": "sofa",
+    "label": "Devon president office side-facing sofa",
+    "family": "sofa",
+    "reason": "The Devon 3F map has a three-cell dark sofa at each side of the office. Build one cushioned seat with high side back, arms and legs before slicing it. Leave the projected pink-carpet area empty and use only local dark upholstery pixels.",
+    "baseline_entry_sha256": "7b9ed5f76a7a1b0d95f00101137719124ff09e00ae543d8fa48e99de99d2a582",
+    "contact_position": 400,
+    "evidence": [
+      "inventory/shared-building/page-013.png",
+      "interiors/seating-statues-source.png"
+    ],
+    "section": 1,
+    "mirror": true
+  },
+  "g3q/5244-5245-5050-5051": {
+    "role": "sofa",
+    "label": "Devon president office side-facing sofa",
+    "family": "sofa",
+    "reason": "The Devon 3F map has a three-cell dark sofa at each side of the office. Build one cushioned seat with high side back, arms and legs before slicing it. Leave the projected pink-carpet area empty and use only local dark upholstery pixels.",
+    "baseline_entry_sha256": "ca4b17c144b2d209cc7e81945d4f472edaee907c7ec9790d43e7da5ea1d63fe1",
+    "contact_position": 486,
+    "evidence": [
+      "inventory/shared-building/page-016.png",
+      "interiors/seating-statues-source.png"
+    ],
+    "section": 2,
+    "mirror": true
+  },
+  "g3q/5020-5021-5116-5117": {
+    "role": "sofa",
+    "label": "Devon president office side-facing sofa",
+    "family": "sofa",
+    "reason": "The Devon 3F map has a three-cell dark sofa at each side of the office. Build one cushioned seat with high side back, arms and legs before slicing it. Leave the projected pink-carpet area empty and use only local dark upholstery pixels.",
+    "baseline_entry_sha256": "737d6c00b57ac86d173de0a840740bac5f655353654e4f097213b9bf28aa9fff",
+    "contact_position": 428,
+    "evidence": [
+      "inventory/shared-building/page-014.png",
+      "interiors/seating-statues-source.png"
+    ],
+    "section": 0,
+    "mirror": false
+  },
+  "g3q/5130-5131-5132-5133": {
+    "role": "sofa",
+    "label": "Devon president office side-facing sofa",
+    "family": "sofa",
+    "reason": "The Devon 3F map has a three-cell dark sofa at each side of the office. Build one cushioned seat with high side back, arms and legs before slicing it. Leave the projected pink-carpet area empty and use only local dark upholstery pixels.",
+    "baseline_entry_sha256": "14c2b533403c34b0e88290fe4476c0e58fc5bc2d8219e16b29c14ce381d0771c",
+    "contact_position": 434,
+    "evidence": [
+      "inventory/shared-building/page-014.png",
+      "interiors/seating-statues-source.png"
+    ],
+    "section": 1,
+    "mirror": false
+  },
+  "g3q/5242-5243-5050-5051": {
+    "role": "sofa",
+    "label": "Devon president office side-facing sofa",
+    "family": "sofa",
+    "reason": "The Devon 3F map has a three-cell dark sofa at each side of the office. Build one cushioned seat with high side back, arms and legs before slicing it. Leave the projected pink-carpet area empty and use only local dark upholstery pixels.",
+    "baseline_entry_sha256": "e3297ec98a72eff80b33335dbac9eed619ecac0d84742cff4c60ac1ff4008c8a",
+    "contact_position": 485,
+    "evidence": [
+      "inventory/shared-building/page-016.png",
+      "interiors/seating-statues-source.png"
+    ],
+    "section": 2,
+    "mirror": false
+  },
+  "g3q/1283-1284-1285-1286": {
+    "role": "statue_base",
+    "label": "Battle Tower statue cylindrical plinth",
+    "family": "statue",
+    "reason": "The complete statue source shows a pale rounded plinth with a cyan accent below the gold crown. Replace the hourglass depth with a grounded foot, column and upper cornice, preserving the crown support metadata.",
+    "baseline_entry_sha256": "f4876db04be6e5e74dba7c5e7ef116ab2b73b71b7ef0b8715d374afd67942d8c",
+    "contact_position": 50,
+    "evidence": [
+      "inventory/shared-building/page-002.png",
+      "interiors/seating-statues-source.png"
+    ]
+  },
+  "g3q/1346-1347-1285-1286": {
+    "role": "statue_base",
+    "label": "Battle Tower statue cylindrical plinth",
+    "family": "statue",
+    "reason": "The complete statue source shows a pale rounded plinth with a cyan accent below the gold crown. Replace the hourglass depth with a grounded foot, column and upper cornice, preserving the crown support metadata.",
+    "baseline_entry_sha256": "6f199d19b85d98c4dfbcc2e57028cc3bfa2fb7deb25886601fb62f5d3b9b77ff",
+    "contact_position": 156,
+    "evidence": [
+      "inventory/shared-building/page-005.png",
+      "interiors/seating-statues-source.png"
+    ]
+  },
+  "g3q/1283-1284-1348-1286": {
+    "role": "statue_base",
+    "label": "Battle Tower statue cylindrical plinth",
+    "family": "statue",
+    "reason": "The complete statue source shows a pale rounded plinth with a cyan accent below the gold crown. Replace the hourglass depth with a grounded foot, column and upper cornice, preserving the crown support metadata.",
+    "baseline_entry_sha256": "f4876db04be6e5e74dba7c5e7ef116ab2b73b71b7ef0b8715d374afd67942d8c",
+    "contact_position": 160,
+    "evidence": [
+      "inventory/shared-building/page-005.png",
+      "interiors/seating-statues-source.png"
+    ]
+  },
+  "g3q/1283-1347-1348-1286": {
+    "role": "statue_base",
+    "label": "Battle Tower statue cylindrical plinth",
+    "family": "statue",
+    "reason": "The complete statue source shows a pale rounded plinth with a cyan accent below the gold crown. Replace the hourglass depth with a grounded foot, column and upper cornice, preserving the crown support metadata.",
+    "baseline_entry_sha256": "8a6ed3d314cd038b50b87afd4bca2026037b19f035a5c7d6203fe0128f00f3ac",
+    "contact_position": 293,
+    "evidence": [
+      "inventory/shared-building/page-010.png",
+      "interiors/seating-statues-source.png"
+    ]
+  },
+  "g3q/1325-1325-1337-1338": {
+    "role": "statue_crown",
+    "label": "Battle Tower gold statue crown",
+    "family": "statue",
+    "reason": "The upper source cell contains a gold rounded crown projected over a floor/wall background. Model only a connected gold ball and collar above its plinth, excluding that background volume.",
+    "baseline_entry_sha256": "15550e3d0c7bad99b6c730056618a7a9f7bdb7605436b5d1a2e460672cec742c",
+    "contact_position": 136,
+    "evidence": [
+      "inventory/shared-building/page-005.png",
+      "interiors/seating-statues-source.png"
+    ]
+  },
+  "g3q/1329-1330-1339-1340": {
+    "role": "statue_crown",
+    "label": "Battle Tower gold statue crown",
+    "family": "statue",
+    "reason": "The upper source cell contains a gold rounded crown projected over a floor/wall background. Model only a connected gold ball and collar above its plinth, excluding that background volume.",
+    "baseline_entry_sha256": "2bde4d7d619da9233749c4ae5b2a43482476e07d66d56621ed2e9378a062ee3e",
+    "contact_position": 139,
+    "evidence": [
+      "inventory/shared-building/page-005.png",
+      "interiors/seating-statues-source.png"
+    ]
+  },
+  "g3q/1336-1325-1439-1338": {
+    "role": "statue_crown",
+    "label": "Battle Tower gold statue crown",
+    "family": "statue",
+    "reason": "The upper source cell contains a gold rounded crown projected over a floor/wall background. Model only a connected gold ball and collar above its plinth, excluding that background volume.",
+    "baseline_entry_sha256": "b32aa05f35851c38417ca5ec748623d3760b86f0602c01ab0644a8d886da1cc9",
+    "contact_position": 289,
+    "evidence": [
+      "inventory/shared-building/page-010.png",
+      "interiors/seating-statues-source.png"
+    ]
+  },
+  "g3q/4725-4726-4727-4728": {
+    "role": "console_upper",
+    "label": "Industrial control console head",
+    "family": "control console",
+    "reason": "The assembled ship/hideout control station has a deep rectangular head with front dials or display. Replace the pinched rear with an explicit supported enclosure, retaining native control details and gray casing material.",
+    "baseline_entry_sha256": "5fa5135daed7743c00b2ca00263a59b5c82455b18bc47bd6d441abaa78a53e49",
+    "contact_position": 104,
+    "evidence": [
+      "inventory/shared-building/page-004.png",
+      "interiors/seating-statues-source.png"
+    ]
+  },
+  "g3q/4729-4730-4731-4732": {
+    "role": "console_upper",
+    "label": "Industrial control console head",
+    "family": "control console",
+    "reason": "The assembled ship/hideout control station has a deep rectangular head with front dials or display. Replace the pinched rear with an explicit supported enclosure, retaining native control details and gray casing material.",
+    "baseline_entry_sha256": "6461f04d0065eb1cb3d416b840f415aed903b16edbdb1f448cad3c8c8389431a",
+    "contact_position": 105,
+    "evidence": [
+      "inventory/shared-building/page-004.png",
+      "interiors/seating-statues-source.png"
+    ]
+  },
+  "g3q/4733-4734-4735-4736": {
+    "role": "console_upper",
+    "label": "Industrial control console head",
+    "family": "control console",
+    "reason": "The assembled ship/hideout control station has a deep rectangular head with front dials or display. Replace the pinched rear with an explicit supported enclosure, retaining native control details and gray casing material.",
+    "baseline_entry_sha256": "133facdb1b5e799a1556618e2a75a2d54e8a3044346c4135da4d93f6b6b45bc5",
+    "contact_position": 106,
+    "evidence": [
+      "inventory/shared-building/page-004.png",
+      "interiors/seating-statues-source.png"
+    ]
+  },
+  "g3q/4749-4750-4668-4669": {
+    "role": "console_base",
+    "label": "Industrial control console stand",
+    "family": "control console",
+    "reason": "The lower source projects flooring below a control console. Model the lower enclosure and four feet supporting the upper head; omit the carpet-colored wedge that the old relief produced.",
+    "baseline_entry_sha256": "637382158ce2c86a79a4b9f38aed886fd5069508fc12bd1ecc0f0da2d959621d",
+    "contact_position": 123,
+    "evidence": [
+      "inventory/shared-building/page-004.png",
+      "interiors/seating-statues-source.png"
+    ]
+  },
+  "g3q/4751-4752-4668-4669": {
+    "role": "console_base",
+    "label": "Industrial control console stand",
+    "family": "control console",
+    "reason": "The lower source projects flooring below a control console. Model the lower enclosure and four feet supporting the upper head; omit the carpet-colored wedge that the old relief produced.",
+    "baseline_entry_sha256": "72545c9c05e540f30468c7288081d9c67b860fd73361c04a8eae90521466b687",
+    "contact_position": 126,
+    "evidence": [
+      "inventory/shared-building/page-004.png",
+      "interiors/seating-statues-source.png"
+    ]
+  },
+  "g3q/4753-4754-4668-4669": {
+    "role": "console_base",
+    "label": "Industrial control console stand",
+    "family": "control console",
+    "reason": "The lower source projects flooring below a control console. Model the lower enclosure and four feet supporting the upper head; omit the carpet-colored wedge that the old relief produced.",
+    "baseline_entry_sha256": "6a1342cc58a6006845f86fc4746a6e810e40cc29ef3b40ba076e5b817baff697",
+    "contact_position": 128,
+    "evidence": [
+      "inventory/shared-building/page-004.png",
+      "interiors/seating-statues-source.png"
+    ]
+  },
+  "g3q/1834-1849-1836-1849": {
+    "role": "floor",
+    "label": "Palace carpet border",
+    "family": "floor panel",
+    "reason": "Map context identifies a horizontal floor decoration. Preserve the exact fitted occupancy and interaction flags, and address its native source drawing across x/z so top-down lines join instead of becoming vertical stripes.",
+    "baseline_entry_sha256": "26406744fed354e5f0884b38e64ed0953ce229483c36cb54bb58605919dc9175",
+    "contact_position": 109,
+    "evidence": [
+      "inventory/shared-building/page-004.png",
+      "interiors/seating-statues-source.png"
+    ]
+  },
+  "g3q/1925-1835-1925-1837": {
+    "role": "floor",
+    "label": "Palace carpet border",
+    "family": "floor panel",
+    "reason": "Map context identifies a horizontal floor decoration. Preserve the exact fitted occupancy and interaction flags, and address its native source drawing across x/z so top-down lines join instead of becoming vertical stripes.",
+    "baseline_entry_sha256": "fc02512bff5094a097064c48b8595af293ee9ff99a9374ff5a8fae60385ccd0b",
+    "contact_position": 115,
+    "evidence": [
+      "inventory/shared-building/page-004.png",
+      "interiors/seating-statues-source.png"
+    ]
+  },
+  "g3q/1840-1838-1849-1925": {
+    "role": "floor",
+    "label": "Palace carpet border",
+    "family": "floor panel",
+    "reason": "Map context identifies a horizontal floor decoration. Preserve the exact fitted occupancy and interaction flags, and address its native source drawing across x/z so top-down lines join instead of becoming vertical stripes.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "contact_position": 124,
+    "evidence": [
+      "inventory/shared-building/page-004.png",
+      "interiors/seating-statues-source.png"
+    ]
+  },
+  "g3q/1849-1925-1836-1837": {
+    "role": "floor",
+    "label": "Palace carpet border",
+    "family": "floor panel",
+    "reason": "Map context identifies a horizontal floor decoration. Preserve the exact fitted occupancy and interaction flags, and address its native source drawing across x/z so top-down lines join instead of becoming vertical stripes.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "contact_position": 131,
+    "evidence": [
+      "inventory/shared-building/page-005.png",
+      "interiors/seating-statues-source.png"
+    ]
+  },
+  "g3q/4956-4957-4958-4959": {
+    "role": "floor",
+    "label": "Facility teleport floor pad",
+    "family": "floor panel",
+    "reason": "Map context identifies a horizontal floor decoration. Preserve the exact fitted occupancy and interaction flags, and address its native source drawing across x/z so top-down lines join instead of becoming vertical stripes.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "contact_position": 378,
+    "evidence": [
+      "inventory/shared-building/page-012.png",
+      "interiors/seating-statues-source.png"
+    ]
+  },
+  "g3q/3810-3810-3823-3824": {
+    "role": "stairs",
+    "label": "Contest blue stage stair section",
+    "family": "stage stairs",
+    "reason": "Contest Hall source/map show a three-wide two-row ascent onto the stage. Author three broad treads and an upper landing across the entire depth, with north high and south low; source-local x/z paint preserves the colored tread markings and neighboring seams.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "contact_position": 284,
+    "evidence": [
+      "inventory/shared-building/page-009.png",
+      "interiors/seating-statues-source.png",
+      "interiors/stair-assemblies-source.png"
+    ],
+    "section": 0,
+    "color": "blue"
+  },
+  "g3q/3810-3810-3824-3824": {
+    "role": "stairs",
+    "label": "Contest blue stage stair section",
+    "family": "stage stairs",
+    "reason": "Contest Hall source/map show a three-wide two-row ascent onto the stage. Author three broad treads and an upper landing across the entire depth, with north high and south low; source-local x/z paint preserves the colored tread markings and neighboring seams.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "contact_position": 287,
+    "evidence": [
+      "inventory/shared-building/page-009.png",
+      "interiors/seating-statues-source.png",
+      "interiors/stair-assemblies-source.png"
+    ],
+    "section": 0,
+    "color": "blue"
+  },
+  "g3q/3810-3810-3824-3825": {
+    "role": "stairs",
+    "label": "Contest blue stage stair section",
+    "family": "stage stairs",
+    "reason": "Contest Hall source/map show a three-wide two-row ascent onto the stage. Author three broad treads and an upper landing across the entire depth, with north high and south low; source-local x/z paint preserves the colored tread markings and neighboring seams.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "contact_position": 288,
+    "evidence": [
+      "inventory/shared-building/page-009.png",
+      "interiors/seating-statues-source.png",
+      "interiors/stair-assemblies-source.png"
+    ],
+    "section": 0,
+    "color": "blue"
+  },
+  "g3q/3823-3824-3823-3824": {
+    "role": "stairs",
+    "label": "Contest blue stage stair section",
+    "family": "stage stairs",
+    "reason": "Contest Hall source/map show a three-wide two-row ascent onto the stage. Author three broad treads and an upper landing across the entire depth, with north high and south low; source-local x/z paint preserves the colored tread markings and neighboring seams.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "contact_position": 297,
+    "evidence": [
+      "inventory/shared-building/page-010.png",
+      "interiors/seating-statues-source.png",
+      "interiors/stair-assemblies-source.png"
+    ],
+    "section": 1,
+    "color": "blue"
+  },
+  "g3q/3824-3824-3824-3824": {
+    "role": "stairs",
+    "label": "Contest blue stage stair section",
+    "family": "stage stairs",
+    "reason": "Contest Hall source/map show a three-wide two-row ascent onto the stage. Author three broad treads and an upper landing across the entire depth, with north high and south low; source-local x/z paint preserves the colored tread markings and neighboring seams.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "contact_position": 300,
+    "evidence": [
+      "inventory/shared-building/page-010.png",
+      "interiors/seating-statues-source.png",
+      "interiors/stair-assemblies-source.png"
+    ],
+    "section": 1,
+    "color": "blue"
+  },
+  "g3q/3824-3825-3824-3825": {
+    "role": "stairs",
+    "label": "Contest blue stage stair section",
+    "family": "stage stairs",
+    "reason": "Contest Hall source/map show a three-wide two-row ascent onto the stage. Author three broad treads and an upper landing across the entire depth, with north high and south low; source-local x/z paint preserves the colored tread markings and neighboring seams.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "contact_position": 301,
+    "evidence": [
+      "inventory/shared-building/page-010.png",
+      "interiors/seating-statues-source.png",
+      "interiors/stair-assemblies-source.png"
+    ],
+    "section": 1,
+    "color": "blue"
+  },
+  "g3q/3810-3810-3847-3848": {
+    "role": "stairs",
+    "label": "Contest green stage stair section",
+    "family": "stage stairs",
+    "reason": "Contest Hall source/map show a three-wide two-row ascent onto the stage. Author three broad treads and an upper landing across the entire depth, with north high and south low; source-local x/z paint preserves the colored tread markings and neighboring seams.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "contact_position": 311,
+    "evidence": [
+      "inventory/shared-building/page-010.png",
+      "interiors/seating-statues-source.png",
+      "interiors/stair-assemblies-source.png"
+    ],
+    "section": 0,
+    "color": "green"
+  },
+  "g3q/3810-3810-3848-3848": {
+    "role": "stairs",
+    "label": "Contest green stage stair section",
+    "family": "stage stairs",
+    "reason": "Contest Hall source/map show a three-wide two-row ascent onto the stage. Author three broad treads and an upper landing across the entire depth, with north high and south low; source-local x/z paint preserves the colored tread markings and neighboring seams.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "contact_position": 312,
+    "evidence": [
+      "inventory/shared-building/page-010.png",
+      "interiors/seating-statues-source.png",
+      "interiors/stair-assemblies-source.png"
+    ],
+    "section": 0,
+    "color": "green"
+  },
+  "g3q/3810-3810-3848-3849": {
+    "role": "stairs",
+    "label": "Contest green stage stair section",
+    "family": "stage stairs",
+    "reason": "Contest Hall source/map show a three-wide two-row ascent onto the stage. Author three broad treads and an upper landing across the entire depth, with north high and south low; source-local x/z paint preserves the colored tread markings and neighboring seams.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "contact_position": 313,
+    "evidence": [
+      "inventory/shared-building/page-010.png",
+      "interiors/seating-statues-source.png",
+      "interiors/stair-assemblies-source.png"
+    ],
+    "section": 0,
+    "color": "green"
+  },
+  "g3q/3847-3848-3847-3848": {
+    "role": "stairs",
+    "label": "Contest green stage stair section",
+    "family": "stage stairs",
+    "reason": "Contest Hall source/map show a three-wide two-row ascent onto the stage. Author three broad treads and an upper landing across the entire depth, with north high and south low; source-local x/z paint preserves the colored tread markings and neighboring seams.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "contact_position": 320,
+    "evidence": [
+      "inventory/shared-building/page-010.png",
+      "interiors/seating-statues-source.png",
+      "interiors/stair-assemblies-source.png"
+    ],
+    "section": 1,
+    "color": "green"
+  },
+  "g3q/3848-3848-3848-3848": {
+    "role": "stairs",
+    "label": "Contest green stage stair section",
+    "family": "stage stairs",
+    "reason": "Contest Hall source/map show a three-wide two-row ascent onto the stage. Author three broad treads and an upper landing across the entire depth, with north high and south low; source-local x/z paint preserves the colored tread markings and neighboring seams.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "contact_position": 321,
+    "evidence": [
+      "inventory/shared-building/page-011.png",
+      "interiors/seating-statues-source.png",
+      "interiors/stair-assemblies-source.png"
+    ],
+    "section": 1,
+    "color": "green"
+  },
+  "g3q/3848-3849-3848-3849": {
+    "role": "stairs",
+    "label": "Contest green stage stair section",
+    "family": "stage stairs",
+    "reason": "Contest Hall source/map show a three-wide two-row ascent onto the stage. Author three broad treads and an upper landing across the entire depth, with north high and south low; source-local x/z paint preserves the colored tread markings and neighboring seams.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "contact_position": 322,
+    "evidence": [
+      "inventory/shared-building/page-011.png",
+      "interiors/seating-statues-source.png",
+      "interiors/stair-assemblies-source.png"
+    ],
+    "section": 1,
+    "color": "green"
+  },
+  "g3q/3810-3810-3866-3867": {
+    "role": "stairs",
+    "label": "Contest yellow stage stair section",
+    "family": "stage stairs",
+    "reason": "Contest Hall source/map show a three-wide two-row ascent onto the stage. Author three broad treads and an upper landing across the entire depth, with north high and south low; source-local x/z paint preserves the colored tread markings and neighboring seams.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "contact_position": 328,
+    "evidence": [
+      "inventory/shared-building/page-011.png",
+      "interiors/seating-statues-source.png",
+      "interiors/stair-assemblies-source.png"
+    ],
+    "section": 0,
+    "color": "yellow"
+  },
+  "g3q/3810-3810-3867-3867": {
+    "role": "stairs",
+    "label": "Contest yellow stage stair section",
+    "family": "stage stairs",
+    "reason": "Contest Hall source/map show a three-wide two-row ascent onto the stage. Author three broad treads and an upper landing across the entire depth, with north high and south low; source-local x/z paint preserves the colored tread markings and neighboring seams.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "contact_position": 329,
+    "evidence": [
+      "inventory/shared-building/page-011.png",
+      "interiors/seating-statues-source.png",
+      "interiors/stair-assemblies-source.png"
+    ],
+    "section": 0,
+    "color": "yellow"
+  },
+  "g3q/3810-3810-3867-3868": {
+    "role": "stairs",
+    "label": "Contest yellow stage stair section",
+    "family": "stage stairs",
+    "reason": "Contest Hall source/map show a three-wide two-row ascent onto the stage. Author three broad treads and an upper landing across the entire depth, with north high and south low; source-local x/z paint preserves the colored tread markings and neighboring seams.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "contact_position": 330,
+    "evidence": [
+      "inventory/shared-building/page-011.png",
+      "interiors/seating-statues-source.png",
+      "interiors/stair-assemblies-source.png"
+    ],
+    "section": 0,
+    "color": "yellow"
+  },
+  "g3q/3866-3867-3866-3867": {
+    "role": "stairs",
+    "label": "Contest yellow stage stair section",
+    "family": "stage stairs",
+    "reason": "Contest Hall source/map show a three-wide two-row ascent onto the stage. Author three broad treads and an upper landing across the entire depth, with north high and south low; source-local x/z paint preserves the colored tread markings and neighboring seams.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "contact_position": 332,
+    "evidence": [
+      "inventory/shared-building/page-011.png",
+      "interiors/seating-statues-source.png",
+      "interiors/stair-assemblies-source.png"
+    ],
+    "section": 1,
+    "color": "yellow"
+  },
+  "g3q/3867-3867-3867-3867": {
+    "role": "stairs",
+    "label": "Contest yellow stage stair section",
+    "family": "stage stairs",
+    "reason": "Contest Hall source/map show a three-wide two-row ascent onto the stage. Author three broad treads and an upper landing across the entire depth, with north high and south low; source-local x/z paint preserves the colored tread markings and neighboring seams.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "contact_position": 333,
+    "evidence": [
+      "inventory/shared-building/page-011.png",
+      "interiors/seating-statues-source.png",
+      "interiors/stair-assemblies-source.png"
+    ],
+    "section": 1,
+    "color": "yellow"
+  },
+  "g3q/3867-3868-3867-3868": {
+    "role": "stairs",
+    "label": "Contest yellow stage stair section",
+    "family": "stage stairs",
+    "reason": "Contest Hall source/map show a three-wide two-row ascent onto the stage. Author three broad treads and an upper landing across the entire depth, with north high and south low; source-local x/z paint preserves the colored tread markings and neighboring seams.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "contact_position": 334,
+    "evidence": [
+      "inventory/shared-building/page-011.png",
+      "interiors/seating-statues-source.png",
+      "interiors/stair-assemblies-source.png"
+    ],
+    "section": 1,
+    "color": "yellow"
+  },
+  "g3q/3810-3810-3885-3886": {
+    "role": "stairs",
+    "label": "Contest pink stage stair section",
+    "family": "stage stairs",
+    "reason": "Contest Hall source/map show a three-wide two-row ascent onto the stage. Author three broad treads and an upper landing across the entire depth, with north high and south low; source-local x/z paint preserves the colored tread markings and neighboring seams.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "contact_position": 340,
+    "evidence": [
+      "inventory/shared-building/page-011.png",
+      "interiors/seating-statues-source.png",
+      "interiors/stair-assemblies-source.png"
+    ],
+    "section": 0,
+    "color": "pink"
+  },
+  "g3q/3810-3810-3886-3886": {
+    "role": "stairs",
+    "label": "Contest pink stage stair section",
+    "family": "stage stairs",
+    "reason": "Contest Hall source/map show a three-wide two-row ascent onto the stage. Author three broad treads and an upper landing across the entire depth, with north high and south low; source-local x/z paint preserves the colored tread markings and neighboring seams.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "contact_position": 341,
+    "evidence": [
+      "inventory/shared-building/page-011.png",
+      "interiors/seating-statues-source.png",
+      "interiors/stair-assemblies-source.png"
+    ],
+    "section": 0,
+    "color": "pink"
+  },
+  "g3q/3810-3810-3886-3887": {
+    "role": "stairs",
+    "label": "Contest pink stage stair section",
+    "family": "stage stairs",
+    "reason": "Contest Hall source/map show a three-wide two-row ascent onto the stage. Author three broad treads and an upper landing across the entire depth, with north high and south low; source-local x/z paint preserves the colored tread markings and neighboring seams.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "contact_position": 344,
+    "evidence": [
+      "inventory/shared-building/page-011.png",
+      "interiors/seating-statues-source.png",
+      "interiors/stair-assemblies-source.png"
+    ],
+    "section": 0,
+    "color": "pink"
+  },
+  "g3q/3885-3886-3885-3886": {
+    "role": "stairs",
+    "label": "Contest pink stage stair section",
+    "family": "stage stairs",
+    "reason": "Contest Hall source/map show a three-wide two-row ascent onto the stage. Author three broad treads and an upper landing across the entire depth, with north high and south low; source-local x/z paint preserves the colored tread markings and neighboring seams.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "contact_position": 349,
+    "evidence": [
+      "inventory/shared-building/page-011.png",
+      "interiors/seating-statues-source.png",
+      "interiors/stair-assemblies-source.png"
+    ],
+    "section": 1,
+    "color": "pink"
+  },
+  "g3q/3886-3886-3886-3886": {
+    "role": "stairs",
+    "label": "Contest pink stage stair section",
+    "family": "stage stairs",
+    "reason": "Contest Hall source/map show a three-wide two-row ascent onto the stage. Author three broad treads and an upper landing across the entire depth, with north high and south low; source-local x/z paint preserves the colored tread markings and neighboring seams.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "contact_position": 351,
+    "evidence": [
+      "inventory/shared-building/page-011.png",
+      "interiors/seating-statues-source.png",
+      "interiors/stair-assemblies-source.png"
+    ],
+    "section": 1,
+    "color": "pink"
+  },
+  "g3q/3886-3887-3886-3887": {
+    "role": "stairs",
+    "label": "Contest pink stage stair section",
+    "family": "stage stairs",
+    "reason": "Contest Hall source/map show a three-wide two-row ascent onto the stage. Author three broad treads and an upper landing across the entire depth, with north high and south low; source-local x/z paint preserves the colored tread markings and neighboring seams.",
+    "baseline_entry_sha256": "3e8afd8f1cd1e9034704b7a32bc37092e5878ca96f13894110af676858f06513",
+    "contact_position": 353,
+    "evidence": [
+      "inventory/shared-building/page-012.png",
+      "interiors/seating-statues-source.png",
+      "interiors/stair-assemblies-source.png"
+    ],
+    "section": 1,
+    "color": "pink"
+  },
+  "g3q/3810-3810-3897-3898": {
+    "role": "stairs",
+    "label": "Contest orange stage stair section",
+    "family": "stage stairs",
+    "reason": "Contest Hall source/map show a three-wide two-row ascent onto the stage. Author three broad treads and an upper landing across the entire depth, with north high and south low; source-local x/z paint preserves the colored tread markings and neighboring seams.",
+    "baseline_entry_sha256": "12242c1168e025586359ed535574deca2df49ce5e3d7d054609c6635a0f4b392",
+    "contact_position": 357,
+    "evidence": [
+      "inventory/shared-building/page-012.png",
+      "interiors/seating-statues-source.png",
+      "interiors/stair-assemblies-source.png"
+    ],
+    "section": 0,
+    "color": "orange"
+  },
+  "g3q/3810-3810-3898-3898": {
+    "role": "stairs",
+    "label": "Contest orange stage stair section",
+    "family": "stage stairs",
+    "reason": "Contest Hall source/map show a three-wide two-row ascent onto the stage. Author three broad treads and an upper landing across the entire depth, with north high and south low; source-local x/z paint preserves the colored tread markings and neighboring seams.",
+    "baseline_entry_sha256": "2953ac2ea988865a253ff5da3a7126f6e899bcb2050f03c896e41fde526039bc",
+    "contact_position": 359,
+    "evidence": [
+      "inventory/shared-building/page-012.png",
+      "interiors/seating-statues-source.png",
+      "interiors/stair-assemblies-source.png"
+    ],
+    "section": 0,
+    "color": "orange"
+  },
+  "g3q/3810-3810-3898-3899": {
+    "role": "stairs",
+    "label": "Contest orange stage stair section",
+    "family": "stage stairs",
+    "reason": "Contest Hall source/map show a three-wide two-row ascent onto the stage. Author three broad treads and an upper landing across the entire depth, with north high and south low; source-local x/z paint preserves the colored tread markings and neighboring seams.",
+    "baseline_entry_sha256": "09e2853a92f15089f5c63d10aac40f5ddccef4acc1c594a04318920d13b5f553",
+    "contact_position": 361,
+    "evidence": [
+      "inventory/shared-building/page-012.png",
+      "interiors/seating-statues-source.png",
+      "interiors/stair-assemblies-source.png"
+    ],
+    "section": 0,
+    "color": "orange"
+  },
+  "g3q/3897-3898-3897-3898": {
+    "role": "stairs",
+    "label": "Contest orange stage stair section",
+    "family": "stage stairs",
+    "reason": "Contest Hall source/map show a three-wide two-row ascent onto the stage. Author three broad treads and an upper landing across the entire depth, with north high and south low; source-local x/z paint preserves the colored tread markings and neighboring seams.",
+    "baseline_entry_sha256": "e45835075326ec896c56f1c6c596d50a16c2905f2820f8b42a623a9ce8a22977",
+    "contact_position": 366,
+    "evidence": [
+      "inventory/shared-building/page-012.png",
+      "interiors/seating-statues-source.png",
+      "interiors/stair-assemblies-source.png"
+    ],
+    "section": 1,
+    "color": "orange"
+  },
+  "g3q/3898-3898-3898-3898": {
+    "role": "stairs",
+    "label": "Contest orange stage stair section",
+    "family": "stage stairs",
+    "reason": "Contest Hall source/map show a three-wide two-row ascent onto the stage. Author three broad treads and an upper landing across the entire depth, with north high and south low; source-local x/z paint preserves the colored tread markings and neighboring seams.",
+    "baseline_entry_sha256": "e45835075326ec896c56f1c6c596d50a16c2905f2820f8b42a623a9ce8a22977",
+    "contact_position": 367,
+    "evidence": [
+      "inventory/shared-building/page-012.png",
+      "interiors/seating-statues-source.png",
+      "interiors/stair-assemblies-source.png"
+    ],
+    "section": 1,
+    "color": "orange"
+  },
+  "g3q/3898-3899-3898-3899": {
+    "role": "stairs",
+    "label": "Contest orange stage stair section",
+    "family": "stage stairs",
+    "reason": "Contest Hall source/map show a three-wide two-row ascent onto the stage. Author three broad treads and an upper landing across the entire depth, with north high and south low; source-local x/z paint preserves the colored tread markings and neighboring seams.",
+    "baseline_entry_sha256": "e45835075326ec896c56f1c6c596d50a16c2905f2820f8b42a623a9ce8a22977",
+    "contact_position": 368,
+    "evidence": [
+      "inventory/shared-building/page-012.png",
+      "interiors/seating-statues-source.png",
+      "interiors/stair-assemblies-source.png"
+    ],
+    "section": 1,
+    "color": "orange"
+  }
+}

@@ -38,8 +38,13 @@ import org.jetbrains.annotations.Nullable;
  * </pre>
  */
 public final class LandscapeModels {
-	/** The system property naming the models table, a JSON file. */
+	/**
+	 * The system property naming the models table, a JSON file. Unset, the jar's table ({@link #RESOURCE}, the default since
+	 * 2026-11-01); blank or {@code none} (the JUnit and GameTest runs), no table: no models, slopes or pins.
+	 */
 	static final String PROPERTY = "kantobridge.landscape.models";
+	/** The table the jar carries: models table v16t, the one LandSky6 was built with (sha256 4bc49344...). */
+	static final String RESOURCE = "/kantobridge/landscape_models.json";
 
 	/** One model on its map ({@code trees}: a model of trees, each on its own ground where the ground has levels). */
 	record Model(String name, int tx, int ty, int w, int h, List<int[]> claim, JsonObject spec, boolean trees) {
@@ -121,15 +126,22 @@ public final class LandscapeModels {
 		if (!loaded) {
 			loaded = true;
 			String path = System.getProperty(PROPERTY);
-			if (path != null && !path.isBlank()) {
-				try {
-					String json = Files.readString(Path.of(path), StandardCharsets.UTF_8);
-					table = parse(json);
-					slopeTable = parseSlopes(json);
-					pinTable = parsePins(json);
-				} catch (IOException e) {
-					throw new IllegalStateException("landscape models: can't read " + path, e);
+			String json = null;
+			try {
+				if (path == null) {
+					try (java.io.InputStream in = LandscapeModels.class.getResourceAsStream(RESOURCE)) {
+						json = in == null ? null : new String(in.readAllBytes(), StandardCharsets.UTF_8);
+					}
+				} else if (!path.isBlank() && !"none".equals(path.trim())) {
+					json = Files.readString(Path.of(path), StandardCharsets.UTF_8);
 				}
+			} catch (IOException e) {
+				throw new IllegalStateException("landscape models: can't read " + (path == null ? RESOURCE : path), e);
+			}
+			if (json != null) {
+				table = parse(json);
+				slopeTable = parseSlopes(json);
+				pinTable = parsePins(json);
 			}
 		}
 		return table;

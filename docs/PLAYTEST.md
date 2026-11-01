@@ -1177,3 +1177,11 @@ Quit" saves them first. Start every game the world needs (or use `-Engines minec
       screen is back and you are held.
 - [ ] **The snap back:** walk off while minimised, press R, finish the battle: after the fade you stand on the hidden
       player's cell again, facing its way. Walking away never ends a wild battle; Run still does (where running is allowed).
+
+## Raised outdoors by default (2026-11-01; a new world needed)
+- [ ] **Create world** (a new world: worlds made before keep their flat outdoors) with Emerald: the outdoors have raised
+      ground: Route 119's sand slope up to the plateau, Fortree at Route 119's east end at the same height, cliffs where
+      the drawing has faces, rock models on their maps. Kanto and Johto (Blue, Crystal) get their levels too.
+- [ ] **The build fits your launcher's memory:** a Hoenn world from Create world built in a 4 GB heap on the server
+      side here; with Minecraft's own memory on top, a 6 GB game setting should do. If Create world stalls or crashes
+      for memory, note your game's memory setting.

@@ -317,8 +317,9 @@ public final class BuildTask {
 			long packMs = (System.nanoTime() - packStarted) / 1_000_000L;
 			WorldIndex previous = region != null ? region.previousIndex() : previousIndex(this.worldDir);
 			// The geometry a client would build from the shape index, the self-check of every placed map (recorded) and the
-			// quads the planned world draws.
-			ShapeReport shapes = plan.shapes() == null || plan.scene() == null ? null : ShapeReport.of(plan, FrontEnds.artSource(this.bundle));
+			// quads the planned world draws. Not in the client's own builds (BuildOptions.shapeReport): only checks read it.
+			ShapeReport shapes = !this.options.shapeReport() || plan.shapes() == null || plan.scene() == null ? null
+					: ShapeReport.of(plan, FrontEnds.artSource(this.bundle));
 			// The character styles' pure parts on the export's sprites (the voxel plan's V8): what each client would fall back to.
 			CharacterReport characters = plan.shapes() == null ? null : CharacterReport.of(this.bundle);
 			return new Prepared(plan, pack, characters, previous == null ? List.of() : WorldPlan.volumesOf(previous),

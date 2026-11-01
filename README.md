@@ -28,6 +28,11 @@ records every deviation, open issue and question.
   the generative voxel system, first-person dressing, several regions in one world)
 - [`docs/VERSIONS.md`](docs/VERSIONS.md): pinned versions
 - [`docs/REFERENCES.md`](docs/REFERENCES.md): reference projects, their licences, and how Gen1Recomp and Cobblemon work inside
+- [`docs/MODEL_REVIEWS.md`](docs/MODEL_REVIEWS.md): highlight models in game, save comments, and review proposed fixes
+- [`docs/MODEL_GALLERY.md`](docs/MODEL_GALLERY.md): isolated model galleries, automatic front/side captures, and sprite comparison sheets
+- [`docs/MODEL_AUTHORING_WORKFLOW.md`](docs/MODEL_AUTHORING_WORKFLOW.md): the accepted sprite and building modeling process, source paint, and Minecraft quality checks
+- [`docs/EMERALD_MODEL_HANDOFF.md`](docs/EMERALD_MODEL_HANDOFF.md): resume the Emerald scenery and building pass after a context reset
+- [`docs/MODEL_HISTORY.md`](docs/MODEL_HISTORY.md): preserved originals and approved models, with individual rollback
 - [`CLAUDE.md`](CLAUDE.md): working rules for this repo
 
 ## Setting up a new machine

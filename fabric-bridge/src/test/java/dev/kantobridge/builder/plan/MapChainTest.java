@@ -1,6 +1,8 @@
 package dev.kantobridge.builder.plan;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.kantobridge.world.Dir;
 import dev.kantobridge.world.MapLayout;
@@ -16,6 +18,27 @@ class MapChainTest {
 	private static PlacedMap map(String id, int x, int z, MapLayout layout, String... rows) {
 		MapPlacement p = new MapPlacement(id, x, Scale.SURFACE_Y, z, 4, 4, 0, MapPlacement.Kind.SURFACE, "PAL", "kantobridge:kanto_outdoor", false, null);
 		return new PlacedMap(p, RaisedRegionsTest.model(rows), PairEdges.NONE, layout);
+	}
+
+	@Test
+	void unsetTheMapsChainFalseOrBlankTheyDont() {
+		String before = System.getProperty(MapChain.PROPERTY);
+		try {
+			System.clearProperty(MapChain.PROPERTY);
+			assertTrue(MapChain.enabled(), "every build's default since 2026-11-01");
+			System.setProperty(MapChain.PROPERTY, "");
+			assertFalse(MapChain.enabled(), "the JUnit runs' blank");
+			System.setProperty(MapChain.PROPERTY, "false");
+			assertFalse(MapChain.enabled(), "the GameTests' false");
+			System.setProperty(MapChain.PROPERTY, "true");
+			assertTrue(MapChain.enabled());
+		} finally {
+			if (before == null) {
+				System.clearProperty(MapChain.PROPERTY);
+			} else {
+				System.setProperty(MapChain.PROPERTY, before);
+			}
+		}
 	}
 
 	@Test

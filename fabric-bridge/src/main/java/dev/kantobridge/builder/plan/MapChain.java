@@ -28,15 +28,19 @@ import org.jetbrains.annotations.Nullable;
  * check over a dump. Pure Java.
  */
 public final class MapChain {
-	/** The system property that chains the outdoor maps (-Pkb.chainLevels=true); unset, every surface map's floor is the surface. */
+	/**
+	 * The system property that chains the outdoor maps: unset, they are chained (the default since 2026-11-01); {@code false}
+	 * or blank (the JUnit and GameTest runs), every surface map's floor is the surface.
+	 */
 	public static final String PROPERTY = "kantobridge.chainLevels";
 
 	private MapChain() {
 	}
 
-	/** Whether the system property chains the maps. */
+	/** Whether the maps are chained: the system property unset or {@code true}. */
 	public static boolean enabled() {
-		return Boolean.getBoolean(PROPERTY);
+		String value = System.getProperty(PROPERTY);
+		return value == null || Boolean.parseBoolean(value.trim());
 	}
 
 	/**

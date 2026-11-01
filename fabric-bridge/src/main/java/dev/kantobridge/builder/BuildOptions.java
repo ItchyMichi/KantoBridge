@@ -33,10 +33,14 @@ import org.jetbrains.annotations.Nullable;
  *                      and shape map; off builds today's world without them (the invariant tests compare the two)
  * @param region        the region this build makes or rebuilds (MG3), or null for a legacy build
  * @param slot          the region's slot in the region table (0..63), or {@link #NO_SLOT} for a legacy build
+ * @param shapeReport   build the shape table as a client would to self-check it and count its quads ({@link
+ *                      dev.kantobridge.builder.shape.ShapeReport}, the build report's shape fields and
+ *                      {@code shape_selfcheck.json}); off in the client's own builds (Create world, Add a region), where
+ *                      nothing reads it and Hoenn's table would cost minutes and gigabytes in the player's game
  */
 public record BuildOptions(int originX, int originZ, @Nullable Path worldDir, @Nullable Path packDir, @Nullable Path reportCopy,
 		boolean setWorldSpawn, boolean writePack, boolean writeDatapack, boolean publishIndex, int tickBudgetMs, boolean shapes,
-		@Nullable String region, int slot) {
+		@Nullable String region, int slot, boolean shapeReport) {
 	public static final int DEFAULT_TICK_BUDGET_MS = 25;
 	/** The slot of a legacy build (no region). */
 	public static final int NO_SLOT = -1;
@@ -59,6 +63,14 @@ public record BuildOptions(int originX, int originZ, @Nullable Path worldDir, @N
 		}
 	}
 
+	/** The options with the shape report (every build before it could be turned off). */
+	public BuildOptions(int originX, int originZ, @Nullable Path worldDir, @Nullable Path packDir, @Nullable Path reportCopy,
+			boolean setWorldSpawn, boolean writePack, boolean writeDatapack, boolean publishIndex, int tickBudgetMs, boolean shapes,
+			@Nullable String region, int slot) {
+		this(originX, originZ, worldDir, packDir, reportCopy, setWorldSpawn, writePack, writeDatapack, publishIndex, tickBudgetMs, shapes, region,
+				slot, true);
+	}
+
 	/** The options of a build before regions existed (a legacy build). */
 	public BuildOptions(int originX, int originZ, @Nullable Path worldDir, @Nullable Path packDir, @Nullable Path reportCopy,
 			boolean setWorldSpawn, boolean writePack, boolean writeDatapack, boolean publishIndex, int tickBudgetMs, boolean shapes) {
@@ -67,49 +79,55 @@ public record BuildOptions(int originX, int originZ, @Nullable Path worldDir, @N
 	}
 
 	public static BuildOptions defaults() {
-		return new BuildOptions(0, 0, null, null, null, true, true, true, true, DEFAULT_TICK_BUDGET_MS, true, null, NO_SLOT);
+		return new BuildOptions(0, 0, null, null, null, true, true, true, true, DEFAULT_TICK_BUDGET_MS, true, null, NO_SLOT, true);
 	}
 
 	public BuildOptions withOrigin(int x, int z) {
 		return new BuildOptions(x, z, this.worldDir, this.packDir, this.reportCopy, this.setWorldSpawn, this.writePack, this.writeDatapack,
-				this.publishIndex, this.tickBudgetMs, this.shapes, this.region, this.slot);
+				this.publishIndex, this.tickBudgetMs, this.shapes, this.region, this.slot, this.shapeReport);
 	}
 
 	public BuildOptions withWorldDir(@Nullable Path dir) {
 		return new BuildOptions(this.originX, this.originZ, dir, this.packDir, this.reportCopy, this.setWorldSpawn, this.writePack,
-				this.writeDatapack, this.publishIndex, this.tickBudgetMs, this.shapes, this.region, this.slot);
+				this.writeDatapack, this.publishIndex, this.tickBudgetMs, this.shapes, this.region, this.slot, this.shapeReport);
 	}
 
 	public BuildOptions withPackDir(@Nullable Path dir) {
 		return new BuildOptions(this.originX, this.originZ, this.worldDir, dir, this.reportCopy, this.setWorldSpawn, this.writePack,
-				this.writeDatapack, this.publishIndex, this.tickBudgetMs, this.shapes, this.region, this.slot);
+				this.writeDatapack, this.publishIndex, this.tickBudgetMs, this.shapes, this.region, this.slot, this.shapeReport);
 	}
 
 	public BuildOptions withReportCopy(@Nullable Path path) {
 		return new BuildOptions(this.originX, this.originZ, this.worldDir, this.packDir, path, this.setWorldSpawn, this.writePack,
-				this.writeDatapack, this.publishIndex, this.tickBudgetMs, this.shapes, this.region, this.slot);
+				this.writeDatapack, this.publishIndex, this.tickBudgetMs, this.shapes, this.region, this.slot, this.shapeReport);
 	}
 
 	public BuildOptions withWorldSpawn(boolean set) {
 		return new BuildOptions(this.originX, this.originZ, this.worldDir, this.packDir, this.reportCopy, set, this.writePack,
-				this.writeDatapack, this.publishIndex, this.tickBudgetMs, this.shapes, this.region, this.slot);
+				this.writeDatapack, this.publishIndex, this.tickBudgetMs, this.shapes, this.region, this.slot, this.shapeReport);
 	}
 
 	/** False when the pack is already written, e.g. by the client's "Create Kanto world" flow before the level exists. */
 	public BuildOptions withWritePack(boolean write) {
 		return new BuildOptions(this.originX, this.originZ, this.worldDir, this.packDir, this.reportCopy, this.setWorldSpawn, write,
-				this.writeDatapack, this.publishIndex, this.tickBudgetMs, this.shapes, this.region, this.slot);
+				this.writeDatapack, this.publishIndex, this.tickBudgetMs, this.shapes, this.region, this.slot, this.shapeReport);
 	}
 
 	public BuildOptions withPublishIndex(boolean publish) {
 		return new BuildOptions(this.originX, this.originZ, this.worldDir, this.packDir, this.reportCopy, this.setWorldSpawn, this.writePack,
-				this.writeDatapack, publish, this.tickBudgetMs, this.shapes, this.region, this.slot);
+				this.writeDatapack, publish, this.tickBudgetMs, this.shapes, this.region, this.slot, this.shapeReport);
 	}
 
 	/** With or without the world's shapes. */
 	public BuildOptions withShapes(boolean plan) {
 		return new BuildOptions(this.originX, this.originZ, this.worldDir, this.packDir, this.reportCopy, this.setWorldSpawn, this.writePack,
-				this.writeDatapack, this.publishIndex, this.tickBudgetMs, plan, this.region, this.slot);
+				this.writeDatapack, this.publishIndex, this.tickBudgetMs, plan, this.region, this.slot, this.shapeReport);
+	}
+
+	/** With or without the shape report (off: the client's own builds, see {@link #shapeReport()}). */
+	public BuildOptions withShapeReport(boolean report) {
+		return new BuildOptions(this.originX, this.originZ, this.worldDir, this.packDir, this.reportCopy, this.setWorldSpawn, this.writePack,
+				this.writeDatapack, this.publishIndex, this.tickBudgetMs, this.shapes, this.region, this.slot, report);
 	}
 
 	/**
@@ -121,7 +139,7 @@ public record BuildOptions(int originX, int originZ, @Nullable Path worldDir, @N
 			throw new IllegalArgumentException("a region build needs a region id");
 		}
 		return new BuildOptions(this.originX, this.originZ, this.worldDir, this.packDir, this.reportCopy, this.setWorldSpawn, this.writePack,
-				this.writeDatapack, this.publishIndex, this.tickBudgetMs, this.shapes, id, slot);
+				this.writeDatapack, this.publishIndex, this.tickBudgetMs, this.shapes, id, slot, this.shapeReport);
 	}
 
 	/** True for a region build (a region and a slot), false for a legacy build. */

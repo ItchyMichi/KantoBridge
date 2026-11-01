@@ -1,0 +1,802 @@
+{
+  "schema": 1,
+  "inspection": "All37 existing source/model cards and complete source room maps manually inspected; authored assemblies pending final local and Minecraft review.",
+  "entries": [
+    {
+      "key": "g3q/7419-7420-3262-3263",
+      "group": "building__mossdeep_gym",
+      "label": "Mossdeep statue globe",
+      "family": "gym room architecture",
+      "recipe": null,
+      "reason": "Retain the rounded white globe and narrow collar; it joins the exact matched plaque base and excludes the surrounding gray floor.",
+      "baseline_entry_sha256": "cf9cb4fda27e054bcb87d6a05b91fd90bd8742a6dc154635b6ad4f4546c1ad91",
+      "source_contact": "../inventory/building__mossdeep_gym/page-001.png",
+      "source_card": 1,
+      "assemblies": [
+        "emerald_mossdeep_entry_statue"
+      ]
+    },
+    {
+      "key": "g3q/3267-3268-7429-7430",
+      "group": "building__mossdeep_gym",
+      "label": "Mossdeep statue plaque base",
+      "family": "gym room architecture",
+      "recipe": null,
+      "reason": "Retain the grounded plaque body, dark inset emblem and separate bottom foot supporting the paired globe.",
+      "baseline_entry_sha256": "5dc434bc468aa7c3bab087bc8201a3b1be265584cace3d61c2139ef498343480",
+      "source_contact": "../inventory/building__mossdeep_gym/page-001.png",
+      "source_card": 2,
+      "assemblies": [
+        "emerald_mossdeep_entry_statue"
+      ]
+    },
+    {
+      "key": "g3q/7423-7431-7425-7432",
+      "group": "building__mossdeep_gym",
+      "label": "Mossdeep partition right corner",
+      "family": "gym room architecture",
+      "recipe": "wall",
+      "reason": "Close the perforated partition end with a shallow gray backing while preserving its red border and source corner face.",
+      "baseline_entry_sha256": "25aa77e3ee0ff5dd85b15533a876ac3c4b44c0505c90f21e96ac54c8a7e45a95",
+      "source_contact": "../inventory/building__mossdeep_gym/page-001.png",
+      "source_card": 3,
+      "assemblies": [
+        "emerald_mossdeep_right_corner"
+      ]
+    },
+    {
+      "key": "g3q/7431-7424-7433-7426",
+      "group": "building__mossdeep_gym",
+      "label": "Mossdeep partition left corner",
+      "family": "gym room architecture",
+      "recipe": "wall",
+      "reason": "Replace the open pixel extrusion with a closed shallow partition; retain the native red/gray corner orientation.",
+      "baseline_entry_sha256": "f8bd5ca1465595fb8f71e5bb1581981988ab753dcdc938bc42d4ef3829a59f6c",
+      "source_contact": "../inventory/building__mossdeep_gym/page-001.png",
+      "source_card": 4,
+      "assemblies": [
+        "emerald_mossdeep_left_corner"
+      ]
+    },
+    {
+      "key": "g3q/7438-7439-7440-7441",
+      "group": "building__mossdeep_gym",
+      "label": "Mossdeep partition end",
+      "family": "gym room architecture",
+      "recipe": "wall",
+      "reason": "Fill the unintended holes in the gray partition end with one bounded three-voxel-deep wall panel.",
+      "baseline_entry_sha256": "7df8054b57e015e6c47d34993c09ce5e127d1c4c76e11cc3e23261c778ce7bf2",
+      "source_contact": "../inventory/building__mossdeep_gym/page-001.png",
+      "source_card": 5,
+      "assemblies": [
+        "emerald_mossdeep_wall_end"
+      ]
+    },
+    {
+      "key": "g3q/7450-7451-7452-7453",
+      "group": "building__mossdeep_gym",
+      "label": "Mossdeep dais northwest rail",
+      "family": "gym room architecture",
+      "recipe": "dais_0_0",
+      "reason": "Join the raised deep-blue west rail to the complete low blue platform and rear border.",
+      "baseline_entry_sha256": "9197e60b4d784f543189b0b18a6e7de92da4afe1fc2e5abc96941382a00aab5b",
+      "source_contact": "../inventory/building__mossdeep_gym/page-001.png",
+      "source_card": 6,
+      "assemblies": [
+        "emerald_mossdeep_complete_dais"
+      ]
+    },
+    {
+      "key": "g3q/7454-7455-7456-7457",
+      "group": "building__mossdeep_gym",
+      "label": "Mossdeep dais pink mat left",
+      "family": "gym room architecture",
+      "recipe": "dais_1_0",
+      "reason": "Keep the pink mat top-facing as a shallow inset surface within the blue platform, without turning the pattern into isolated tall cubes.",
+      "baseline_entry_sha256": "4a73d1c7fcb8a1e08057ed44a28195b4755dd573e18e16b3d1bddb7de6b012e6",
+      "source_contact": "../inventory/building__mossdeep_gym/page-001.png",
+      "source_card": 7,
+      "assemblies": [
+        "emerald_mossdeep_complete_dais"
+      ]
+    },
+    {
+      "key": "g3q/7455-7458-7457-7459",
+      "group": "building__mossdeep_gym",
+      "label": "Mossdeep dais pink mat right",
+      "family": "gym room architecture",
+      "recipe": "dais_2_0",
+      "reason": "Continue the same shallow pink inset mat across the right center, aligned to the left half.",
+      "baseline_entry_sha256": "20e303f2d7fbf37349e5af85fbaa2b8858e65d1e6d2a2a39b550be0ea3d48421",
+      "source_contact": "../inventory/building__mossdeep_gym/page-001.png",
+      "source_card": 8,
+      "assemblies": [
+        "emerald_mossdeep_complete_dais"
+      ]
+    },
+    {
+      "key": "g3q/7460-7461-7462-7463",
+      "group": "building__mossdeep_gym",
+      "label": "Mossdeep dais northeast rail",
+      "family": "gym room architecture",
+      "recipe": "dais_3_0",
+      "reason": "Join the east deep-blue rail to the same continuous platform and rear border.",
+      "baseline_entry_sha256": "c7a48587641e55fe7f3a100d992adec1e764e3c422a8554afce8d63bb4120c2a",
+      "source_contact": "../inventory/building__mossdeep_gym/page-001.png",
+      "source_card": 9,
+      "assemblies": [
+        "emerald_mossdeep_complete_dais"
+      ]
+    },
+    {
+      "key": "g3q/7465-7453-7466-7467",
+      "group": "building__mossdeep_gym",
+      "label": "Mossdeep dais southwest corner",
+      "family": "gym room architecture",
+      "recipe": "dais_0_1",
+      "reason": "Continue the grounded west rail around the front corner with a low platform beneath it.",
+      "baseline_entry_sha256": "bc36f4e60ad939a25349b817fab7716753fa755dd85c254061953824697fd11e",
+      "source_contact": "../inventory/building__mossdeep_gym/page-001.png",
+      "source_card": 10,
+      "assemblies": [
+        "emerald_mossdeep_complete_dais"
+      ]
+    },
+    {
+      "key": "g3q/7462-7472-7473-7474",
+      "group": "building__mossdeep_gym",
+      "label": "Mossdeep dais southeast corner",
+      "family": "gym room architecture",
+      "recipe": "dais_3_1",
+      "reason": "Continue the east rail to its front end without filling the platform approach with a tall block.",
+      "baseline_entry_sha256": "3d9c4ab9b09a89b70f884011eaea3ea9b4ea3584f257a7489f59127dc7309dd7",
+      "source_contact": "../inventory/building__mossdeep_gym/page-001.png",
+      "source_card": 11,
+      "assemblies": [
+        "emerald_mossdeep_complete_dais"
+      ]
+    },
+    {
+      "key": "g3q/7446-7480-7447-7481",
+      "group": "building__mossdeep_gym",
+      "label": "Mossdeep badge wall left",
+      "family": "gym room architecture",
+      "recipe": "wall",
+      "reason": "Keep the left half of the pink/blue badge on a closed gray/red backing; the badge is a wall motif, not a detached column.",
+      "baseline_entry_sha256": "423ce796261d8753c0dc523f624a1f424c70a379ec6f4f4145fd341b0aa83b8e",
+      "source_contact": "../inventory/building__mossdeep_gym/page-001.png",
+      "source_card": 12,
+      "assemblies": [
+        "emerald_mossdeep_badge_wall"
+      ]
+    },
+    {
+      "key": "g3q/7482-7443-7483-7445",
+      "group": "building__mossdeep_gym",
+      "label": "Mossdeep badge wall right",
+      "family": "gym room architecture",
+      "recipe": "wall",
+      "reason": "Complete the right half of the same badge wall with a closed shallow backing and continuous red framing.",
+      "baseline_entry_sha256": "3c1d4f1028c3409e1f083502eb3ce061baf427585a4731830cce318c99e39985",
+      "source_contact": "../inventory/building__mossdeep_gym/page-001.png",
+      "source_card": 13,
+      "assemblies": [
+        "emerald_mossdeep_badge_wall"
+      ]
+    },
+    {
+      "key": "g3q/7853-7853-7855-7855",
+      "group": "building__petalburg_gym",
+      "label": "Petalburg patterned wooden wall",
+      "family": "gym room architecture",
+      "recipe": "wall",
+      "reason": "Close the holes cut by the wood grain in the original extrusion; retain the brown patterned face on a shallow structural wall.",
+      "baseline_entry_sha256": "4a054d13b0ce9fdd94e42cc801e6f4c08c24e90fa56570cde9a5f8bc10307d91",
+      "source_contact": "../inventory/building__petalburg_gym/page-001.png",
+      "source_card": 1,
+      "assemblies": [
+        "emerald_petalburg_badge_wall"
+      ]
+    },
+    {
+      "key": "g3q/7860-7861-7862-7863",
+      "group": "building__petalburg_gym",
+      "label": "Petalburg gym badge wall",
+      "family": "gym room architecture",
+      "recipe": "wall",
+      "reason": "Keep the inset gym badge and wooden framing on one closed shallow wall rather than allowing dark source pixels to perforate it.",
+      "baseline_entry_sha256": "8c69f3ba4965398e1481dca2b2b346e4169a7e37b48c610119dd90bbdd55b4cc",
+      "source_contact": "../inventory/building__petalburg_gym/page-001.png",
+      "source_card": 2,
+      "assemblies": [
+        "emerald_petalburg_badge_wall"
+      ]
+    },
+    {
+      "key": "g3q/7841-7841-7872-7873",
+      "group": "building__petalburg_gym",
+      "label": "Petalburg door header",
+      "family": "gym room architecture",
+      "recipe": "wall",
+      "reason": "Join the brown upper wall and door lintel to the actual leaf below as a two-row shallow doorway.",
+      "baseline_entry_sha256": "3a691605b30ad343afc6a2de9b4435c3c9c5e8013c3d119df2e8f26123502d90",
+      "source_contact": "../inventory/building__petalburg_gym/page-001.png",
+      "source_card": 3,
+      "assemblies": [
+        "emerald_petalburg_door"
+      ],
+      "on": "g3q/7889-7890-7891-7892"
+    },
+    {
+      "key": "g3q/7889-7890-7891-7892",
+      "group": "building__petalburg_gym",
+      "label": "Petalburg door leaf",
+      "family": "gym room architecture",
+      "recipe": "wall",
+      "reason": "Preserve the gray door, gold handle and wooden frame on a complete closed leaf supporting its explicit upper header.",
+      "baseline_entry_sha256": "aeccd2190b8cbf817f8fc8222d06d875abc90a546029e8fee628bed1e700f52d",
+      "source_contact": "../inventory/building__petalburg_gym/page-001.png",
+      "source_card": 4,
+      "assemblies": [
+        "emerald_petalburg_door"
+      ]
+    },
+    {
+      "key": "g3q/7913-7914-7855-7855",
+      "group": "building__petalburg_gym",
+      "label": "Petalburg window left",
+      "family": "gym room architecture",
+      "recipe": "wall",
+      "reason": "Preserve the left window frame and patterned timber on a closed shallow wall backing.",
+      "baseline_entry_sha256": "239335d02cf4cb39517e0e6edce55d85f29b37d83070014de3fbe2e4c13366ae",
+      "source_contact": "../inventory/building__petalburg_gym/page-001.png",
+      "source_card": 5,
+      "assemblies": [
+        "emerald_petalburg_window_pair"
+      ]
+    },
+    {
+      "key": "g3q/7914-7915-7855-7855",
+      "group": "building__petalburg_gym",
+      "label": "Petalburg window right",
+      "family": "gym room architecture",
+      "recipe": "wall",
+      "reason": "Join the adjacent right window and timber panel to the same shallow wall without source-pixel holes.",
+      "baseline_entry_sha256": "239335d02cf4cb39517e0e6edce55d85f29b37d83070014de3fbe2e4c13366ae",
+      "source_contact": "../inventory/building__petalburg_gym/page-001.png",
+      "source_card": 6,
+      "assemblies": [
+        "emerald_petalburg_window_pair"
+      ]
+    },
+    {
+      "key": "g3q/7917-7918-7919-7920",
+      "group": "building__petalburg_gym",
+      "label": "Petalburg tatami dais rear column 1",
+      "family": "gym room architecture",
+      "recipe": null,
+      "reason": "Retain the bounded low west gold rail; its rear edge joins the other nine source cells in the complete platform without isolated raised floor paint.",
+      "baseline_entry_sha256": "2ee2a75bb5a0563b6a443d9f6f2d5f497300aa7978219e7f9ca14c778b928ae1",
+      "source_contact": "../inventory/building__petalburg_gym/page-001.png",
+      "source_card": 7,
+      "assemblies": [
+        "emerald_petalburg_tatami_dais"
+      ]
+    },
+    {
+      "key": "g3q/7918-7921-7920-7922",
+      "group": "building__petalburg_gym",
+      "label": "Petalburg tatami dais rear column 2",
+      "family": "gym room architecture",
+      "recipe": null,
+      "reason": "Retain the bounded low tatami floor panel; its rear edge joins the other nine source cells in the complete platform without isolated raised floor paint.",
+      "baseline_entry_sha256": "8c10562d3f2f0e91df1e29d9dc09e7fead32189f0138f83e7c36f14d6d1c28b2",
+      "source_contact": "../inventory/building__petalburg_gym/page-001.png",
+      "source_card": 8,
+      "assemblies": [
+        "emerald_petalburg_tatami_dais"
+      ]
+    },
+    {
+      "key": "g3q/7923-7923-7924-7924",
+      "group": "building__petalburg_gym",
+      "label": "Petalburg tatami dais rear column 3",
+      "family": "gym room architecture",
+      "recipe": null,
+      "reason": "Retain the bounded low tatami floor panel; its rear edge joins the other nine source cells in the complete platform without isolated raised floor paint.",
+      "baseline_entry_sha256": "927200148c960c1a936c806b5f7f87744da7333c938639d6fb1e4734f2ede055",
+      "source_contact": "../inventory/building__petalburg_gym/page-001.png",
+      "source_card": 9,
+      "assemblies": [
+        "emerald_petalburg_tatami_dais"
+      ]
+    },
+    {
+      "key": "g3q/7925-7918-7926-7920",
+      "group": "building__petalburg_gym",
+      "label": "Petalburg tatami dais rear column 4",
+      "family": "gym room architecture",
+      "recipe": null,
+      "reason": "Retain the bounded low tatami floor panel; its rear edge joins the other nine source cells in the complete platform without isolated raised floor paint.",
+      "baseline_entry_sha256": "0f28f11cce94ca98e663d21202032e287d5492c3ef6c7c2f02cfc8dd63c200a9",
+      "source_contact": "../inventory/building__petalburg_gym/page-001.png",
+      "source_card": 10,
+      "assemblies": [
+        "emerald_petalburg_tatami_dais"
+      ]
+    },
+    {
+      "key": "g3q/7918-7927-7920-7928",
+      "group": "building__petalburg_gym",
+      "label": "Petalburg tatami dais rear column 5",
+      "family": "gym room architecture",
+      "recipe": null,
+      "reason": "Retain the bounded low east gold rail; its rear edge joins the other nine source cells in the complete platform without isolated raised floor paint.",
+      "baseline_entry_sha256": "54902571388a3727eff2e5fc7b80e9c9c9835c559c3d2210361973d574465d7f",
+      "source_contact": "../inventory/building__petalburg_gym/page-001.png",
+      "source_card": 11,
+      "assemblies": [
+        "emerald_petalburg_tatami_dais"
+      ]
+    },
+    {
+      "key": "g3q/7929-7930-7931-7932",
+      "group": "building__petalburg_gym",
+      "label": "Petalburg tatami dais front column 1",
+      "family": "gym room architecture",
+      "recipe": null,
+      "reason": "Retain the bounded low west gold rail; its front edge joins the other nine source cells in the complete platform without isolated raised floor paint.",
+      "baseline_entry_sha256": "fc72a76a23a663fb53559ee0665073594f7c201279b3d2d0426b3698ad31b85b",
+      "source_contact": "../inventory/building__petalburg_gym/page-001.png",
+      "source_card": 12,
+      "assemblies": [
+        "emerald_petalburg_tatami_dais"
+      ]
+    },
+    {
+      "key": "g3q/7930-7930-7933-7934",
+      "group": "building__petalburg_gym",
+      "label": "Petalburg tatami dais front column 2",
+      "family": "gym room architecture",
+      "recipe": null,
+      "reason": "Retain the bounded low tatami floor panel; its front edge joins the other nine source cells in the complete platform without isolated raised floor paint.",
+      "baseline_entry_sha256": "73b7abcfed5fabb13cc711b73c6ba877003f94e993245deb417f32ea194360e2",
+      "source_contact": "../inventory/building__petalburg_gym/page-001.png",
+      "source_card": 13,
+      "assemblies": [
+        "emerald_petalburg_tatami_dais"
+      ]
+    },
+    {
+      "key": "g3q/7930-7930-7934-7934",
+      "group": "building__petalburg_gym",
+      "label": "Petalburg tatami dais front column 3",
+      "family": "gym room architecture",
+      "recipe": null,
+      "reason": "Retain the bounded low tatami floor panel; its front edge joins the other nine source cells in the complete platform without isolated raised floor paint.",
+      "baseline_entry_sha256": "dfd879f85532296a0835f01c5f415803c56376788b12ea9e5086af22461e9f55",
+      "source_contact": "../inventory/building__petalburg_gym/page-001.png",
+      "source_card": 14,
+      "assemblies": [
+        "emerald_petalburg_tatami_dais"
+      ]
+    },
+    {
+      "key": "g3q/7930-7930-7934-7935",
+      "group": "building__petalburg_gym",
+      "label": "Petalburg tatami dais front column 4",
+      "family": "gym room architecture",
+      "recipe": null,
+      "reason": "Retain the bounded low tatami floor panel; its front edge joins the other nine source cells in the complete platform without isolated raised floor paint.",
+      "baseline_entry_sha256": "4d644b2c45e52f0715ca2445f26351d14a24827943b61932f8ffffdd11a4caf6",
+      "source_contact": "../inventory/building__petalburg_gym/page-001.png",
+      "source_card": 15,
+      "assemblies": [
+        "emerald_petalburg_tatami_dais"
+      ]
+    },
+    {
+      "key": "g3q/7930-7936-7932-7937",
+      "group": "building__petalburg_gym",
+      "label": "Petalburg tatami dais front column 5",
+      "family": "gym room architecture",
+      "recipe": null,
+      "reason": "Retain the bounded low east gold rail; its front edge joins the other nine source cells in the complete platform without isolated raised floor paint.",
+      "baseline_entry_sha256": "d4e540da6e74ab83fbf98904219b826c416c2f5f3b24c1ea082baaec04217f8f",
+      "source_contact": "../inventory/building__petalburg_gym/page-001.png",
+      "source_card": 16,
+      "assemblies": [
+        "emerald_petalburg_tatami_dais"
+      ]
+    },
+    {
+      "key": "g3q/7938-7939-3262-3263",
+      "group": "building__petalburg_gym",
+      "label": "Petalburg statue globe",
+      "family": "gym room architecture",
+      "recipe": "statue_clean",
+      "reason": "Preserve the existing bounded globe/collar or plaque/foot geometry, but replace the yellow floor-colored edge specks with native pedestal gray; the actual paired object stays intact.",
+      "baseline_entry_sha256": "8d1c58fb53c0e75237acee964f56f4ba14254e3ddf4e99c7fd7dd5eb8a0b9902",
+      "source_contact": "../inventory/building__petalburg_gym/page-001.png",
+      "source_card": 17,
+      "assemblies": [
+        "emerald_petalburg_entry_statue"
+      ]
+    },
+    {
+      "key": "g3q/3267-3268-7948-7949",
+      "group": "building__petalburg_gym",
+      "label": "Petalburg statue plaque base",
+      "family": "gym room architecture",
+      "recipe": "statue_clean",
+      "reason": "Preserve the existing bounded globe/collar or plaque/foot geometry, but replace the yellow floor-colored edge specks with native pedestal gray; the actual paired object stays intact.",
+      "baseline_entry_sha256": "d184dc5a7856cb7566d96549ac36de771f290604878b488b4647500fe8a8496a",
+      "source_contact": "../inventory/building__petalburg_gym/page-001.png",
+      "source_card": 18,
+      "assemblies": [
+        "emerald_petalburg_entry_statue"
+      ]
+    },
+    {
+      "key": "g3q/7841-7841-7843-7950",
+      "group": "building__petalburg_gym",
+      "label": "Petalburg alcove upper left",
+      "family": "gym room architecture",
+      "recipe": "alcove_0_1",
+      "reason": "Join the upper left brown wall and gray pilaster to its lower side panel, framing the flower niche.",
+      "baseline_entry_sha256": "1d4d3b2030e1d043869a5c108d3b761c851aeaf2bad7356f096f186494b38fee",
+      "source_contact": "../inventory/building__petalburg_gym/page-001.png",
+      "source_card": 19,
+      "assemblies": [
+        "emerald_petalburg_flower_alcove"
+      ],
+      "on": "g3q/7853-7951-7855-7952"
+    },
+    {
+      "key": "g3q/7853-7951-7855-7952",
+      "group": "building__petalburg_gym",
+      "label": "Petalburg alcove lower left",
+      "family": "gym room architecture",
+      "recipe": "alcove_0_0",
+      "reason": "Ground the left niche pilaster and preserve the adjacent patterned brown wall as part of the complete three-column alcove.",
+      "baseline_entry_sha256": "6ae40aae692fe48891cf0a199c0126444d2942b08c6ffb6d14f8720c9211acbe",
+      "source_contact": "../inventory/building__petalburg_gym/page-001.png",
+      "source_card": 20,
+      "assemblies": [
+        "emerald_petalburg_flower_alcove"
+      ]
+    },
+    {
+      "key": "g3q/7841-7841-7957-7958",
+      "group": "building__petalburg_gym",
+      "label": "Petalburg alcove upper center",
+      "family": "gym room architecture",
+      "recipe": "alcove_1_1",
+      "reason": "Replace the white-flower source extrusion with a rounded blossom and stem in front of the niche backing; align with the pot below.",
+      "baseline_entry_sha256": "c9eef7d3e5c7ad8b18d9ae5354769a07410a286b53945f0aedfecc942068df80",
+      "source_contact": "../inventory/building__petalburg_gym/page-001.png",
+      "source_card": 21,
+      "assemblies": [
+        "emerald_petalburg_flower_alcove"
+      ],
+      "on": "g3q/7967-7968-7969-7970"
+    },
+    {
+      "key": "g3q/7967-7968-7969-7970",
+      "group": "building__petalburg_gym",
+      "label": "Petalburg alcove pot and shelf",
+      "family": "gym room architecture",
+      "recipe": "alcove_1_0",
+      "reason": "Author the red shelf, dark rounded pot and green stem as supported distinct parts under the white blossom.",
+      "baseline_entry_sha256": "2685ab7a38ef099834e25265b7c286424c97ffa1885874cf93badc69bc7a356d",
+      "source_contact": "../inventory/building__petalburg_gym/page-001.png",
+      "source_card": 22,
+      "assemblies": [
+        "emerald_petalburg_flower_alcove"
+      ]
+    },
+    {
+      "key": "g3q/7841-7841-7971-7843",
+      "group": "building__petalburg_gym",
+      "label": "Petalburg alcove upper right",
+      "family": "gym room architecture",
+      "recipe": "alcove_2_1",
+      "reason": "Join the upper right wall and gray trim to its lower pilaster, completing the niche frame.",
+      "baseline_entry_sha256": "9fa83a70af8457db5ccf0445073b325657b2c448f9e382fbd692ab180df451dd",
+      "source_contact": "../inventory/building__petalburg_gym/page-001.png",
+      "source_card": 23,
+      "assemblies": [
+        "emerald_petalburg_flower_alcove"
+      ],
+      "on": "g3q/7972-7853-7973-7855"
+    },
+    {
+      "key": "g3q/7972-7853-7973-7855",
+      "group": "building__petalburg_gym",
+      "label": "Petalburg alcove lower right",
+      "family": "gym room architecture",
+      "recipe": "alcove_2_0",
+      "reason": "Ground the right pilaster beside the red shelf and patterned wall, retaining the source alcove width.",
+      "baseline_entry_sha256": "9a91a8b13e1e2cd9b0460b2323722b54ea616cca81bed2181a546520fda7fd4d",
+      "source_contact": "../inventory/building__petalburg_gym/page-001.png",
+      "source_card": 24,
+      "assemblies": [
+        "emerald_petalburg_flower_alcove"
+      ]
+    },
+    {
+      "key": "g3q/7468-7468-7469-7470",
+      "group": "building__mossdeep_gym",
+      "label": "Mossdeep lower center platform 1",
+      "family": "gym room architecture",
+      "recipe": "dais_1_1",
+      "reason": "Complete the missing low blue approach surface between the two existing front rail corners, with native source pixels kept top-facing.",
+      "baseline_entry_sha256": null,
+      "source_contact": "../gym-study/mossdeep-dais.png",
+      "source_card": null,
+      "assemblies": [
+        "emerald_mossdeep_complete_dais"
+      ]
+    },
+    {
+      "key": "g3q/7468-7468-7470-7471",
+      "group": "building__mossdeep_gym",
+      "label": "Mossdeep lower center platform 2",
+      "family": "gym room architecture",
+      "recipe": "dais_2_1",
+      "reason": "Complete the missing low blue approach surface between the two existing front rail corners, with native source pixels kept top-facing.",
+      "baseline_entry_sha256": null,
+      "source_contact": "../gym-study/mossdeep-dais.png",
+      "source_card": null,
+      "assemblies": [
+        "emerald_mossdeep_complete_dais"
+      ]
+    }
+  ],
+  "assemblies": [
+    {
+      "id": "emerald_mossdeep_complete_dais",
+      "map": "EM_MOSSDEEP_CITY_GYM",
+      "rect": [
+        22,
+        7,
+        4,
+        2
+      ],
+      "kind": "floor (model as one)",
+      "note": "One blue platform with pink inset mat, deep blue side rails and shallow front step; both missing lower center cells included.",
+      "source_layout": [
+        [
+          "g3q/7450-7451-7452-7453",
+          "g3q/7454-7455-7456-7457",
+          "g3q/7455-7458-7457-7459",
+          "g3q/7460-7461-7462-7463"
+        ],
+        [
+          "g3q/7465-7453-7466-7467",
+          "g3q/7468-7468-7469-7470",
+          "g3q/7468-7468-7470-7471",
+          "g3q/7462-7472-7473-7474"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_mossdeep_entry_statue",
+      "map": "EM_MOSSDEEP_CITY_GYM",
+      "rect": [
+        4,
+        33,
+        1,
+        2
+      ],
+      "kind": "stack (model as one)",
+      "note": "Existing rounded globe and plaque base retain the exact matched pair.",
+      "source_layout": [
+        [
+          "g3q/7419-7420-3262-3263"
+        ],
+        [
+          "g3q/3267-3268-7429-7430"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_mossdeep_badge_wall",
+      "map": "EM_MOSSDEEP_CITY_GYM",
+      "rect": [
+        23,
+        6,
+        2,
+        1
+      ],
+      "kind": "wall (model as one)",
+      "note": "Two adjacent gray/red wall panels form the complete central gym badge behind the platform.",
+      "source_layout": [
+        [
+          "g3q/7446-7480-7447-7481",
+          "g3q/7482-7443-7483-7445"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_mossdeep_right_corner",
+      "map": "EM_MOSSDEEP_CITY_GYM",
+      "rect": [
+        7,
+        2,
+        1,
+        1
+      ],
+      "kind": "wall (model as one)",
+      "note": "Actual-map partition end with closed shallow wall backing and source-local trim.",
+      "source_layout": [
+        [
+          "g3q/7423-7431-7425-7432"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_mossdeep_left_corner",
+      "map": "EM_MOSSDEEP_CITY_GYM",
+      "rect": [
+        5,
+        2,
+        1,
+        1
+      ],
+      "kind": "wall (model as one)",
+      "note": "Actual-map partition end with closed shallow wall backing and source-local trim.",
+      "source_layout": [
+        [
+          "g3q/7431-7424-7433-7426"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_mossdeep_wall_end",
+      "map": "EM_MOSSDEEP_CITY_GYM",
+      "rect": [
+        5,
+        7,
+        1,
+        1
+      ],
+      "kind": "wall (model as one)",
+      "note": "Actual-map partition end with closed shallow wall backing and source-local trim.",
+      "source_layout": [
+        [
+          "g3q/7438-7439-7440-7441"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_petalburg_tatami_dais",
+      "map": "EM_PETALBURG_CITY_GYM",
+      "rect": [
+        2,
+        2,
+        5,
+        2
+      ],
+      "kind": "floor (model as one)",
+      "note": "Complete ten-cell low tatami platform; all gold rails, inset mats and front edge remain bounded and continuous.",
+      "source_layout": [
+        [
+          "g3q/7917-7918-7919-7920",
+          "g3q/7918-7921-7920-7922",
+          "g3q/7923-7923-7924-7924",
+          "g3q/7925-7918-7926-7920",
+          "g3q/7918-7927-7920-7928"
+        ],
+        [
+          "g3q/7929-7930-7931-7932",
+          "g3q/7930-7930-7933-7934",
+          "g3q/7930-7930-7934-7934",
+          "g3q/7930-7930-7934-7935",
+          "g3q/7930-7936-7932-7937"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_petalburg_entry_statue",
+      "map": "EM_PETALBURG_CITY_GYM",
+      "rect": [
+        1,
+        109,
+        1,
+        2
+      ],
+      "kind": "stack (model as one)",
+      "note": "Existing globe and separate plaque foot form the complete entry statue.",
+      "source_layout": [
+        [
+          "g3q/7938-7939-3262-3263"
+        ],
+        [
+          "g3q/3267-3268-7948-7949"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_petalburg_door",
+      "map": "EM_PETALBURG_CITY_GYM",
+      "rect": [
+        7,
+        13,
+        1,
+        2
+      ],
+      "kind": "stack (model as one)",
+      "note": "Door header and full leaf occupy the actual two consecutive source rows as one shallow framed doorway.",
+      "source_layout": [
+        [
+          "g3q/7841-7841-7872-7873"
+        ],
+        [
+          "g3q/7889-7890-7891-7892"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_petalburg_flower_alcove",
+      "map": "EM_PETALBURG_CITY_GYM",
+      "rect": [
+        3,
+        104,
+        3,
+        2
+      ],
+      "kind": "stack (model as one)",
+      "note": "Complete three-column two-row niche: framed brown wall, red shelf, dark flower pot, green stem and white blossom.",
+      "source_layout": [
+        [
+          "g3q/7841-7841-7843-7950",
+          "g3q/7841-7841-7957-7958",
+          "g3q/7841-7841-7971-7843"
+        ],
+        [
+          "g3q/7853-7951-7855-7952",
+          "g3q/7967-7968-7969-7970",
+          "g3q/7972-7853-7973-7855"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_petalburg_window_pair",
+      "map": "EM_PETALBURG_CITY_GYM",
+      "rect": [
+        1,
+        1,
+        2,
+        1
+      ],
+      "kind": "wall (model as one)",
+      "note": "Two neighboring upper window panels keep their source frames on a continuous shallow wooden wall.",
+      "source_layout": [
+        [
+          "g3q/7913-7914-7855-7855",
+          "g3q/7914-7915-7855-7855"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_petalburg_badge_wall",
+      "map": "EM_PETALBURG_CITY_GYM",
+      "rect": [
+        3,
+        1,
+        3,
+        1
+      ],
+      "kind": "wall (model as one)",
+      "note": "Central gym badge framed by the adjacent continuous wooden wall sections.",
+      "source_layout": [
+        [
+          "g3q/7853-7853-7855-7855",
+          "g3q/7860-7861-7862-7863",
+          "g3q/7853-7853-7855-7855"
+        ]
+      ]
+    }
+  ]
+}

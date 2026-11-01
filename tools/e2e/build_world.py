@@ -245,7 +245,9 @@ def build(bundle, maps, world, timeout=3600, region=None, slot=None, heap=None, 
     comma-separated) stands those outdoor maps on raised ground (HEIGHTS_ALL_GAMES_PLAN.md D4, the levels pilot)."""
     extra = region_args(region, slot) + list(extra or [])
     if landscape_models is not None:
-        extra.append(f"-Pkb.landscapeModels={Path(landscape_models).resolve()}")
+        # "none": no table (since 2026-11-01 a build takes the jar's table unless told otherwise)
+        table = "none" if str(landscape_models) == "none" else Path(landscape_models).resolve()
+        extra.append(f"-Pkb.landscapeModels={table}")
     if outdoor_levels:
         extra.append(f"-Pkb.outdoorLevels={outdoor_levels}")
     if chain_levels:
@@ -440,6 +442,13 @@ def write_viewpoints(report, world, path=VIEWPOINTS):
     return path
 
 
+def flat_args(args):
+    """--flat: the Gradle properties that turn off raised outdoor ground, the chain and the landscape models."""
+    if not getattr(args, "flat", False):
+        return []
+    return ["-Pkb.outdoorLevels=none", "-Pkb.chainLevels=false", "-Pkb.landscapeModels=none"]
+
+
 def build_games(args, maps):
     """WS6: --games: each game's bundle (exported unless --skip-export), then one server run building them all, the world
     record written first (start: --start)."""
@@ -454,7 +463,7 @@ def build_games(args, maps):
         pairs.append(f"{game}={Path(bundle).resolve()}")
     extra = [f"-Pkb.buildGames={','.join(pairs)}"] + ([f"-Pkb.buildStart={args.start}"] if args.start else [])
     print(f"== build {len(games)} regions into saves/{args.world} (start {args.start or 'the first'})")
-    code = build(None, maps, args.world, heap=args.heap, extra=extra)
+    code = build(None, maps, args.world, heap=args.heap, extra=extra + flat_args(args))
     if not REPORT.exists():
         print(f"no build report (server exit {code})")
         return 1
@@ -479,9 +488,15 @@ def main(argv=None):
                         "request, comma-separated (slot order; each game's catalogue region), e.g. blue,crystal")
     parser.add_argument("--start", default=None, help="WS6: with --games, the start region (the world spawn); default the first game's")
     parser.add_argument("--heap", default=None, help="MG7: the server's heap, e.g. 8g (a full Hoenn needs more than the default)")
-    parser.add_argument("--landscape-models", default=None, help="the landscape sections' models: a table (models_table.py)")
-    parser.add_argument("--outdoor-levels", default=None, help="outdoor maps on raised ground (the levels pilot): map ids, or all")
-    parser.add_argument("--chain-levels", action="store_true", help="each surface map's floor where its neighbour's ground leaves off")
+    # Since 2026-11-01 every build has raised outdoor ground on every map, chained, with the jar's models table; these
+    # three override that, --flat turns all three off (the outdoors as before).
+    parser.add_argument("--landscape-models", default=None, help="the landscape sections' models: a table (models_table.py) in place "
+                        "of the jar's, or none")
+    parser.add_argument("--outdoor-levels", default=None, help="outdoor maps on raised ground: map ids, all (the default) or none")
+    parser.add_argument("--chain-levels", action="store_true", help="each surface map's floor where its neighbour's ground leaves off "
+                        "(the default; kept for the pod scripts)")
+    parser.add_argument("--flat", action="store_true", help="the outdoors flat, as before 2026-11-01: no raised ground, chain or "
+                        "landscape models")
     args = parser.parse_args(argv)
 
     maps = [] if args.maps == "all" else MAP_SETS.get(args.maps) or args.maps.split(",")
@@ -506,7 +521,7 @@ def main(argv=None):
     where = f"saves/{args.world}" + (f" as region {args.region} (slot {args.slot})" if args.region is not None else "")
     print(f"== build ({len(maps) or 'all'} maps) into {where}")
     code = build(bundle, maps, args.world, region=args.region, slot=args.slot, heap=args.heap, landscape_models=args.landscape_models,
-                 outdoor_levels=args.outdoor_levels, chain_levels=args.chain_levels)
+                 outdoor_levels=args.outdoor_levels, chain_levels=args.chain_levels, extra=flat_args(args))
     if not REPORT.exists():
         print(f"no build report (server exit {code})")
         return 1

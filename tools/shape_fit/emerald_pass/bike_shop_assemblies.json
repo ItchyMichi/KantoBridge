@@ -1,0 +1,766 @@
+[
+  {
+    "id": "emerald_bike_shop_west_bike_3",
+    "kind": "object (model as one)",
+    "note": "Complete bicycle across two original solid cells; handlebars from neighboring source projections excluded from geometry.",
+    "layout": [
+      [
+        "g3q/13770-13771-13721-13722",
+        "g3q/13772-13773-13725-13726"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_MAUVILLE_CITY_BIKE_SHOP",
+        "x": 0,
+        "y": 3,
+        "palette": "BAKED"
+      }
+    ]
+  },
+  {
+    "id": "emerald_bike_shop_west_bike_4",
+    "kind": "object (model as one)",
+    "note": "Complete bicycle across two original solid cells; handlebars from neighboring source projections excluded from geometry.",
+    "layout": [
+      [
+        "g3q/13770-13771-13721-13786",
+        "g3q/13772-13724-13725-13726"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_MAUVILLE_CITY_BIKE_SHOP",
+        "x": 0,
+        "y": 4,
+        "palette": "BAKED"
+      }
+    ]
+  },
+  {
+    "id": "emerald_bike_shop_west_bike_5",
+    "kind": "object (model as one)",
+    "note": "Complete bicycle across two original solid cells; handlebars from neighboring source projections excluded from geometry.",
+    "layout": [
+      [
+        "g3q/13719-13720-13721-13722",
+        "g3q/13723-13724-13725-13726"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_MAUVILLE_CITY_BIKE_SHOP",
+        "x": 0,
+        "y": 5,
+        "palette": "BAKED"
+      }
+    ]
+  },
+  {
+    "id": "emerald_bike_shop_west_bike_6",
+    "kind": "object (model as one)",
+    "note": "Complete bicycle across two original solid cells; handlebars from neighboring source projections excluded from geometry.",
+    "layout": [
+      [
+        "g3q/13770-13771-13721-13722",
+        "g3q/13772-13724-13725-13726"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_MAUVILLE_CITY_BIKE_SHOP",
+        "x": 0,
+        "y": 6,
+        "palette": "BAKED"
+      }
+    ]
+  },
+  {
+    "id": "emerald_bike_shop_west_bike_7",
+    "kind": "object (model as one)",
+    "note": "Complete bicycle across two original solid cells; handlebars from neighboring source projections excluded from geometry.",
+    "layout": [
+      [
+        "g3q/13770-13771-13721-13786",
+        "g3q/13772-13724-13725-13726"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_MAUVILLE_CITY_BIKE_SHOP",
+        "x": 0,
+        "y": 7,
+        "palette": "BAKED"
+      }
+    ]
+  },
+  {
+    "id": "emerald_bike_shop_west_bike_8",
+    "kind": "object (model as one)",
+    "note": "Complete bicycle across two original solid cells; handlebars from neighboring source projections excluded from geometry.",
+    "layout": [
+      [
+        "g3q/13719-13720-13745-13745",
+        "g3q/13723-13724-13746-13726"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_MAUVILLE_CITY_BIKE_SHOP",
+        "x": 0,
+        "y": 8,
+        "palette": "BAKED"
+      }
+    ]
+  },
+  {
+    "id": "emerald_bike_shop_east_bike_5",
+    "kind": "object (model as one)",
+    "note": "Complete red or yellow bicycle across its exact two source cells.",
+    "layout": [
+      [
+        "g3q/13854-13856-13857-13858",
+        "g3q/13859-13860-13861-13862"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_MAUVILLE_CITY_BIKE_SHOP",
+        "x": 10,
+        "y": 5,
+        "palette": "BAKED"
+      }
+    ]
+  },
+  {
+    "id": "emerald_bike_shop_east_bike_6",
+    "kind": "object (model as one)",
+    "note": "Complete red or yellow bicycle across its exact two source cells.",
+    "layout": [
+      [
+        "g3q/13833-13834-13835-13836",
+        "g3q/13837-13838-13839-13840"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_MAUVILLE_CITY_BIKE_SHOP",
+        "x": 10,
+        "y": 6,
+        "palette": "BAKED"
+      }
+    ]
+  },
+  {
+    "id": "emerald_bike_shop_east_bike_7",
+    "kind": "object (model as one)",
+    "note": "Complete red or yellow bicycle across its exact two source cells.",
+    "layout": [
+      [
+        "g3q/13833-13834-13835-13836",
+        "g3q/13837-13838-13839-13840"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_MAUVILLE_CITY_BIKE_SHOP",
+        "x": 10,
+        "y": 7,
+        "palette": "BAKED"
+      }
+    ]
+  },
+  {
+    "id": "emerald_bike_shop_shop_parts_shelf",
+    "kind": "object (model as one)",
+    "note": "Complete retained shop shelf, with the lower solid front trays.",
+    "layout": [
+      [
+        "g3q/13727-13728-13729-13730",
+        "g3q/13731-13732-13733-13734"
+      ],
+      [
+        "g3q/13749-13750-13751-13752",
+        "g3q/13753-13754-13755-13756"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_MAUVILLE_CITY_BIKE_SHOP",
+        "x": 0,
+        "y": 1,
+        "palette": "BAKED"
+      }
+    ]
+  },
+  {
+    "id": "emerald_bike_shop_shop_counter",
+    "kind": "object (model as one)",
+    "note": "Whole shop counter and register context; original raw144 middle/right cells keep native counter routing.",
+    "layout": [
+      [
+        "g3q/13735-13736-13737-13738",
+        "g3q/13739-13740-13741-13742",
+        "g3q/13739-13740-13741-13742",
+        "g3q/13743-13744-13741-13742"
+      ],
+      [
+        "g3q/13757-13758-13759-13760",
+        null,
+        null,
+        null
+      ],
+      [
+        "g3q/13759-13774-13775-13776",
+        "g3q/13774-13774-13776-13776",
+        "g3q/13774-13777-13776-13778",
+        "g3q/13779-13777-13780-13781"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_MAUVILLE_CITY_BIKE_SHOP",
+        "x": 2,
+        "y": 1,
+        "palette": "BAKED"
+      }
+    ],
+    "reference_layout": [
+      [
+        "g3q/13735-13736-13737-13738",
+        "g3q/13739-13740-13741-13742",
+        "g3q/13739-13740-13741-13742",
+        "g3q/13743-13744-13741-13742"
+      ],
+      [
+        "g3q/13757-13758-13759-13760",
+        "g3q/13756-13756-13761-13762",
+        "g3q/13756-13756-13763-13764",
+        "g3q/13756-13756-13765-13764"
+      ],
+      [
+        "g3q/13759-13774-13775-13776",
+        "g3q/13774-13774-13776-13776",
+        "g3q/13774-13777-13776-13778",
+        "g3q/13779-13777-13780-13781"
+      ]
+    ]
+  },
+  {
+    "id": "emerald_bike_shop_first_book_desk",
+    "kind": "object (model as one)",
+    "note": "Complete first checkerboard window desk, four legs, red book and papers.",
+    "layout": [
+      [
+        "g3q/13800-13801-13802-13803",
+        "g3q/13804-13805-13806-13807"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_MAUVILLE_CITY_BIKE_SHOP",
+        "x": 7,
+        "y": 1,
+        "palette": "BAKED"
+      }
+    ],
+    "baseline_native_fragments": {
+      "evidence": "local/model-gallery/emerald-pass-study/bike-shop/desk-runtime-proof.json",
+      "evidence_sha256": "21bb4e71cb897e0ca97bfbb6ee30a512344ffc2cac715353368e6fa757f83d28",
+      "baseline_sha256": "7958d43cb8545ae006b3568bb6b86d809c7def79cb128a7789c36016756797d6",
+      "occurrence": {
+        "map": "EM_MAUVILLE_CITY_BIKE_SHOP",
+        "x": 7,
+        "y": 1
+      },
+      "source_layout": [
+        [
+          "g3q/13800-13801-13802-13803",
+          "g3q/13804-13805-13806-13807"
+        ]
+      ]
+    }
+  },
+  {
+    "id": "emerald_bike_shop_second_book_desk",
+    "kind": "object (model as one)",
+    "note": "Complete second checkerboard window desk including its previously missing left solid source cell.",
+    "layout": [
+      [
+        "g3q/13808-13809-13802-13803",
+        "g3q/13810-13811-13806-13807"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_MAUVILLE_CITY_BIKE_SHOP",
+        "x": 10,
+        "y": 1,
+        "palette": "BAKED"
+      }
+    ],
+    "baseline_native_fragments": {
+      "evidence": "local/model-gallery/emerald-pass-study/bike-shop/desk-runtime-proof.json",
+      "evidence_sha256": "21bb4e71cb897e0ca97bfbb6ee30a512344ffc2cac715353368e6fa757f83d28",
+      "baseline_sha256": "7958d43cb8545ae006b3568bb6b86d809c7def79cb128a7789c36016756797d6",
+      "occurrence": {
+        "map": "EM_MAUVILLE_CITY_BIKE_SHOP",
+        "x": 10,
+        "y": 1
+      },
+      "source_layout": [
+        [
+          "g3q/13808-13809-13802-13803",
+          "g3q/13810-13811-13806-13807"
+        ]
+      ]
+    }
+  },
+  {
+    "id": "emerald_bike_shop_handlebars_3",
+    "kind": "object (model as one)",
+    "note": "Straight wall-mounted handlebar display using the preserved real upper-to-lower stack.",
+    "layout": [
+      [
+        "g3q/13708-13708-13715-13716"
+      ],
+      [
+        "g3q/13739-13740-13741-13742"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_MAUVILLE_CITY_BIKE_SHOP",
+        "x": 3,
+        "y": 0,
+        "palette": "BAKED"
+      }
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    ]
+  },
+  {
+    "id": "emerald_bike_shop_handlebars_4",
+    "kind": "object (model as one)",
+    "note": "Straight wall-mounted handlebar display using the preserved real upper-to-lower stack.",
+    "layout": [
+      [
+        "g3q/13708-13708-13715-13716"
+      ],
+      [
+        "g3q/13739-13740-13741-13742"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_MAUVILLE_CITY_BIKE_SHOP",
+        "x": 4,
+        "y": 0,
+        "palette": "BAKED"
+      }
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    ]
+  },
+  {
+    "id": "emerald_bike_shop_handlebars_5",
+    "kind": "object (model as one)",
+    "note": "Straight wall-mounted handlebar display using the preserved real upper-to-lower stack.",
+    "layout": [
+      [
+        "g3q/13708-13708-13717-13718"
+      ],
+      [
+        "g3q/13743-13744-13741-13742"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_MAUVILLE_CITY_BIKE_SHOP",
+        "x": 5,
+        "y": 0,
+        "palette": "BAKED"
+      }
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    ]
+  },
+  {
+    "id": "emerald_bike_shop_generator",
+    "kind": "object (model as one)",
+    "note": "Complete source generator: mounting plate, ribbed cylinder, shoulder, hollow collar and indicator. Sixteen original SOLID7 cells, no added footprint.",
+    "layout": [
+      [
+        "g3q/13735-13941-13942-13943",
+        "g3q/13944-13945-13946-13947",
+        "g3q/13948-13949-13950-13951",
+        "g3q/13952-13736-13953-13954"
+      ],
+      [
+        "g3q/13969-13970-13969-13971",
+        "g3q/13972-13973-13974-13975",
+        "g3q/13976-13977-13978-13979",
+        "g3q/13980-13981-13982-13981"
+      ],
+      [
+        "g3q/13995-13996-13969-13997",
+        "g3q/13998-13999-14000-14001",
+        "g3q/14002-14003-14004-14005",
+        "g3q/14006-14007-14008-13981"
+      ],
+      [
+        "g3q/14017-14018-14019-14020",
+        "g3q/14021-14022-14020-14023",
+        "g3q/14024-14025-14026-14020",
+        "g3q/14027-14028-14020-14029"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_NEW_MAUVILLE_INSIDE",
+        "x": 32,
+        "y": 1,
+        "palette": "BAKED"
+      }
+    ],
+    "baseline_native_fragments": {
+      "evidence": "local/model-gallery/emerald-pass-study/bike-shop/runtime-proof.json",
+      "evidence_sha256": "31086590679c7be221d349c3db2d7dbee3e9f02814c988aaa367f53024ee35fe",
+      "baseline_sha256": "7958d43cb8545ae006b3568bb6b86d809c7def79cb128a7789c36016756797d6",
+      "occurrence": {
+        "map": "EM_NEW_MAUVILLE_INSIDE",
+        "x": 32,
+        "y": 1
+      },
+      "source_layout": [
+        [
+          "g3q/13735-13941-13942-13943",
+          "g3q/13944-13945-13946-13947",
+          "g3q/13948-13949-13950-13951",
+          "g3q/13952-13736-13953-13954"
+        ],
+        [
+          "g3q/13969-13970-13969-13971",
+          "g3q/13972-13973-13974-13975",
+          "g3q/13976-13977-13978-13979",
+          "g3q/13980-13981-13982-13981"
+        ],
+        [
+          "g3q/13995-13996-13969-13997",
+          "g3q/13998-13999-14000-14001",
+          "g3q/14002-14003-14004-14005",
+          "g3q/14006-14007-14008-13981"
+        ],
+        [
+          "g3q/14017-14018-14019-14020",
+          "g3q/14021-14022-14020-14023",
+          "g3q/14024-14025-14026-14020",
+          "g3q/14027-14028-14020-14029"
+        ]
+      ]
+    }
+  },
+  {
+    "id": "emerald_bike_shop_compressor",
+    "kind": "object (model as one)",
+    "note": "Complete connected green tank, white duct, vent and control cabinet on six original SOLID7 cells.",
+    "layout": [
+      [
+        "g3q/13735-13955-13956-13957",
+        "g3q/13958-13736-13959-13960"
+      ],
+      [
+        "g3q/13983-13984-13985-13986",
+        "g3q/13987-13988-13989-13990"
+      ],
+      [
+        "g3q/14009-14010-14011-14012",
+        "g3q/14013-14014-14015-14016"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_NEW_MAUVILLE_INSIDE",
+        "x": 29,
+        "y": 1,
+        "palette": "BAKED"
+      }
+    ],
+    "baseline_native_fragments": {
+      "evidence": "local/model-gallery/emerald-pass-study/bike-shop/runtime-proof.json",
+      "evidence_sha256": "31086590679c7be221d349c3db2d7dbee3e9f02814c988aaa367f53024ee35fe",
+      "baseline_sha256": "7958d43cb8545ae006b3568bb6b86d809c7def79cb128a7789c36016756797d6",
+      "occurrence": {
+        "map": "EM_NEW_MAUVILLE_INSIDE",
+        "x": 29,
+        "y": 1
+      },
+      "source_layout": [
+        [
+          "g3q/13735-13955-13956-13957",
+          "g3q/13958-13736-13959-13960"
+        ],
+        [
+          "g3q/13983-13984-13985-13986",
+          "g3q/13987-13988-13989-13990"
+        ],
+        [
+          "g3q/14009-14010-14011-14012",
+          "g3q/14013-14014-14015-14016"
+        ]
+      ]
+    }
+  },
+  {
+    "id": "emerald_bike_shop_blue_workbench",
+    "kind": "object (model as one)",
+    "note": "Native upper WALK worktop projection accompanies the complete supported blue bench on the lower solid row.",
+    "layout": [
+      [
+        null,
+        null
+      ],
+      [
+        "g3q/13905-13776-13787-13788",
+        "g3q/13776-13906-13788-13907"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_NEW_MAUVILLE_INSIDE",
+        "x": 4,
+        "y": 18,
+        "palette": "BAKED"
+      }
+    ],
+    "reference_layout": [
+      [
+        "g3q/13901-13763-13896-13774",
+        "g3q/13762-13902-13774-13777"
+      ],
+      [
+        "g3q/13905-13776-13787-13788",
+        "g3q/13776-13906-13788-13907"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      }
+    ],
+    "baseline_native_fragments": {
+      "evidence": "local/model-gallery/emerald-pass-study/bike-shop/blue-workbench-runtime-proof.json",
+      "evidence_sha256": "20e63d8f4388027f928afc47ffb5a398d0414792c27e2a1463d12d75f4334a08",
+      "baseline_sha256": "7958d43cb8545ae006b3568bb6b86d809c7def79cb128a7789c36016756797d6",
+      "occurrence": {
+        "map": "EM_NEW_MAUVILLE_INSIDE",
+        "x": 4,
+        "y": 18
+      },
+      "source_layout": [
+        [
+          "g3q/13901-13763-13896-13774",
+          "g3q/13762-13902-13774-13777"
+        ],
+        [
+          "g3q/13905-13776-13787-13788",
+          "g3q/13776-13906-13788-13907"
+        ]
+      ]
+    }
+  },
+  {
+    "id": "emerald_bike_shop_storage_rack",
+    "kind": "object (model as one)",
+    "note": "Complete retained supply rack with gold crate and continuous shelves.",
+    "layout": [
+      [
+        "g3q/13910-13911-13912-13913",
+        "g3q/13914-13915-13916-13917"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_NEW_MAUVILLE_INSIDE",
+        "x": 5,
+        "y": 1,
+        "palette": "BAKED"
+      }
+    ]
+  },
+  {
+    "id": "emerald_bike_shop_closed_open_crates",
+    "kind": "object (model as one)",
+    "note": "Actual four-crate group showing closed lids and hollow open box in their source arrangement.",
+    "layout": [
+      [
+        "g3q/13933-13932-13843-13844",
+        "g3q/13931-13932-13928-13844"
+      ],
+      [
+        "g3q/13931-13932-13928-13844",
+        "g3q/13931-13932-13928-13844"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_NEW_MAUVILLE_INSIDE",
+        "x": 38,
+        "y": 6,
+        "palette": "BAKED"
+      }
+    ]
+  },
+  {
+    "id": "emerald_bike_shop_wall_crates",
+    "kind": "object (model as one)",
+    "note": "Four source wall crates placed only in their true upper solid row; WALK projections remain reference.",
+    "layout": [
+      [
+        "g3q/13735-13736-13920-13919",
+        "g3q/13735-13736-13920-13919",
+        "g3q/13735-13736-13918-13919",
+        "g3q/13735-13736-13920-13919"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_NEW_MAUVILLE_INSIDE",
+        "x": 7,
+        "y": 35,
+        "palette": "BAKED"
+      }
+    ],
+    "reference_layout": [
+      [
+        "g3q/13735-13736-13920-13919",
+        "g3q/13735-13736-13920-13919",
+        "g3q/13735-13736-13918-13919",
+        "g3q/13735-13736-13920-13919"
+      ],
+      [
+        "g3q/13843-13844-13748-13747",
+        "g3q/13843-13844-13748-13747",
+        "g3q/13928-13844-13748-13747",
+        "g3q/13843-13844-13748-13747"
+      ]
+    ]
+  },
+  {
+    "id": "emerald_bike_shop_control_terminals",
+    "kind": "object (model as one)",
+    "note": "Retained paired brown and pale control cabinets with WALK foot projections as source reference.",
+    "layout": [
+      [
+        "g3q/13965-13966-13967-13968",
+        "g3q/13965-13966-13967-13968",
+        "g3q/13961-13962-13963-13964"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_NEW_MAUVILLE_INSIDE",
+        "x": 12,
+        "y": 1,
+        "palette": "BAKED"
+      }
+    ],
+    "reference_layout": [
+      [
+        "g3q/13965-13966-13967-13968",
+        "g3q/13965-13966-13967-13968",
+        "g3q/13961-13962-13963-13964"
+      ],
+      [
+        "g3q/13993-13994-13756-13756",
+        "g3q/13993-13994-13756-13756",
+        "g3q/13991-13992-13756-13756"
+      ]
+    ]
+  }
+]

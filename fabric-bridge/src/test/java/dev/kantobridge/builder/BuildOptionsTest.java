@@ -23,6 +23,16 @@ class BuildOptionsTest {
 	}
 
 	@Test
+	void theShapeReportIsOnUnlessTheClientsBuildTurnsItOff() {
+		BuildOptions options = BuildOptions.defaults();
+		assertTrue(options.shapeReport(), "a build reports its shapes unless asked not to");
+		BuildOptions quiet = options.withShapeReport(false);
+		assertFalse(quiet.shapeReport());
+		assertEquals(options, quiet.withShapeReport(true), "nothing else changes");
+		assertFalse(quiet.withRegion("hoenn", 1).withWritePack(false).withShapes(true).shapeReport(), "the other with* keep it");
+	}
+
+	@Test
 	void withRegionMakesARegionBuild() {
 		BuildOptions options = BuildOptions.defaults().withOrigin(16, 32).withRegion("hoenn", 1);
 		assertTrue(options.regionBuild());

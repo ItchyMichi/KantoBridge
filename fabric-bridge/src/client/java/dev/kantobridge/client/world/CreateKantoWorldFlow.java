@@ -617,13 +617,13 @@ public final class CreateKantoWorldFlow {
 			List<BuildRequest.Job> jobs = new java.util.ArrayList<>();
 			for (int i = 0; i < chosenRecord.games().size(); i++) {
 				jobs.add(new BuildRequest.Job(this.bundles.get(i), null,
-						BuildOptions.defaults().withWritePack(false).withRegion(chosenRecord.games().get(i).region(), i)));
+						BuildOptions.defaults().withWritePack(false).withShapeReport(false).withRegion(chosenRecord.games().get(i).region(), i)));
 			}
 			this.request = BuildRequest.submitAll(folder, jobs, chosenRecord);
 			PENDING_CHOICES.put(folder, this.picks);
 		} else {
 			// The client already wrote the pack (step 3); the build must not replace it while it is in use.
-			this.request = BuildRequest.submit(folder, bundle, null, BuildOptions.defaults().withWritePack(false));
+			this.request = BuildRequest.submit(folder, bundle, null, BuildOptions.defaults().withWritePack(false).withShapeReport(false));
 		}
 		KantoBridge.LOGGER.info("create: creating level folder \"{}\" with preset {}", folder, KANTO_PRESET.location());
 		this.moveTo(Step.LOADING);

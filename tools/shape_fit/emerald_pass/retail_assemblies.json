@@ -1,0 +1,2071 @@
+[
+  {
+    "id": "emerald_retail_dddf1814dbad",
+    "map": "EM_BATTLE_FRONTIER_MART",
+    "rect": [
+      3,
+      0,
+      1,
+      2
+    ],
+    "kind": "stack (model as one)",
+    "note": "Mounted retail window or display complete pair",
+    "source_layout": [
+      [
+        "g3q/8960-8960-8965-8966"
+      ],
+      [
+        "g3q/8984-8985-8986-8987"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_BATTLE_FRONTIER_MART",
+        "x": 3,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_BATTLE_FRONTIER_MART",
+        "x": 4,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_BATTLE_FRONTIER_MART",
+        "x": 5,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_FALLARBOR_TOWN_MART",
+        "x": 3,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_FALLARBOR_TOWN_MART",
+        "x": 4,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_FALLARBOR_TOWN_MART",
+        "x": 5,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_FORTREE_CITY_MART",
+        "x": 3,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_FORTREE_CITY_MART",
+        "x": 4,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_FORTREE_CITY_MART",
+        "x": 5,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LAVARIDGE_TOWN_MART",
+        "x": 3,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LAVARIDGE_TOWN_MART",
+        "x": 4,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LAVARIDGE_TOWN_MART",
+        "x": 5,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_UNUSED_MART",
+        "x": 3,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_UNUSED_MART",
+        "x": 4,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_UNUSED_MART",
+        "x": 5,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_MAUVILLE_CITY_MART",
+        "x": 3,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_MAUVILLE_CITY_MART",
+        "x": 4,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_MAUVILLE_CITY_MART",
+        "x": 5,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_MOSSDEEP_CITY_MART",
+        "x": 3,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_MOSSDEEP_CITY_MART",
+        "x": 4,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_MOSSDEEP_CITY_MART",
+        "x": 5,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_OLDALE_TOWN_MART",
+        "x": 3,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_OLDALE_TOWN_MART",
+        "x": 4,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_OLDALE_TOWN_MART",
+        "x": 5,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_PETALBURG_CITY_MART",
+        "x": 3,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_PETALBURG_CITY_MART",
+        "x": 4,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_PETALBURG_CITY_MART",
+        "x": 5,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_RUSTBORO_CITY_MART",
+        "x": 3,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_RUSTBORO_CITY_MART",
+        "x": 4,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_RUSTBORO_CITY_MART",
+        "x": 5,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_SLATEPORT_CITY_MART",
+        "x": 3,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_SLATEPORT_CITY_MART",
+        "x": 4,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_SLATEPORT_CITY_MART",
+        "x": 5,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_SOOTOPOLIS_CITY_MART",
+        "x": 3,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_SOOTOPOLIS_CITY_MART",
+        "x": 4,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_SOOTOPOLIS_CITY_MART",
+        "x": 5,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_VERDANTURF_TOWN_MART",
+        "x": 3,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_VERDANTURF_TOWN_MART",
+        "x": 4,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_VERDANTURF_TOWN_MART",
+        "x": 5,
+        "y": 0,
+        "palette": "BAKED"
+      }
+    ]
+  },
+  {
+    "id": "emerald_retail_73feaa9e585e",
+    "map": "EM_LAVARIDGE_TOWN_HERB_SHOP",
+    "rect": [
+      0,
+      0,
+      1,
+      2
+    ],
+    "kind": "stack (model as one)",
+    "note": "Mounted retail window or display complete pair",
+    "source_layout": [
+      [
+        "g3q/9095-9095-8965-8966"
+      ],
+      [
+        "g3q/8984-8985-8986-8987"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_LAVARIDGE_TOWN_HERB_SHOP",
+        "x": 0,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LAVARIDGE_TOWN_HERB_SHOP",
+        "x": 1,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LAVARIDGE_TOWN_HERB_SHOP",
+        "x": 7,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LAVARIDGE_TOWN_HERB_SHOP",
+        "x": 8,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LAVARIDGE_TOWN_HERB_SHOP",
+        "x": 9,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_3F",
+        "x": 8,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_3F",
+        "x": 9,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_3F",
+        "x": 10,
+        "y": 0,
+        "palette": "BAKED"
+      }
+    ]
+  },
+  {
+    "id": "emerald_retail_e7b55e90674e",
+    "map": "EM_BATTLE_FRONTIER_MART",
+    "rect": [
+      1,
+      0,
+      1,
+      2
+    ],
+    "kind": "stack (model as one)",
+    "note": "Retail wall clock crown complete pair",
+    "source_layout": [
+      [
+        "g3q/8960-8960-8999-9000"
+      ],
+      [
+        "g3q/9086-9087-8979-8979"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_BATTLE_FRONTIER_MART",
+        "x": 1,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_FALLARBOR_TOWN_MART",
+        "x": 1,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_FORTREE_CITY_MART",
+        "x": 1,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LAVARIDGE_TOWN_MART",
+        "x": 1,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_UNUSED_MART",
+        "x": 1,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_MAUVILLE_CITY_MART",
+        "x": 1,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_MOSSDEEP_CITY_MART",
+        "x": 1,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_OLDALE_TOWN_MART",
+        "x": 1,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_PETALBURG_CITY_MART",
+        "x": 1,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_RUSTBORO_CITY_MART",
+        "x": 1,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_SLATEPORT_CITY_MART",
+        "x": 1,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_SOOTOPOLIS_CITY_MART",
+        "x": 1,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_VERDANTURF_TOWN_MART",
+        "x": 1,
+        "y": 0,
+        "palette": "BAKED"
+      }
+    ]
+  },
+  {
+    "id": "emerald_retail_56eb4f7f69f5",
+    "map": "EM_LAVARIDGE_TOWN_HERB_SHOP",
+    "rect": [
+      4,
+      0,
+      1,
+      2
+    ],
+    "kind": "stack (model as one)",
+    "note": "Retail wall clock crown complete pair",
+    "source_layout": [
+      [
+        "g3q/9095-9095-9203-9204"
+      ],
+      [
+        "g3q/9215-9216-9189-9189"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_LAVARIDGE_TOWN_HERB_SHOP",
+        "x": 4,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_3F",
+        "x": 7,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_ROUTE110_SEASIDE_CYCLING_ROAD_NORTH_ENTRANCE",
+        "x": 6,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_ROUTE110_SEASIDE_CYCLING_ROAD_SOUTH_ENTRANCE",
+        "x": 6,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_ROUTE121_SAFARI_ZONE_ENTRANCE",
+        "x": 9,
+        "y": 0,
+        "palette": "BAKED"
+      }
+    ]
+  },
+  {
+    "id": "emerald_retail_5461f2db50d5",
+    "map": "EM_BATTLE_FRONTIER_MART",
+    "rect": [
+      10,
+      2,
+      1,
+      2
+    ],
+    "kind": "stack (model as one)",
+    "note": "Retail potted plant canopy complete pair",
+    "source_layout": [
+      [
+        "g3q/9004-9005-9006-9007"
+      ],
+      [
+        "g3q/9030-9031-9032-9033"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_BATTLE_FRONTIER_MART",
+        "x": 10,
+        "y": 2,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_FALLARBOR_TOWN_MART",
+        "x": 10,
+        "y": 2,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_FORTREE_CITY_MART",
+        "x": 10,
+        "y": 2,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LAVARIDGE_TOWN_MART",
+        "x": 10,
+        "y": 2,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_UNUSED_MART",
+        "x": 10,
+        "y": 2,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_MAUVILLE_CITY_MART",
+        "x": 10,
+        "y": 2,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_MOSSDEEP_CITY_MART",
+        "x": 10,
+        "y": 2,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_OLDALE_TOWN_MART",
+        "x": 10,
+        "y": 2,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_PETALBURG_CITY_MART",
+        "x": 10,
+        "y": 2,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_RUSTBORO_CITY_MART",
+        "x": 10,
+        "y": 2,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_SLATEPORT_CITY_MART",
+        "x": 10,
+        "y": 2,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_SOOTOPOLIS_CITY_MART",
+        "x": 10,
+        "y": 2,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_VERDANTURF_TOWN_MART",
+        "x": 10,
+        "y": 2,
+        "palette": "BAKED"
+      }
+    ]
+  },
+  {
+    "id": "emerald_retail_75b531093679",
+    "map": "EM_ROUTE110_SEASIDE_CYCLING_ROAD_NORTH_ENTRANCE",
+    "rect": [
+      0,
+      4,
+      1,
+      2
+    ],
+    "kind": "stack (model as one)",
+    "note": "Retail potted plant canopy complete pair",
+    "source_layout": [
+      [
+        "g3q/9125-9126-9127-9128"
+      ],
+      [
+        "g3q/9145-9146-9147-9148"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_ROUTE110_SEASIDE_CYCLING_ROAD_NORTH_ENTRANCE",
+        "x": 0,
+        "y": 4,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_ROUTE110_SEASIDE_CYCLING_ROAD_SOUTH_ENTRANCE",
+        "x": 0,
+        "y": 4,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_ROUTE121_SAFARI_ZONE_ENTRANCE",
+        "x": 0,
+        "y": 4,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_ROUTE121_SAFARI_ZONE_ENTRANCE",
+        "x": 12,
+        "y": 7,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_ROUTE121_SAFARI_ZONE_ENTRANCE",
+        "x": 12,
+        "y": 12,
+        "palette": "BAKED"
+      }
+    ]
+  },
+  {
+    "id": "emerald_retail_1457b3e0ac26",
+    "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_1F",
+    "rect": [
+      14,
+      6,
+      1,
+      2
+    ],
+    "kind": "stack (model as one)",
+    "note": "Retail potted plant canopy complete pair",
+    "source_layout": [
+      [
+        "g3q/9159-9126-9160-9128"
+      ],
+      [
+        "g3q/9172-9146-9173-9148"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_1F",
+        "x": 14,
+        "y": 6,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_1F",
+        "x": 16,
+        "y": 6,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_1F",
+        "x": 17,
+        "y": 6,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_ROUTE110_SEASIDE_CYCLING_ROAD_NORTH_ENTRANCE",
+        "x": 14,
+        "y": 4,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_ROUTE110_SEASIDE_CYCLING_ROAD_SOUTH_ENTRANCE",
+        "x": 14,
+        "y": 4,
+        "palette": "BAKED"
+      }
+    ]
+  },
+  {
+    "id": "emerald_retail_914fe1359193",
+    "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_2F",
+    "rect": [
+      17,
+      3,
+      1,
+      2
+    ],
+    "kind": "stack (model as one)",
+    "note": "Retail potted plant canopy complete pair",
+    "source_layout": [
+      [
+        "g3q/9161-9162-9163-9164"
+      ],
+      [
+        "g3q/9030-9031-9174-9175"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_2F",
+        "x": 17,
+        "y": 3,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_2F",
+        "x": 17,
+        "y": 6,
+        "palette": "BAKED"
+      }
+    ]
+  },
+  {
+    "id": "emerald_retail_a8712acf0dcb",
+    "map": "EM_ROUTE121_SAFARI_ZONE_ENTRANCE",
+    "rect": [
+      17,
+      12,
+      1,
+      2
+    ],
+    "kind": "stack (model as one)",
+    "note": "Retail potted plant canopy complete pair",
+    "source_layout": [
+      [
+        "g3q/9125-9307-9160-9128"
+      ],
+      [
+        "g3q/9172-9146-9173-9148"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_ROUTE121_SAFARI_ZONE_ENTRANCE",
+        "x": 17,
+        "y": 12,
+        "palette": "BAKED"
+      }
+    ]
+  },
+  {
+    "id": "emerald_retail_e86876736c6d",
+    "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_ROOFTOP",
+    "rect": [
+      9,
+      0,
+      1,
+      2
+    ],
+    "kind": "stack (model as one)",
+    "note": "Rooftop vending-machine upper complete pair",
+    "source_layout": [
+      [
+        "g3q/48-49-9169-9170"
+      ],
+      [
+        "g3q/9178-9179-9180-9181"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_ROOFTOP",
+        "x": 9,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_ROOFTOP",
+        "x": 10,
+        "y": 0,
+        "palette": "BAKED"
+      }
+    ]
+  },
+  {
+    "id": "emerald_retail_802ffb0a836c",
+    "map": "EM_LAVARIDGE_TOWN_HERB_SHOP",
+    "rect": [
+      3,
+      0,
+      1,
+      2
+    ],
+    "kind": "stack (model as one)",
+    "note": "Mounted retail window or display complete pair",
+    "source_layout": [
+      [
+        "g3q/9095-9095-9199-9200"
+      ],
+      [
+        "g3q/9211-9212-9189-9189"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_LAVARIDGE_TOWN_HERB_SHOP",
+        "x": 3,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_ROUTE110_SEASIDE_CYCLING_ROAD_NORTH_ENTRANCE",
+        "x": 8,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_ROUTE110_SEASIDE_CYCLING_ROAD_SOUTH_ENTRANCE",
+        "x": 8,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_ROUTE121_SAFARI_ZONE_ENTRANCE",
+        "x": 15,
+        "y": 0,
+        "palette": "BAKED"
+      }
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "id": "emerald_retail_09134873eed4",
+    "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_5F",
+    "rect": [
+      6,
+      0,
+      1,
+      2
+    ],
+    "kind": "stack (model as one)",
+    "note": "Mounted retail window or display complete pair",
+    "source_layout": [
+      [
+        "g3q/9095-9095-9319-9320"
+      ],
+      [
+        "g3q/9337-9338-9329-9329"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_5F",
+        "x": 6,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_5F",
+        "x": 10,
+        "y": 0,
+        "palette": "BAKED"
+      }
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    ],
+    "baseline_layout": [
+      [
+        "g3q/9095-9095-9319-9320"
+      ],
+      [
+        null
+      ]
+    ]
+  },
+  {
+    "id": "emerald_retail_d6beb073aed1",
+    "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_2F",
+    "rect": [
+      7,
+      0,
+      1,
+      2
+    ],
+    "kind": "stack (model as one)",
+    "note": "Mounted retail window or display complete pair",
+    "source_layout": [
+      [
+        "g3q/9095-9095-9378-9379"
+      ],
+      [
+        "g3q/9380-9381-9189-9189"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_2F",
+        "x": 7,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_2F",
+        "x": 10,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_4F",
+        "x": 5,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_4F",
+        "x": 6,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_4F",
+        "x": 9,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_4F",
+        "x": 10,
+        "y": 0,
+        "palette": "BAKED"
+      }
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    ],
+    "baseline_layout": [
+      [
+        "g3q/9095-9095-9378-9379"
+      ],
+      [
+        null
+      ]
+    ]
+  },
+  {
+    "id": "emerald_retail_95b086cf962b",
+    "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_5F",
+    "rect": [
+      7,
+      0,
+      3,
+      2
+    ],
+    "kind": "stack (model as one)",
+    "note": "Department-store three-column wall mural",
+    "source_layout": [
+      [
+        "g3q/9095-9095-9314-9315",
+        "g3q/9095-9095-9316-9317",
+        "g3q/9095-9095-9318-9314"
+      ],
+      [
+        "g3q/9327-9328-9329-9330",
+        "g3q/9331-9332-9333-9334",
+        "g3q/9335-9327-9336-9329"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_5F",
+        "x": 7,
+        "y": 0,
+        "palette": "BAKED"
+      }
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          2,
+          1
+        ],
+        "offset": [
+          2,
+          0,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "id": "emerald_retail_234e9ced734c",
+    "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_ROOFTOP",
+    "rect": [
+      5,
+      5,
+      2,
+      1
+    ],
+    "kind": "object (model as one)",
+    "note": "Rooftop two-seat slatted bench",
+    "source_layout": [
+      [
+        "g3q/9262-9263-9264-9265",
+        "g3q/9287-9288-9289-9290"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_ROOFTOP",
+        "x": 5,
+        "y": 5,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_ROOFTOP",
+        "x": 9,
+        "y": 5,
+        "palette": "BAKED"
+      }
+    ]
+  },
+  {
+    "id": "emerald_retail_5133db825098",
+    "map": "EM_LAVARIDGE_TOWN_HERB_SHOP",
+    "rect": [
+      10,
+      3,
+      1,
+      3
+    ],
+    "kind": "object (model as one)",
+    "note": "Herb-shop complete display cabinet",
+    "source_layout": [
+      [
+        "g3q/9382-9383-9024-9025"
+      ],
+      [
+        "g3q/9046-9047-9048-9049"
+      ],
+      [
+        "g3q/9063-9064-9386-9387"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_LAVARIDGE_TOWN_HERB_SHOP",
+        "x": 10,
+        "y": 3,
+        "palette": "BAKED"
+      }
+    ]
+  },
+  {
+    "id": "emerald_retail_c60b2282f69a",
+    "map": "EM_ROUTE110_SEASIDE_CYCLING_ROAD_NORTH_ENTRANCE",
+    "rect": [
+      6,
+      4,
+      2,
+      2
+    ],
+    "kind": "object (model as one)",
+    "note": "Complete source-specific planter",
+    "source_layout": [
+      [
+        "g3q/9118-9119-9120-9121",
+        "g3q/9118-9119-9122-9123"
+      ],
+      [
+        "g3q/9137-9138-9139-9140",
+        "g3q/9141-9142-9143-9144"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_ROUTE110_SEASIDE_CYCLING_ROAD_NORTH_ENTRANCE",
+        "x": 6,
+        "y": 4,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_ROUTE110_SEASIDE_CYCLING_ROAD_NORTH_ENTRANCE",
+        "x": 8,
+        "y": 4,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_ROUTE110_SEASIDE_CYCLING_ROAD_SOUTH_ENTRANCE",
+        "x": 6,
+        "y": 4,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_ROUTE110_SEASIDE_CYCLING_ROAD_SOUTH_ENTRANCE",
+        "x": 8,
+        "y": 4,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_ROUTE121_SAFARI_ZONE_ENTRANCE",
+        "x": 7,
+        "y": 4,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_ROUTE121_SAFARI_ZONE_ENTRANCE",
+        "x": 9,
+        "y": 4,
+        "palette": "BAKED"
+      }
+    ]
+  },
+  {
+    "id": "emerald_retail_c516eded3363",
+    "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_ROOFTOP",
+    "rect": [
+      1,
+      2,
+      2,
+      2
+    ],
+    "kind": "object (model as one)",
+    "note": "Complete source-specific planter",
+    "source_layout": [
+      [
+        "g3q/9101-9098-9297-9298",
+        "g3q/9097-9098-9299-9300"
+      ],
+      [
+        "g3q/9137-9138-9301-9140",
+        "g3q/9141-9302-9143-9303"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_ROOFTOP",
+        "x": 1,
+        "y": 2,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_ROOFTOP",
+        "x": 1,
+        "y": 4,
+        "palette": "BAKED"
+      }
+    ]
+  },
+  {
+    "id": "emerald_retail_edcdaf1dc958",
+    "map": "EM_LAVARIDGE_TOWN_HERB_SHOP",
+    "rect": [
+      0,
+      6,
+      2,
+      2
+    ],
+    "kind": "object (model as one)",
+    "note": "Complete source-specific planter",
+    "source_layout": [
+      [
+        "g3q/9118-9154-9313-9121",
+        "g3q/9153-9154-9122-9123"
+      ],
+      [
+        "g3q/9137-9138-9139-9140",
+        "g3q/9141-9142-9143-9144"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_LAVARIDGE_TOWN_HERB_SHOP",
+        "x": 0,
+        "y": 6,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_1F",
+        "x": 0,
+        "y": 4,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_1F",
+        "x": 0,
+        "y": 6,
+        "palette": "BAKED"
+      }
+    ]
+  },
+  {
+    "id": "emerald_retail_6d0b775f9026",
+    "map": "EM_BATTLE_FRONTIER_MART",
+    "rect": [
+      6,
+      0,
+      2,
+      3
+    ],
+    "kind": "object (model as one)",
+    "note": "Mart complete wall cabinet and floor toes",
+    "source_layout": [
+      [
+        "g3q/8960-8960-9001-9002",
+        "g3q/8960-8960-9002-9003"
+      ],
+      [
+        "g3q/9012-9013-9014-9015",
+        "g3q/9016-9017-9018-9019"
+      ],
+      [
+        "g3q/8997-8998-9039-8957",
+        "g3q/9040-9041-8956-8957"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_BATTLE_FRONTIER_MART",
+        "x": 6,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_FALLARBOR_TOWN_MART",
+        "x": 6,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_FORTREE_CITY_MART",
+        "x": 6,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LAVARIDGE_TOWN_MART",
+        "x": 6,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_UNUSED_MART",
+        "x": 6,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_MAUVILLE_CITY_MART",
+        "x": 6,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_MOSSDEEP_CITY_MART",
+        "x": 6,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_OLDALE_TOWN_MART",
+        "x": 6,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_PETALBURG_CITY_MART",
+        "x": 6,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_RUSTBORO_CITY_MART",
+        "x": 6,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_SLATEPORT_CITY_MART",
+        "x": 6,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_SOOTOPOLIS_CITY_MART",
+        "x": 6,
+        "y": 0,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_VERDANTURF_TOWN_MART",
+        "x": 6,
+        "y": 0,
+        "palette": "BAKED"
+      }
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          2
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          1,
+          2
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "id": "emerald_retail_70c89123135f",
+    "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_ROOFTOP",
+    "rect": [
+      0,
+      0,
+      18,
+      8
+    ],
+    "kind": "object (model as one)",
+    "note": "Department-store entire rooftop perimeter rail",
+    "source_layout": [
+      [
+        "g3q/8995-8995-9008-9009",
+        "g3q/8995-8995-9182-9182",
+        "g3q/8995-8995-9182-9182",
+        "g3q/8995-8995-9182-9182",
+        "g3q/8995-8995-9182-9182",
+        "g3q/8995-8995-9182-9182",
+        "g3q/8995-8995-9182-9182",
+        "g3q/8995-8995-9182-9182",
+        "g3q/8995-8995-9182-9182",
+        "g3q/48-49-9169-9170",
+        "g3q/48-49-9169-9170",
+        "g3q/8995-8995-9182-9182",
+        "g3q/8995-8995-9182-9182",
+        "g3q/8995-8995-9182-9182",
+        "g3q/8995-8995-9182-9182",
+        "g3q/8995-8995-9010-9011",
+        "g3q/8995-8995-8995-8995",
+        "g3q/8995-8995-8995-8995"
+      ],
+      [
+        "g3q/9034-9035-9034-9036",
+        "g3q/9110-9110-9102-9111",
+        "g3q/9110-9110-9102-9111",
+        "g3q/9110-9110-9102-9111",
+        "g3q/9110-9110-9102-9111",
+        "g3q/9110-9110-9102-9111",
+        "g3q/9110-9110-9102-9111",
+        "g3q/9110-9110-9102-9111",
+        "g3q/9110-9110-9102-9111",
+        "g3q/9178-9179-9180-9181",
+        "g3q/9178-9179-9180-9181",
+        "g3q/9110-9110-9102-9111",
+        "g3q/48-9054-9104-9055",
+        "g3q/9054-9054-9055-9055",
+        "g3q/9054-49-9055-9056",
+        "g3q/9037-9038-9036-9038",
+        "g3q/8995-8995-8995-8995",
+        "g3q/8995-8995-8995-8995"
+      ],
+      [
+        "g3q/9034-9036-9034-9036",
+        "g3q/9101-9098-9297-9298",
+        "g3q/9097-9098-9299-9300",
+        "g3q/9097-9098-9099-9100",
+        "g3q/9097-9098-9099-9100",
+        "g3q/9097-9098-9099-9100",
+        "g3q/9097-9098-9099-9100",
+        "g3q/9097-9098-9099-9100",
+        "g3q/9097-9098-9099-9100",
+        "g3q/9101-9103-9099-9100",
+        "g3q/9101-9103-9099-9100",
+        "g3q/9101-9098-9099-9100",
+        "g3q/9104-9055-9114-840",
+        "g3q/9055-9055-840-840",
+        "g3q/9055-9056-840-9071",
+        "g3q/9036-9038-9072-9182",
+        "g3q/8995-8995-9182-9182",
+        "g3q/8995-8995-9010-9011"
+      ],
+      [
+        "g3q/9034-9036-9034-9036",
+        "g3q/9137-9138-9301-9140",
+        "g3q/9141-9302-9143-9303",
+        "g3q/9097-9098-9099-9100",
+        "g3q/9097-9098-9099-9100",
+        "g3q/9097-9098-9099-9100",
+        "g3q/9097-9098-9099-9100",
+        "g3q/9097-9098-9099-9100",
+        "g3q/9097-9098-9099-9100",
+        "g3q/9097-9098-9099-9100",
+        "g3q/9097-9098-9099-9100",
+        "g3q/9097-9098-9099-9100",
+        "g3q/9114-840-9131-9109",
+        "g3q/840-840-9132-9132",
+        "g3q/840-9071-9088-9089",
+        "g3q/9090-9110-9102-9111",
+        "g3q/9110-9110-9102-9111",
+        "g3q/9037-9038-9036-9038"
+      ],
+      [
+        "g3q/9034-9036-9034-9036",
+        "g3q/9101-9098-9297-9298",
+        "g3q/9097-9098-9299-9300",
+        "g3q/9097-9098-9099-9100",
+        "g3q/9097-9098-9099-9100",
+        "g3q/9097-9098-9099-9100",
+        "g3q/9097-9098-9099-9100",
+        "g3q/9097-9098-9099-9100",
+        "g3q/9097-9098-9099-9100",
+        "g3q/9097-9098-9099-9100",
+        "g3q/9097-9098-9099-9100",
+        "g3q/9097-9098-9099-9100",
+        "g3q/9101-9103-9099-9100",
+        "g3q/9101-9103-9099-9100",
+        "g3q/9101-9103-9099-9100",
+        "g3q/9101-9103-9099-9100",
+        "g3q/9283-9284-9285-9286",
+        "g3q/9036-9038-9036-9038"
+      ],
+      [
+        "g3q/9034-9036-9034-9036",
+        "g3q/9137-9138-9301-9140",
+        "g3q/9141-9302-9143-9303",
+        "g3q/9097-9098-9099-9100",
+        "g3q/9097-9098-9099-9100",
+        "g3q/9262-9263-9264-9265",
+        "g3q/9287-9288-9289-9290",
+        "g3q/9097-9098-9099-9100",
+        "g3q/9097-9098-9099-9100",
+        "g3q/9262-9263-9264-9265",
+        "g3q/9287-9288-9289-9290",
+        "g3q/9097-9098-9099-9100",
+        "g3q/9097-9098-9099-9100",
+        "g3q/9097-9098-9099-9100",
+        "g3q/9097-9098-9099-9100",
+        "g3q/9097-9098-9099-9100",
+        "g3q/9283-9284-9285-9286",
+        "g3q/9036-9038-9036-9038"
+      ],
+      [
+        "g3q/9034-9036-9034-9072",
+        "g3q/9101-9098-9112-9113",
+        "g3q/9097-9098-9124-9113",
+        "g3q/9097-9098-9124-9113",
+        "g3q/9097-9098-9124-9113",
+        "g3q/9097-9098-9124-9113",
+        "g3q/9097-9098-9124-9113",
+        "g3q/9097-9098-9124-9113",
+        "g3q/9097-9098-9124-9113",
+        "g3q/9097-9098-9124-9113",
+        "g3q/9097-9098-9124-9113",
+        "g3q/9097-9098-9124-9113",
+        "g3q/9097-9098-9124-9113",
+        "g3q/9097-9098-9124-9113",
+        "g3q/9097-9098-9124-9113",
+        "g3q/9097-9098-9124-9113",
+        "g3q/9097-9098-9124-9113",
+        "g3q/9036-9038-9073-9038"
+      ],
+      [
+        "g3q/9034-9090-9091-9092",
+        "g3q/9110-9110-9092-9092",
+        "g3q/9110-9110-9092-9092",
+        "g3q/9110-9110-9092-9092",
+        "g3q/9110-9110-9092-9092",
+        "g3q/9110-9110-9092-9092",
+        "g3q/9110-9110-9092-9092",
+        "g3q/9110-9110-9092-9092",
+        "g3q/9110-9110-9092-9092",
+        "g3q/9110-9110-9092-9092",
+        "g3q/9110-9110-9092-9092",
+        "g3q/9110-9110-9092-9092",
+        "g3q/9110-9110-9092-9092",
+        "g3q/9110-9110-9092-9092",
+        "g3q/9110-9110-9092-9092",
+        "g3q/9110-9110-9092-9092",
+        "g3q/9110-9110-9092-9092",
+        "g3q/9093-9038-9092-9094"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_ROOFTOP",
+        "x": 0,
+        "y": 0,
+        "palette": "BAKED"
+      }
+    ],
+    "model_layout": [
+      [
+        "g3q/8995-8995-9008-9009",
+        "g3q/8995-8995-9182-9182",
+        "g3q/8995-8995-9182-9182",
+        "g3q/8995-8995-9182-9182",
+        "g3q/8995-8995-9182-9182",
+        "g3q/8995-8995-9182-9182",
+        "g3q/8995-8995-9182-9182",
+        "g3q/8995-8995-9182-9182",
+        "g3q/8995-8995-9182-9182",
+        null,
+        null,
+        "g3q/8995-8995-9182-9182",
+        "g3q/8995-8995-9182-9182",
+        "g3q/8995-8995-9182-9182",
+        "g3q/8995-8995-9182-9182",
+        "g3q/8995-8995-9010-9011",
+        null,
+        null
+      ],
+      [
+        "g3q/9034-9035-9034-9036",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        "g3q/9037-9038-9036-9038",
+        null,
+        null
+      ],
+      [
+        "g3q/9034-9036-9034-9036",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        "g3q/9036-9038-9072-9182",
+        "g3q/8995-8995-9182-9182",
+        "g3q/8995-8995-9010-9011"
+      ],
+      [
+        "g3q/9034-9036-9034-9036",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        "g3q/9037-9038-9036-9038"
+      ],
+      [
+        "g3q/9034-9036-9034-9036",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        "g3q/9036-9038-9036-9038"
+      ],
+      [
+        "g3q/9034-9036-9034-9036",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        "g3q/9036-9038-9036-9038"
+      ],
+      [
+        "g3q/9034-9036-9034-9072",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        "g3q/9036-9038-9073-9038"
+      ],
+      [
+        "g3q/9034-9090-9091-9092",
+        "g3q/9110-9110-9092-9092",
+        "g3q/9110-9110-9092-9092",
+        "g3q/9110-9110-9092-9092",
+        "g3q/9110-9110-9092-9092",
+        "g3q/9110-9110-9092-9092",
+        "g3q/9110-9110-9092-9092",
+        "g3q/9110-9110-9092-9092",
+        "g3q/9110-9110-9092-9092",
+        "g3q/9110-9110-9092-9092",
+        "g3q/9110-9110-9092-9092",
+        "g3q/9110-9110-9092-9092",
+        "g3q/9110-9110-9092-9092",
+        "g3q/9110-9110-9092-9092",
+        "g3q/9110-9110-9092-9092",
+        "g3q/9110-9110-9092-9092",
+        "g3q/9110-9110-9092-9092",
+        "g3q/9093-9038-9092-9094"
+      ]
+    ]
+  },
+  {
+    "id": "emerald_retail_f19b35f5ee84",
+    "map": "EM_BATTLE_FRONTIER_MART",
+    "rect": [
+      6,
+      4,
+      2,
+      3
+    ],
+    "kind": "object (model as one)",
+    "note": "Mart complete free-standing merchandise shelf",
+    "source_layout": [
+      [
+        "g3q/9022-9023-9024-9025",
+        "g3q/9026-9027-9028-9029"
+      ],
+      [
+        "g3q/9046-9047-9048-9049",
+        "g3q/9050-9051-9052-9053"
+      ],
+      [
+        "g3q/9063-9064-9065-9066",
+        "g3q/9067-9068-9069-9070"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_BATTLE_FRONTIER_MART",
+        "x": 6,
+        "y": 4,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_FALLARBOR_TOWN_MART",
+        "x": 6,
+        "y": 4,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_FORTREE_CITY_MART",
+        "x": 6,
+        "y": 4,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LAVARIDGE_TOWN_MART",
+        "x": 6,
+        "y": 4,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_3F",
+        "x": 2,
+        "y": 4,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_DEPARTMENT_STORE_3F",
+        "x": 14,
+        "y": 4,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_UNUSED_MART",
+        "x": 6,
+        "y": 4,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_MAUVILLE_CITY_MART",
+        "x": 6,
+        "y": 4,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_MOSSDEEP_CITY_MART",
+        "x": 6,
+        "y": 4,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_OLDALE_TOWN_MART",
+        "x": 6,
+        "y": 4,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_PETALBURG_CITY_MART",
+        "x": 6,
+        "y": 4,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_RUSTBORO_CITY_MART",
+        "x": 6,
+        "y": 4,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_SLATEPORT_CITY_MART",
+        "x": 6,
+        "y": 4,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_SOOTOPOLIS_CITY_MART",
+        "x": 6,
+        "y": 4,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_VERDANTURF_TOWN_MART",
+        "x": 6,
+        "y": 4,
+        "palette": "BAKED"
+      }
+    ],
+    "model_layout": [
+      [
+        "g3q/9022-9023-9024-9025",
+        "g3q/9026-9027-9028-9029"
+      ],
+      [
+        "g3q/9046-9047-9048-9049",
+        "g3q/9050-9051-9052-9053"
+      ],
+      [
+        "g3q/9063-9064-9065-9066",
+        "g3q/9067-9068-9069-9070"
+      ]
+    ]
+  },
+  {
+    "id": "emerald_retail_263d928f3b61",
+    "map": "EM_BATTLE_FRONTIER_MART",
+    "rect": [
+      0,
+      1,
+      3,
+      4
+    ],
+    "kind": "object (model as one)",
+    "note": "Mart complete service counter and register",
+    "source_layout": [
+      [
+        "g3q/8976-8977-8978-8979",
+        "g3q/9086-9087-8979-8979",
+        "g3q/8977-8977-9020-9021"
+      ],
+      [
+        "g3q/8996-8955-8956-8957",
+        "g3q/8954-8955-8952-8953",
+        "g3q/9042-9043-9044-9045"
+      ],
+      [
+        "g3q/8954-8955-9391-9392",
+        "g3q/8950-8951-9059-9060",
+        "g3q/9061-9062-9044-9045"
+      ],
+      [
+        "g3q/9393-9394-9076-9077",
+        "g3q/9078-9079-9077-9080",
+        "g3q/9081-9082-9083-9084"
+      ]
+    ],
+    "occurrences": [
+      {
+        "map": "EM_BATTLE_FRONTIER_MART",
+        "x": 0,
+        "y": 1,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_FALLARBOR_TOWN_MART",
+        "x": 0,
+        "y": 1,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_FORTREE_CITY_MART",
+        "x": 0,
+        "y": 1,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LAVARIDGE_TOWN_MART",
+        "x": 0,
+        "y": 1,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_UNUSED_MART",
+        "x": 0,
+        "y": 1,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_MAUVILLE_CITY_MART",
+        "x": 0,
+        "y": 1,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_MOSSDEEP_CITY_MART",
+        "x": 0,
+        "y": 1,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_OLDALE_TOWN_MART",
+        "x": 0,
+        "y": 1,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_PETALBURG_CITY_MART",
+        "x": 0,
+        "y": 1,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_RUSTBORO_CITY_MART",
+        "x": 0,
+        "y": 1,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_SLATEPORT_CITY_MART",
+        "x": 0,
+        "y": 1,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_SOOTOPOLIS_CITY_MART",
+        "x": 0,
+        "y": 1,
+        "palette": "BAKED"
+      },
+      {
+        "map": "EM_VERDANTURF_TOWN_MART",
+        "x": 0,
+        "y": 1,
+        "palette": "BAKED"
+      }
+    ],
+    "model_layout": [
+      [
+        null,
+        null,
+        "g3q/8977-8977-9020-9021"
+      ],
+      [
+        null,
+        null,
+        "g3q/9042-9043-9044-9045"
+      ],
+      [
+        "g3q/8954-8955-9391-9392",
+        "g3q/8950-8951-9059-9060",
+        "g3q/9061-9062-9044-9045"
+      ],
+      [
+        "g3q/9393-9394-9076-9077",
+        "g3q/9078-9079-9077-9080",
+        "g3q/9081-9082-9083-9084"
+      ]
+    ]
+  }
+]

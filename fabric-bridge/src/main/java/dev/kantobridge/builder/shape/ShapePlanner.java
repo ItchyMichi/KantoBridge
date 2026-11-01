@@ -664,6 +664,16 @@ public final class ShapePlanner {
 
 	static Columns columns(SceneMap map, @Nullable SceneAtlas sceneAtlas, int atlas, ShapeParams params, Profile.@Nullable Tileset tileset,
 			@Nullable UnitProbe probe, Map<String, Integer> tally, @Nullable MapLayout layout) {
+		return columns(map, sceneAtlas, atlas, params, tileset, probe, tally, layout, false);
+	}
+
+	private static Columns columns(SceneMap map, @Nullable SceneAtlas sceneAtlas, int atlas, ShapeParams params, Profile.@Nullable Tileset tileset,
+			@Nullable UnitProbe probe, Map<String, Integer> tally, @Nullable MapLayout layout, boolean omitPreservingTerrain) {
+		return columns(map, sceneAtlas, atlas, params, tileset, probe, tally, layout, omitPreservingTerrain, false);
+	}
+
+	private static Columns columns(SceneMap map, @Nullable SceneAtlas sceneAtlas, int atlas, ShapeParams params, Profile.@Nullable Tileset tileset,
+			@Nullable UnitProbe probe, Map<String, Integer> tally, @Nullable MapLayout layout, boolean omitPreservingTerrain, boolean omitPreservingCarriers) {
 		if (!params.measured()) {
 			return classified(map, atlas, params);
 		}
@@ -673,10 +683,29 @@ public final class ShapePlanner {
 		List<Buildings.Claim> claims = params.profileBuildings() && tileset != null && sceneAtlas != null && map.perCell() == ShapeTable.UNIT_CELL
 				? Buildings.claims(map, tileset.buildings(), held, tally) : List.of();
 		// The fitted table's generated buildings (HAND_MODELS.md section 7) claim their grids next, as band buildings do,
-		// outdoors (on the surface or under the open sky: a Pokémon Center outside Silver Cave, 2026-10-23).
+		// outdoors, plus explicitly opted-in Emerald parts objects indoors. FittedBuildings filters legacy entries.
 		Map<Profile.Building, FittedShapes.Building> fittedOf = FittedBuildings.index();
-		List<Buildings.Claim> fitted = sceneAtlas != null && map.perCell() == ShapeTable.UNIT_CELL && map.outdoors()
-				? FittedBuildings.claims(map, held, tally, fittedOf) : List.of();
+		List<Buildings.Claim> fitted = sceneAtlas != null && map.perCell() == ShapeTable.UNIT_CELL
+				? FittedBuildings.claims(map, held, tally, fittedOf, omitPreservingTerrain, omitPreservingCarriers) : List.of();
+		if (!omitPreservingTerrain && !omitPreservingCarriers
+				&& fitted.stream().anyMatch(c -> FittedShapes.preserveCarriersBuilding(fittedOf.get(c.building())))) {
+			// Retain every ordinary/terrain-preserving building in the reference. Only
+			// these visual carrier overlays are omitted; disjoint Trainer Hill and
+			// forest/soil claims therefore keep their independent native profiles.
+			Columns nativeSource = columns(map, sceneAtlas, atlas, params, tileset, probe, new TreeMap<>(), layout, false, true);
+			Map<Buildings.Claim, FittedCarriers.Profile> profiles = new java.util.IdentityHashMap<>();
+			for (Buildings.Claim claim : fitted) {
+				var definition = fittedOf.get(claim.building());
+				if (FittedShapes.preserveCarriersBuilding(definition)) {
+					var profile = FittedCarriers.profile(map, claim, definition, nativeSource, classes, layout);
+					if (profile == null) tally.merge("fitted_native_carriers_refused", 1, Integer::sum);
+					else profiles.put(claim, profile);
+				}
+			}
+			// Claims are disjoint. A refused source carrier must remain native without
+			// suppressing other independently validated models elsewhere on this map.
+			return profiles.isEmpty() ? nativeSource : FittedCarriers.overlay(map, atlas, nativeSource, fitted, fittedOf, profiles, tally);
+		}
 		// The landscape sections' models (LANDSCAPE_MODELS.md; none unless the build names a table) claim their marked cells
 		// next, outdoors (on the surface or under the open sky), as parts templates.
 		List<Buildings.Claim> landscape = sceneAtlas != null && map.perCell() == ShapeTable.UNIT_CELL && map.env().outdoor()
@@ -779,9 +808,39 @@ public final class ShapePlanner {
 		for (int i = 0; box != null && i < n; i++) {
 			modelled[i] |= box[i] != null;
 		}
-		return new Columns(columns.keys(), columns.blocks(), columns.shapeMask(), floor, decor, List.copyOf(units), columns.runs(), templates,
+		Columns result = new Columns(columns.keys(), columns.blocks(), columns.shapeMask(), floor, decor, List.copyOf(units), columns.runs(), templates,
 				wallTile, ceiling, dress == null ? new ShapeKey[n][] : dress.hung(), dress == null ? new int[n] : dress.hungMask(),
 				dress == null ? new int[n] : dress.hungLeaves(), dress == null ? null : dress.curtain(), modelled);
+		if (!omitPreservingTerrain && fitted.stream().anyMatch(c -> FittedShapes.preserveTerrainBuilding(fittedOf.get(c.building())))) {
+			// Removing a mixed cliff/building drawing from Tier A can shorten the native
+			// connected runs outside that model. Compare with the exact native source plan,
+			// retaining all other claims, and restore only unclaimed structural columns.
+			Columns nativeSource = columns(map, sceneAtlas, atlas, params, tileset, probe, new TreeMap<>(), layout, true);
+			result = preserveNativeTerrain(map, result, nativeSource, held, tally);
+		}
+		return result;
+	}
+
+	static Columns preserveNativeTerrain(SceneMap map, Columns result, Columns source, boolean[] held, Map<String,Integer> tally) {
+		boolean[] restored = new boolean[held.length];int changed = 0;
+		for (int i=0;i<held.length;i++) {
+			if (held[i] || result.modelled()[i] || source.modelled()[i] || map.kindAtTile(i%map.artCols(),i/map.artCols())!=CellKind.SOLID
+					|| source.blocks()[i]<=0 || source.decor()[i]!=0) continue;
+			ShapeKey[] keys=source.keys()[i];boolean nativeColumn=true;
+			if(keys!=null)for(ShapeKey key:keys)if(key!=null&&key.kind()!=ShapeKey.Kind.CUBE&&key.kind()!=ShapeKey.Kind.ROOF){nativeColumn=false;break;}
+			if(!nativeColumn)continue;
+			if(result.blocks()[i]!=source.blocks()[i]||!Arrays.equals(result.keys()[i],keys))changed++;
+			result.keys()[i]=keys;result.blocks()[i]=source.blocks()[i];result.shapeMask()[i]=source.shapeMask()[i];
+			result.floor()[i]=source.floor()[i];result.decor()[i]=source.decor()[i];result.hung()[i]=source.hung()[i];
+			result.hungMask()[i]=source.hungMask()[i];result.hungLeaves()[i]=source.hungLeaves()[i];restored[i]=true;
+		}
+		int per=map.perCell(),cols=map.artCols();List<Units.Cell> units=result.units().stream().filter(unit->{
+			for(int dy=0;dy<per;dy++)for(int dx=0;dx<per;dx++)if(!restored[(unit.cy()*per+dy)*cols+unit.cx()*per+dx])return true;
+			return false;
+		}).toList();
+		tally.merge("fitted_native_terrain_preserved",changed,Integer::sum);
+		return new Columns(result.keys(),result.blocks(),result.shapeMask(),result.floor(),result.decor(),units,result.runs(),result.templates(),
+				result.wallTile(),result.ceiling(),result.hung(),result.hungMask(),result.hungLeaves(),result.curtain(),result.modelled());
 	}
 
 	// ---- kb-shapes/1: today's classified heights, folded ----

@@ -1,0 +1,413 @@
+{
+  "schema": 1,
+  "inspection": "All14 source/model cards, full room map, six complete assemblies and revised bowl-middle silhouette inspected; Minecraft pending.",
+  "entries": [
+    {
+      "key": "g3q/7157-7158-7159-7160",
+      "group": "building__mauville_gym",
+      "label": "Shared electrical terminal cap",
+      "family": "electrical gym fixture",
+      "recipe": "coil_cap",
+      "reason": "Replace the distorted cap with a rounded pale bowl, narrow grounded neck and small contact pin. Exclude yellow floor pixels and add exact alternate bases for its six real placements.",
+      "baseline_entry_sha256": "97e9da33c012704707b3aebe9aeaac8e971f1e7705eb3734f34c3b145ebc3bdd",
+      "source_contact": "../inventory/building__mauville_gym/page-001.png",
+      "source_card": 1,
+      "assemblies": [
+        "emerald_mauville_east_tall_pylon",
+        "emerald_mauville_plain_pylon",
+        "emerald_mauville_alternate_pylon"
+      ],
+      "alsoOn": [
+        "g3q/7172-7173-7174-7175",
+        "g3q/7286-7283-7287-7285"
+      ]
+    },
+    {
+      "key": "g3q/7168-7169-3262-3263",
+      "group": "building__mauville_gym",
+      "label": "Mauville entry statue globe",
+      "family": "electrical gym fixture",
+      "recipe": null,
+      "reason": "Retain the rounded globe and collar above its exact plaque pedestal; surrounding yellow floor remains outside its occupied silhouette.",
+      "baseline_entry_sha256": "a25f726fc5cb7cccd3eb30e33e729347b5d60f065c37a22237ebd1898009891c",
+      "source_contact": "../inventory/building__mauville_gym/page-001.png",
+      "source_card": 2,
+      "assemblies": [
+        "emerald_mauville_statue"
+      ]
+    },
+    {
+      "key": "g3q/7172-7173-7174-7175",
+      "group": "building__mauville_gym",
+      "label": "Electrical pylon plain base",
+      "family": "electrical gym fixture",
+      "recipe": "coil_base",
+      "reason": "Use a broad grounded metal foot, blue insulator body, narrow shaft and separate pale rings; this base supports the repeated terminal cap.",
+      "baseline_entry_sha256": "417f36108f12f6e015ac6c473814ef56b4d41c91eb2804a004acfa1fb6b9bd9b",
+      "source_contact": "../inventory/building__mauville_gym/page-001.png",
+      "source_card": 3,
+      "assemblies": [
+        "emerald_mauville_plain_pylon"
+      ]
+    },
+    {
+      "key": "g3q/3267-3268-7181-7182",
+      "group": "building__mauville_gym",
+      "label": "Mauville entry statue pedestal",
+      "family": "electrical gym fixture",
+      "recipe": null,
+      "reason": "Retain the bounded plaque body and separate bottom foot that support the matched globe at both entrance positions.",
+      "baseline_entry_sha256": "d9f2d05c02398b7bb33a43d3032204b6fc6b7d568b82f1c05928d19f6aab4892",
+      "source_contact": "../inventory/building__mauville_gym/page-001.png",
+      "source_card": 4,
+      "assemblies": [
+        "emerald_mauville_statue"
+      ]
+    },
+    {
+      "key": "g3q/7209-7210-7211-7212",
+      "group": "building__mauville_gym",
+      "label": "Mauville dais northwest corner",
+      "family": "electrical gym fixture",
+      "recipe": "dais_0_0",
+      "reason": "Join the yellow-edged gray platform into one complete low surface with a raised west rail and shallow rear edge.",
+      "baseline_entry_sha256": "4e4e1e7020c52aa8cc97d6d4574088b7e2bef7613513df6e697b184b6c8ca63e",
+      "source_contact": "../inventory/building__mauville_gym/page-001.png",
+      "source_card": 5,
+      "assemblies": [
+        "emerald_mauville_dais"
+      ]
+    },
+    {
+      "key": "g3q/7210-7219-7212-7220",
+      "group": "building__mauville_gym",
+      "label": "Mauville dais northeast corner",
+      "family": "electrical gym fixture",
+      "recipe": "dais_3_0",
+      "reason": "Mirror the east rail within the same physical platform; the yellow source border stays top-facing.",
+      "baseline_entry_sha256": "c0e30225c6d1148f79760a3b2cd5615a6fa4cf8d4f7818dfaf9708fece529e2f",
+      "source_contact": "../inventory/building__mauville_gym/page-001.png",
+      "source_card": 6,
+      "assemblies": [
+        "emerald_mauville_dais"
+      ]
+    },
+    {
+      "key": "g3q/7245-7212-7246-7247",
+      "group": "building__mauville_gym",
+      "label": "Mauville dais southwest corner",
+      "family": "electrical gym fixture",
+      "recipe": "dais_0_1",
+      "reason": "Continue the west rail to a shallow front step instead of treating the source floor as a tall slab.",
+      "baseline_entry_sha256": "868e04e0eda71c92f83240e38a742abb2e959424f267ff6a75af8602198107c9",
+      "source_contact": "../inventory/building__mauville_gym/page-001.png",
+      "source_card": 7,
+      "assemblies": [
+        "emerald_mauville_dais"
+      ]
+    },
+    {
+      "key": "g3q/7212-7220-7247-7251",
+      "group": "building__mauville_gym",
+      "label": "Mauville dais southeast corner",
+      "family": "electrical gym fixture",
+      "recipe": "dais_3_1",
+      "reason": "The east rail ends at the shared low front step; all center floor pieces align at seams.",
+      "baseline_entry_sha256": "9fc05ff13292661e20cb7c2ec9a82f654a21ac09892d54a95b46438ac17d8e98",
+      "source_contact": "../inventory/building__mauville_gym/page-001.png",
+      "source_card": 8,
+      "assemblies": [
+        "emerald_mauville_dais"
+      ]
+    },
+    {
+      "key": "g3q/7253-7158-7254-7160",
+      "group": "building__mauville_gym",
+      "label": "West tall pylon terminal cap",
+      "family": "electrical gym fixture",
+      "recipe": "coil_cap",
+      "reason": "Remove the yellow background block from the back of the pale terminal. Place its bowl and pin above the two repeated middle sections.",
+      "baseline_entry_sha256": "a046ce9381b8fd6455ff27c61125e1b0142652bccb86bb935de5e0b9cc847d47",
+      "source_contact": "../inventory/building__mauville_gym/page-001.png",
+      "source_card": 9,
+      "assemblies": [
+        "emerald_mauville_west_tall_pylon"
+      ],
+      "on": "g3q/7282-7283-7284-7285"
+    },
+    {
+      "key": "g3q/7259-7262-7265-7268",
+      "group": "building__mauville_gym",
+      "label": "East tall pylon energized base",
+      "family": "electrical gym fixture",
+      "recipe": "coil_electric",
+      "reason": "Give the pylon a grounded blue insulator and metal rings, plus a separate native-cyan discharge on its front; exclude the yellow floor.",
+      "baseline_entry_sha256": "394914908aa963abaea1bef4f351aa529a29e8236d1f935bd965292afd9fa65f",
+      "source_contact": "../inventory/building__mauville_gym/page-001.png",
+      "source_card": 10,
+      "assemblies": [
+        "emerald_mauville_east_tall_pylon"
+      ]
+    },
+    {
+      "key": "g3q/7281-7173-7174-7175",
+      "group": "building__mauville_gym",
+      "label": "Electrical pylon alternate plain base",
+      "family": "electrical gym fixture",
+      "recipe": "coil_base",
+      "reason": "Use the same physical insulator as its exact source variant; keep the primary cap relationship while eliminating source-floor paint from the sides.",
+      "baseline_entry_sha256": "417f36108f12f6e015ac6c473814ef56b4d41c91eb2804a004acfa1fb6b9bd9b",
+      "source_contact": "../inventory/building__mauville_gym/page-001.png",
+      "source_card": 11,
+      "assemblies": [
+        "emerald_mauville_alternate_pylon"
+      ]
+    },
+    {
+      "key": "g3q/7282-7283-7284-7285",
+      "group": "building__mauville_gym",
+      "label": "West tall pylon repeated middle",
+      "family": "electrical gym fixture",
+      "recipe": "coil_middle",
+      "reason": "Model the actual repeated source row as one rounded pale terminal bowl below a narrow shaft and two smaller rings. Two distinct map positions supply the two intermediate bowls; exact self-row and terminal-base links preserve the whole pylon.",
+      "baseline_entry_sha256": "148ed53a44b52be9fee0b996769574fd20d1ab956362af2efa8f9695261746bf",
+      "source_contact": "../inventory/building__mauville_gym/page-001.png",
+      "source_card": 12,
+      "assemblies": [
+        "emerald_mauville_west_tall_pylon"
+      ],
+      "on": "g3q/7282-7283-7284-7285",
+      "alsoOn": [
+        "g3q/7255-7173-7174-7175"
+      ]
+    },
+    {
+      "key": "g3q/7286-7283-7287-7285",
+      "group": "building__mauville_gym",
+      "label": "East tall pylon repeated middle",
+      "family": "electrical gym fixture",
+      "recipe": "coil_middle",
+      "reason": "Model the actual repeated source row as one rounded pale terminal bowl below a narrow shaft and two smaller rings. Two distinct map positions supply the two intermediate bowls; exact self-row and terminal-base links preserve the whole pylon.",
+      "baseline_entry_sha256": "3dcb78223db93d0d209f94184e8c1ec5f4ee6030440c07add30bd0a28397d609",
+      "source_contact": "../inventory/building__mauville_gym/page-001.png",
+      "source_card": 13,
+      "assemblies": [
+        "emerald_mauville_east_tall_pylon"
+      ],
+      "on": "g3q/7286-7283-7287-7285",
+      "alsoOn": [
+        "g3q/7259-7262-7265-7268"
+      ]
+    },
+    {
+      "key": "g3q/7255-7173-7174-7175",
+      "group": "building__mauville_gym",
+      "label": "West tall pylon plain terminal base",
+      "family": "electrical gym fixture",
+      "recipe": "coil_base",
+      "reason": "Ground the west tall pylon with a broad foot, blue insulator and two pale rings; the repeated middle rows join its narrow shaft.",
+      "baseline_entry_sha256": "77537fdeb7f15c39ca9e21f27dea55f5ee3d79740221c9dc949f7d24dea00797",
+      "source_contact": "../inventory/building__mauville_gym/page-001.png",
+      "source_card": 14,
+      "assemblies": [
+        "emerald_mauville_west_tall_pylon"
+      ]
+    },
+    {
+      "key": "g3q/7213-7214-7215-7216",
+      "group": "building__mauville_gym",
+      "label": "Mauville dais center 1,0",
+      "family": "gym platform",
+      "recipe": "dais_1_0",
+      "reason": "Add the missing center section of the whole low platform, with the native badge and gray floor projected horizontally between the yellow rails.",
+      "baseline_entry_sha256": null,
+      "source_contact": "../gym-study/EM_MAUVILLE_CITY_GYM.png",
+      "source_card": null,
+      "assemblies": [
+        "emerald_mauville_dais"
+      ]
+    },
+    {
+      "key": "g3q/7214-7217-7216-7218",
+      "group": "building__mauville_gym",
+      "label": "Mauville dais center 2,0",
+      "family": "gym platform",
+      "recipe": "dais_2_0",
+      "reason": "Add the missing center section of the whole low platform, with the native badge and gray floor projected horizontally between the yellow rails.",
+      "baseline_entry_sha256": null,
+      "source_contact": "../gym-study/EM_MAUVILLE_CITY_GYM.png",
+      "source_card": null,
+      "assemblies": [
+        "emerald_mauville_dais"
+      ]
+    },
+    {
+      "key": "g3q/7212-7212-7248-7249",
+      "group": "building__mauville_gym",
+      "label": "Mauville dais center 1,1",
+      "family": "gym platform",
+      "recipe": "dais_1_1",
+      "reason": "Add the missing center section of the whole low platform, with the native badge and gray floor projected horizontally between the yellow rails.",
+      "baseline_entry_sha256": null,
+      "source_contact": "../gym-study/EM_MAUVILLE_CITY_GYM.png",
+      "source_card": null,
+      "assemblies": [
+        "emerald_mauville_dais"
+      ]
+    },
+    {
+      "key": "g3q/7212-7212-7249-7250",
+      "group": "building__mauville_gym",
+      "label": "Mauville dais center 2,1",
+      "family": "gym platform",
+      "recipe": "dais_2_1",
+      "reason": "Add the missing center section of the whole low platform, with the native badge and gray floor projected horizontally between the yellow rails.",
+      "baseline_entry_sha256": null,
+      "source_contact": "../gym-study/EM_MAUVILLE_CITY_GYM.png",
+      "source_card": null,
+      "assemblies": [
+        "emerald_mauville_dais"
+      ]
+    }
+  ],
+  "assemblies": [
+    {
+      "id": "emerald_mauville_dais",
+      "map": "EM_MAUVILLE_CITY_GYM",
+      "rect": [
+        3,
+        2,
+        4,
+        2
+      ],
+      "kind": "floor (model as one)",
+      "note": "Complete yellow-edged gray arena dais with four new center floor sections.",
+      "source_layout": [
+        [
+          "g3q/7209-7210-7211-7212",
+          "g3q/7213-7214-7215-7216",
+          "g3q/7214-7217-7216-7218",
+          "g3q/7210-7219-7212-7220"
+        ],
+        [
+          "g3q/7245-7212-7246-7247",
+          "g3q/7212-7212-7248-7249",
+          "g3q/7212-7212-7249-7250",
+          "g3q/7212-7220-7247-7251"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_mauville_statue",
+      "map": "EM_MAUVILLE_CITY_GYM",
+      "rect": [
+        3,
+        17,
+        1,
+        2
+      ],
+      "kind": "stack (model as one)",
+      "note": "Complete entry statue and plaque base, repeated at both entrance sides.",
+      "source_layout": [
+        [
+          "g3q/7168-7169-3262-3263"
+        ],
+        [
+          "g3q/3267-3268-7181-7182"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_mauville_west_tall_pylon",
+      "map": "EM_MAUVILLE_CITY_GYM",
+      "rect": [
+        3,
+        5,
+        1,
+        4
+      ],
+      "kind": "stack (model as one)",
+      "note": "Four actual source rows: terminal bowl, two repeated middle shafts and the grounded plain base; actual room headroom9 supports8 block carriers.",
+      "source_layout": [
+        [
+          "g3q/7253-7158-7254-7160"
+        ],
+        [
+          "g3q/7282-7283-7284-7285"
+        ],
+        [
+          "g3q/7282-7283-7284-7285"
+        ],
+        [
+          "g3q/7255-7173-7174-7175"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_mauville_east_tall_pylon",
+      "map": "EM_MAUVILLE_CITY_GYM",
+      "rect": [
+        6,
+        5,
+        1,
+        4
+      ],
+      "kind": "stack (model as one)",
+      "note": "Four source rows ending in a cyan energized base; repeated middle positions remain distinct physical layers.",
+      "source_layout": [
+        [
+          "g3q/7157-7158-7159-7160"
+        ],
+        [
+          "g3q/7286-7283-7287-7285"
+        ],
+        [
+          "g3q/7286-7283-7287-7285"
+        ],
+        [
+          "g3q/7259-7262-7265-7268"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_mauville_plain_pylon",
+      "map": "EM_MAUVILLE_CITY_GYM",
+      "rect": [
+        0,
+        10,
+        1,
+        2
+      ],
+      "kind": "stack (model as one)",
+      "note": "Shared terminal bowl and plain foot/insulator base.",
+      "source_layout": [
+        [
+          "g3q/7157-7158-7159-7160"
+        ],
+        [
+          "g3q/7172-7173-7174-7175"
+        ]
+      ]
+    },
+    {
+      "id": "emerald_mauville_alternate_pylon",
+      "map": "EM_MAUVILLE_CITY_GYM",
+      "rect": [
+        3,
+        10,
+        1,
+        2
+      ],
+      "kind": "stack (model as one)",
+      "note": "The same cap over its existing primary alternate source base.",
+      "source_layout": [
+        [
+          "g3q/7157-7158-7159-7160"
+        ],
+        [
+          "g3q/7281-7173-7174-7175"
+        ]
+      ]
+    }
+  ]
+}

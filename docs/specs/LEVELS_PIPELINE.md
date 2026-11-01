@@ -6,6 +6,11 @@ models standing on it. This file is the how-to: the steps that took Route 119 fr
 [LANDSCAPE_MODELS.md](LANDSCAPE_MODELS.md) "Levels"; the plan is [HEIGHTS_ALL_GAMES_PLAN.md](HEIGHTS_ALL_GAMES_PLAN.md)
 W6. Code: `OutdoorLevels` and `RaisedRegions` (outdoors) in `builder/plan`.
 
+**Since 2026-11-01 these levels are every build's default** (Create world, Add a region, headless): every outdoor map,
+chained, with the models table the jar carries (`kantobridge/landscape_models.json`, v16t). The `-Pkb.outdoorLevels`,
+`-Pkb.chainLevels` and `-Pkb.landscapeModels` properties below still override it; `none`/`false` (or
+`build_world.py --flat`) builds the outdoors flat. PROGRESS.md "Raised outdoors by default" has the measurements.
+
 ## Units
 
 - **Blocks:** the computer's levels (`OutdoorLevelsDumpTest`, `MapLayout`): blocks over the map's floor, 3 a cell of

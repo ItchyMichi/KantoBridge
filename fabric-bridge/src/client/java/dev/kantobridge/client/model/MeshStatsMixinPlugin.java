@@ -8,13 +8,20 @@ import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 
 /**
  * Gates the dev-only mixins of {@code kantobridge.dev.mixins.json} (docs/specs/VOXEL_BLOCKS_PLAN.md §0.2): they apply
- * only with {@code -Dkantobridge.meshstats=true}. Reads a system property and nothing else, because it runs before
+	 * only with {@code -Dkantobridge.meshstats=true}; the read-only gallery accessor instead requires its explicit
+	 * {@code kantobridge.gallery} manifest property. Reads system properties and nothing else, because it runs before
  * Minecraft's classes load.
  */
 public final class MeshStatsMixinPlugin implements IMixinConfigPlugin {
 	/** Whether the dev mixins apply under these system properties. */
 	public static boolean applies(java.util.Properties properties) {
 		return Boolean.parseBoolean(properties.getProperty(MeshStats.PROPERTY, "false"));
+	}
+
+	public static boolean appliesTo(String mixinClassName, java.util.Properties properties) {
+		if (mixinClassName.endsWith(".GalleryChunkMapAccessor"))
+			return !properties.getProperty("kantobridge.gallery", "").isBlank();
+		return applies(properties);
 	}
 
 	@Override
@@ -28,7 +35,7 @@ public final class MeshStatsMixinPlugin implements IMixinConfigPlugin {
 
 	@Override
 	public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
-		return applies(System.getProperties());
+		return appliesTo(mixinClassName, System.getProperties());
 	}
 
 	@Override

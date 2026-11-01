@@ -34,7 +34,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ShapeTable {
 	/** The geometry version: what this code builds from a key. Not part of any world hash; it keys the client's cache. */
-	public static final int GEOMETRY = 9;
+	public static final int GEOMETRY = 13;
 	public static final String NO_OVERRIDES = "0".repeat(64);
 	private static final byte[] MAGIC = "KBST".getBytes(StandardCharsets.US_ASCII);
 	/** 2: quads as {@link QuadStore}'s words (2026-10-23). */
@@ -164,6 +164,19 @@ public final class ShapeTable {
 		return build(index, art, artHash, overrides, true);
 	}
 
+	/** What a built table keeps besides its meshes ({@link #units()}, {@link #templates()}). */
+	public enum Keep {
+		/** Every cell unit and template as built (pack tools, the fit tool, tests). */
+		ALL,
+		/**
+		 * Each cell unit and template without its geometry: its kind, gate, scores and roof rows, a unit's foreground (what a
+		 * build's report reads, ShapeReport). Built one at a time as {@link #NONE} does.
+		 */
+		SUMMARY,
+		/** Nothing (a client: only the meshes matter). */
+		NONE
+	}
+
 	/**
 	 * {@link #build(ShapeIndex, ArtSource, String, ShapeOverrides)}; without {@code keepBuilt} (a client: only the meshes
 	 * matter) each template is built, gives its blocks and goes before the next, and the table keeps no templates: a
@@ -171,6 +184,17 @@ public final class ShapeTable {
 	 * Nor does it keep the cell units (their blocks' quads are in the meshes already): pack tools build their own table.
 	 */
 	public static ShapeTable build(ShapeIndex index, ArtSource art, String artHash, ShapeOverrides overrides, boolean keepBuilt) {
+		return build(index, art, artHash, overrides, keepBuilt ? Keep.ALL : Keep.NONE);
+	}
+
+	/**
+	 * {@link #build(ShapeIndex, ArtSource, String, ShapeOverrides)}, keeping what {@code keep} says. Unless it is
+	 * {@link Keep#ALL}, a template's keys are built together and the template goes (or becomes its summary) after its last
+	 * one, so one template's voxels and quads are held at a time: the build's report kept every one of Hoenn's, gigabytes,
+	 * until 2026-11-01.
+	 */
+	public static ShapeTable build(ShapeIndex index, ArtSource art, String artHash, ShapeOverrides overrides, Keep keep) {
+		boolean lean = keep != Keep.ALL;
 		Map<String, Integer> textures = new HashMap<>();
 		List<String> keys = new ArrayList<>();
 		Meshes meshes = new Meshes(index.size() + 1);
@@ -180,7 +204,7 @@ public final class ShapeTable {
 		Map<String, Templates.Entry> entries = entries(index);
 		int artPx = art.artPx();
 		Map<String, Integer> left = new HashMap<>();
-		for (int id : order(index, keepBuilt, left)) {
+		for (int id : order(index, lean, left)) {
 			ShapeKey key = index.key(id);
 			String palette = index.palette(id);
 			if (key == null || palette == null) {
@@ -220,11 +244,15 @@ public final class ShapeTable {
 					if (entry == null) {
 						yield null;
 					}
-					TemplateRule.Template template = templates.computeIfAbsent(atlas + "|" + key.sig(), k -> TemplateRule.build(entry, atlas, art,
-							overrides));
+					String built = atlas + "|" + key.sig();
+					TemplateRule.Template template = templates.computeIfAbsent(built, k -> TemplateRule.build(entry, atlas, art, overrides));
 					List<ShapeQuad> block = template.block(key.number(0), key.number(1), key.number(2));
-					if (!keepBuilt && left.merge(key.sig(), -1, Integer::sum) == 0) {
-						templates.remove(atlas + "|" + key.sig());
+					if (lean && left.merge(built, -1, Integer::sum) == 0) {
+						if (keep == Keep.SUMMARY) {
+							templates.put(built, template.summary());
+						} else {
+							templates.remove(built);
+						}
 					}
 					int[] colours = template.colours();
 					yield colours != null ? retexture(block, colour -> texture(colourKey(colours[colour]), textures, keys)) : retexture(block, texture);
@@ -257,21 +285,26 @@ public final class ShapeTable {
 				meshes.put(id, quads, FaceMasks.coverage(quads));
 			}
 		}
-		return new ShapeTable(index.hash(), GEOMETRY, artHash, keys, meshes.seal(), keepBuilt ? units : Map.of(), keepBuilt ? templates : Map.of());
+		if (keep == Keep.SUMMARY) {
+			units.replaceAll((sig, unit) -> unit.summary());
+			templates.replaceAll((sig, template) -> template.summary());
+		}
+		return new ShapeTable(index.hash(), GEOMETRY, artHash, keys, meshes.seal(), keep == Keep.NONE ? Map.of() : units,
+				keep == Keep.NONE ? Map.of() : templates);
 	}
 
 	/**
-	 * The ids to build, in order: all of them, else the template keys last, a template's keys together (in {@code left},
-	 * each template's count of keys).
+	 * The ids to build, in order: all of them, else ({@code lean}) the template keys last, a template's keys together (in
+	 * {@code left}, each template's count of keys, by {@code atlas|sig} as the templates are built).
 	 */
-	private static int[] order(ShapeIndex index, boolean keepBuilt, Map<String, Integer> left) {
+	private static int[] order(ShapeIndex index, boolean lean, Map<String, Integer> left) {
 		int[] out = new int[index.size()];
 		int n = 0;
 		Map<String, List<Integer>> bySig = new java.util.LinkedHashMap<>();
 		for (int id = 1; id <= index.size(); id++) {
 			ShapeKey key = index.key(id);
-			if (!keepBuilt && key != null && key.kind() == ShapeKey.Kind.TMPL) {
-				bySig.computeIfAbsent(key.sig(), k -> new ArrayList<>()).add(id);
+			if (lean && key != null && key.kind() == ShapeKey.Kind.TMPL) {
+				bySig.computeIfAbsent(index.atlas(key.atlas()) + "|" + key.sig(), k -> new ArrayList<>()).add(id);
 			} else {
 				out[n++] = id;
 			}

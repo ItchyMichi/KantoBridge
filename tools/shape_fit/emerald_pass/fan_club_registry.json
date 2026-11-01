@@ -1,0 +1,321 @@
+{
+  "g3q/8467-8468-8469-8470": {
+    "source_ordinal": 1,
+    "baseline_entry_sha256": "4ab9bd1467d3b6ac3cf115501d3a79e05ae045269788d91bc228ae766dacf894",
+    "label": "Thin framed Fan Club wall portrait",
+    "family": "wall portrait",
+    "reason": "Retain the existing edited shallow plaque after complete source/front/side/angled inspection; its frame and recognizable native face need no volume change."
+  },
+  "g3q/8471-8472-8473-8474": {
+    "source_ordinal": 2,
+    "baseline_entry_sha256": "f49d9820a99f74ba3a64c339d2171b507020e9cbaca37a465e523558c18b6522",
+    "label": "Thin framed Fan Club wall portrait",
+    "family": "wall portrait",
+    "reason": "Retain the existing edited shallow plaque after complete source/front/side/angled inspection; its frame and recognizable native face need no volume change."
+  },
+  "g3q/8496-8497-8498-8499": {
+    "source_ordinal": 3,
+    "baseline_entry_sha256": "32fc79c6cd5393d5229ec616a981455ac2c6ff1387bc2987c7ef36a2830e9f48",
+    "role": "sofa_east",
+    "z": 0,
+    "label": "East green sofa facing the central glass table",
+    "family": "sofa_east",
+    "reason": "Construct the whole source-identified object before slicing, retaining native materials and excluding carpet/wall background. Supports, rims and floor-depth seams are explicit."
+  },
+  "g3q/8500-8501-8502-8503": {
+    "source_ordinal": 4,
+    "baseline_entry_sha256": "bc424595cb0fa2c2fcd3be2b78522a1c980a89c39d391b1ea3d47470e58bb877",
+    "role": "sofa_west",
+    "z": 0,
+    "label": "West green sofa facing the central glass table",
+    "family": "sofa_west",
+    "reason": "Construct the whole source-identified object before slicing, retaining native materials and excluding carpet/wall background. Supports, rims and floor-depth seams are explicit."
+  },
+  "g3q/8505-8506-8507-8508": {
+    "source_ordinal": 5,
+    "baseline_entry_sha256": "35fabf7c93420f1d8490406432d2916fe235434757d4d7b36664b5ab79e4345e",
+    "role": "sofa_east",
+    "z": 1,
+    "label": "East green sofa facing the central glass table",
+    "family": "sofa_east",
+    "reason": "Construct the whole source-identified object before slicing, retaining native materials and excluding carpet/wall background. Supports, rims and floor-depth seams are explicit."
+  },
+  "g3q/8509-8510-8511-8512": {
+    "source_ordinal": 6,
+    "baseline_entry_sha256": "94ffc2c79bc017ac43e117e68f122c632b358d8ad5642f45761dce4e868a63d4",
+    "role": "sofa_west",
+    "z": 1,
+    "label": "West green sofa facing the central glass table",
+    "family": "sofa_west",
+    "reason": "Construct the whole source-identified object before slicing, retaining native materials and excluding carpet/wall background. Supports, rims and floor-depth seams are explicit."
+  },
+  "g3q/8479-8479-8516-8517": {
+    "source_ordinal": 7,
+    "baseline_entry_sha256": "02d008eb56524a9b6275f37eba6e0da4079bc3f613b462c7310e927e4211d9fb",
+    "role": "low_bookcase",
+    "x": 0,
+    "layer": 1,
+    "added_on": "g3q/8535-8536-8537-8538",
+    "label": "Low green wall bookcase with separate shelves and books",
+    "family": "low_bookcase",
+    "reason": "Construct the whole source-identified object before slicing, retaining native materials and excluding carpet/wall background. Supports, rims and floor-depth seams are explicit."
+  },
+  "g3q/8479-8479-8517-8518": {
+    "source_ordinal": 8,
+    "baseline_entry_sha256": "43e6c76960e3cf979e0c945e97d92f30622dfc668c976fb4bef4849d1c366d6a",
+    "role": "low_bookcase",
+    "x": 1,
+    "layer": 1,
+    "added_on": "g3q/8539-8540-8541-8542",
+    "label": "Low green wall bookcase with separate shelves and books",
+    "family": "low_bookcase",
+    "reason": "Construct the whole source-identified object before slicing, retaining native materials and excluding carpet/wall background. Supports, rims and floor-depth seams are explicit."
+  },
+  "g3q/8519-8520-8521-8522": {
+    "source_ordinal": 9,
+    "baseline_entry_sha256": "d8eff51428626b131c3ae5ad97cf16783caf29bae0ea98d031e14789265a66a2",
+    "role": "tall_bookcase",
+    "layer": 1,
+    "added_on": "g3q/8543-8544-8545-8546",
+    "added_also_on": [
+      "g3q/8543-8544-8547-8548"
+    ],
+    "label": "Tall green wall bookcase with supported shelves and books",
+    "family": "tall_bookcase",
+    "reason": "Construct the whole source-identified object before slicing, retaining native materials and excluding carpet/wall background. Supports, rims and floor-depth seams are explicit."
+  },
+  "g3q/8523-8524-8525-8526": {
+    "source_ordinal": 10,
+    "baseline_entry_sha256": "ff51af88297c64a802becca3761d34db01a351e961d132b68211a35f5c5dc93d",
+    "role": "plant",
+    "layer": 1,
+    "added_also_on": [
+      "g3q/8549-8550-8553-8554"
+    ],
+    "label": "Gray pot with nine curved green fronds",
+    "family": "plant",
+    "reason": "Construct the whole source-identified object before slicing, retaining native materials and excluding carpet/wall background. Supports, rims and floor-depth seams are explicit."
+  },
+  "g3q/8527-8528-8529-8530": {
+    "source_ordinal": 11,
+    "baseline_entry_sha256": "b9d1ba63fb9cb2612db3f5d4055a990e8a323c0fd88b77da9c76bb900e72425b",
+    "role": "plant",
+    "layer": 1,
+    "label": "Gray pot with nine curved green fronds",
+    "family": "plant",
+    "reason": "Construct the whole source-identified object before slicing, retaining native materials and excluding carpet/wall background. Supports, rims and floor-depth seams are explicit."
+  },
+  "g3q/8531-8532-8533-8534": {
+    "source_ordinal": 12,
+    "baseline_entry_sha256": "98a996c8d727fbfdf4c635e33f4023744523c990b02da3c616b43242399151ec",
+    "role": "plant",
+    "layer": 1,
+    "label": "Gray pot with nine curved green fronds",
+    "family": "plant",
+    "reason": "Construct the whole source-identified object before slicing, retaining native materials and excluding carpet/wall background. Supports, rims and floor-depth seams are explicit."
+  },
+  "g3q/8535-8536-8537-8538": {
+    "source_ordinal": 13,
+    "baseline_entry_sha256": "f3e033c6d6d18b2d37dcfe6755c958c690239595f7d0967b65be38bc75e8542f",
+    "role": "low_bookcase",
+    "x": 0,
+    "layer": 0,
+    "label": "Low green wall bookcase with separate shelves and books",
+    "family": "low_bookcase",
+    "reason": "Construct the whole source-identified object before slicing, retaining native materials and excluding carpet/wall background. Supports, rims and floor-depth seams are explicit."
+  },
+  "g3q/8539-8540-8541-8542": {
+    "source_ordinal": 14,
+    "baseline_entry_sha256": "71e7994ffb6a91dcfb7e7edbde8fd57994d2da7c9c81903891b32d2954117681",
+    "role": "low_bookcase",
+    "x": 1,
+    "layer": 0,
+    "label": "Low green wall bookcase with separate shelves and books",
+    "family": "low_bookcase",
+    "reason": "Construct the whole source-identified object before slicing, retaining native materials and excluding carpet/wall background. Supports, rims and floor-depth seams are explicit."
+  },
+  "g3q/8543-8544-8545-8546": {
+    "source_ordinal": 15,
+    "baseline_entry_sha256": "6aee46feafb5ff75fe5c3cad8923098fe62457791fe2bd0138eda643a6c5e10c",
+    "role": "tall_bookcase",
+    "layer": 0,
+    "label": "Tall green wall bookcase with supported shelves and books",
+    "family": "tall_bookcase",
+    "reason": "Construct the whole source-identified object before slicing, retaining native materials and excluding carpet/wall background. Supports, rims and floor-depth seams are explicit."
+  },
+  "g3q/8543-8544-8547-8548": {
+    "source_ordinal": 16,
+    "baseline_entry_sha256": "a3917979e912fc960ebc93e60447750bb211c817a5d228fdf15f6a2c761fd54d",
+    "role": "tall_bookcase",
+    "layer": 0,
+    "label": "Tall green wall bookcase with supported shelves and books",
+    "family": "tall_bookcase",
+    "reason": "Construct the whole source-identified object before slicing, retaining native materials and excluding carpet/wall background. Supports, rims and floor-depth seams are explicit."
+  },
+  "g3q/8549-8550-8551-8552": {
+    "source_ordinal": 17,
+    "baseline_entry_sha256": "cdc63a7a558aa6bc7488ec326091260732e7251b0c969078f819ccfaa013626d",
+    "role": "plant",
+    "layer": 0,
+    "label": "Gray pot with nine curved green fronds",
+    "family": "plant",
+    "reason": "Construct the whole source-identified object before slicing, retaining native materials and excluding carpet/wall background. Supports, rims and floor-depth seams are explicit."
+  },
+  "g3q/8549-8550-8553-8554": {
+    "source_ordinal": 18,
+    "baseline_entry_sha256": "6b6109910aeeb0c0cf408c60d9086c940a36c4ad3700f6a9515b3a904a070f3a",
+    "role": "plant",
+    "layer": 0,
+    "label": "Gray pot with nine curved green fronds",
+    "family": "plant",
+    "reason": "Construct the whole source-identified object before slicing, retaining native materials and excluding carpet/wall background. Supports, rims and floor-depth seams are explicit."
+  },
+  "g3q/8555-8556-8553-8554": {
+    "source_ordinal": 19,
+    "baseline_entry_sha256": "6dcfb57029c3d7d0bee460d70286f2b4c41d6e3ad0b7453b3bbb698ed61a2be2",
+    "role": "plant",
+    "layer": 0,
+    "label": "Gray pot with nine curved green fronds",
+    "family": "plant",
+    "reason": "Construct the whole source-identified object before slicing, retaining native materials and excluding carpet/wall background. Supports, rims and floor-depth seams are explicit."
+  },
+  "g3q/8557-8558-8559-8560": {
+    "source_ordinal": 20,
+    "baseline_entry_sha256": "a528a8d61bbd8d196c9e7a64039e217ce45dc1086d45d48a359d880dd8447931",
+    "role": "plant",
+    "layer": 0,
+    "label": "Gray pot with nine curved green fronds",
+    "family": "plant",
+    "reason": "Construct the whole source-identified object before slicing, retaining native materials and excluding carpet/wall background. Supports, rims and floor-depth seams are explicit."
+  },
+  "g3q/8489-8489-8561-8562": {
+    "source_ordinal": 21,
+    "baseline_entry_sha256": "6b80ded7e76c1b4a29dbd9a8415fd71ebc87db99c08ac1f002a826fc88882cfc",
+    "role": "sofa_north",
+    "x": 0,
+    "z": 0,
+    "label": "Four-seat green sofa with supported back and arms",
+    "family": "sofa_north",
+    "reason": "Construct the whole source-identified object before slicing, retaining native materials and excluding carpet/wall background. Supports, rims and floor-depth seams are explicit."
+  },
+  "g3q/8489-8489-8562-8562": {
+    "source_ordinal": 22,
+    "baseline_entry_sha256": "fb94398cb9435eb1e5959016f46753d1a748abdb6c640ae6676d84a1f8e4f6b9",
+    "role": "sofa_north",
+    "x": 1,
+    "z": 0,
+    "label": "Four-seat green sofa with supported back and arms",
+    "family": "sofa_north",
+    "reason": "Construct the whole source-identified object before slicing, retaining native materials and excluding carpet/wall background. Supports, rims and floor-depth seams are explicit."
+  },
+  "g3q/8489-8489-8562-8563": {
+    "source_ordinal": 23,
+    "baseline_entry_sha256": "0d5780d09284bd0f1073b06db380409e78c9271e3d30eef862f1fb67474ffdb4",
+    "role": "sofa_north",
+    "x": 3,
+    "z": 0,
+    "label": "Four-seat green sofa with supported back and arms",
+    "family": "sofa_north",
+    "reason": "Construct the whole source-identified object before slicing, retaining native materials and excluding carpet/wall background. Supports, rims and floor-depth seams are explicit."
+  },
+  "g3q/8573-8574-8575-8576": {
+    "source_ordinal": 24,
+    "baseline_entry_sha256": "658daf29313372e8b9a9bd5255ecfe04910fddd43a73410cfb8a28b35df626c4",
+    "role": "sofa_north",
+    "x": 0,
+    "z": 1,
+    "label": "Four-seat green sofa with supported back and arms",
+    "family": "sofa_north",
+    "reason": "Construct the whole source-identified object before slicing, retaining native materials and excluding carpet/wall background. Supports, rims and floor-depth seams are explicit."
+  },
+  "g3q/8574-8574-8576-8576": {
+    "source_ordinal": 25,
+    "baseline_entry_sha256": "a15ee746ed475a56db5572ccbfff5871dfb33aa923f5650072b9dbde7515dab0",
+    "role": "sofa_north",
+    "x": 1,
+    "z": 1,
+    "label": "Four-seat green sofa with supported back and arms",
+    "family": "sofa_north",
+    "reason": "Construct the whole source-identified object before slicing, retaining native materials and excluding carpet/wall background. Supports, rims and floor-depth seams are explicit."
+  },
+  "g3q/8574-8577-8576-8578": {
+    "source_ordinal": 26,
+    "baseline_entry_sha256": "8f55570d2dfd626e85bf4472a6d5a918f1f225f81cee37e07cdce35411e813ff",
+    "role": "sofa_north",
+    "x": 3,
+    "z": 1,
+    "label": "Four-seat green sofa with supported back and arms",
+    "family": "sofa_north",
+    "reason": "Construct the whole source-identified object before slicing, retaining native materials and excluding carpet/wall background. Supports, rims and floor-depth seams are explicit."
+  },
+  "g3q/8579-8580-8581-8582": {
+    "source_ordinal": 27,
+    "baseline_entry_sha256": "482ddfb4fb96afe9ad6407b5c9cbe9498aeac1ee4b80624ef265685f61c4a4ef",
+    "role": "glass_table",
+    "x": 0,
+    "z": 1,
+    "label": "Silver-framed glass coffee table with open underside",
+    "family": "glass_table",
+    "reason": "Construct the whole source-identified object before slicing, retaining native materials and excluding carpet/wall background. Supports, rims and floor-depth seams are explicit."
+  },
+  "g3q/8583-8584-8582-8582": {
+    "source_ordinal": 28,
+    "baseline_entry_sha256": "a5d95d256c9726b3732acc384cf700ca71f01b435f63585b692ede5934a4f314",
+    "role": "glass_table",
+    "x": 1,
+    "z": 1,
+    "label": "Silver-framed glass coffee table with open underside",
+    "family": "glass_table",
+    "reason": "Construct the whole source-identified object before slicing, retaining native materials and excluding carpet/wall background. Supports, rims and floor-depth seams are explicit."
+  },
+  "g3q/8583-8583-8582-8582": {
+    "source_ordinal": 29,
+    "baseline_entry_sha256": "006ede532833ef8efa8f85b052c29a34729071535e629c9e2063b38fa61814e1",
+    "role": "glass_table",
+    "x": 2,
+    "z": 1,
+    "label": "Silver-framed glass coffee table with open underside",
+    "family": "glass_table",
+    "reason": "Construct the whole source-identified object before slicing, retaining native materials and excluding carpet/wall background. Supports, rims and floor-depth seams are explicit."
+  },
+  "g3q/8585-8586-8582-8587": {
+    "source_ordinal": 30,
+    "baseline_entry_sha256": "d7db676f14004da3caa1c481dcd3a96e177ad5c11751992dd1090d1f4553a68e",
+    "role": "glass_table",
+    "x": 3,
+    "z": 1,
+    "label": "Silver-framed glass coffee table with open underside",
+    "family": "glass_table",
+    "reason": "Construct the whole source-identified object before slicing, retaining native materials and excluding carpet/wall background. Supports, rims and floor-depth seams are explicit."
+  },
+  "g3q/8588-8589-8566-8565": {
+    "source_ordinal": 31,
+    "baseline_entry_sha256": "597820212e7431639a2568f4f7491c5441080ca1c7410387f7320614e24ceb24",
+    "role": "glass_table",
+    "x": 0,
+    "z": 0,
+    "label": "Silver-framed glass coffee table with open underside",
+    "family": "glass_table",
+    "reason": "Construct the whole source-identified object before slicing, retaining native materials and excluding carpet/wall background. Supports, rims and floor-depth seams are explicit."
+  },
+  "g3q/8589-8589-8567-8568": {
+    "source_ordinal": 32,
+    "baseline_entry_sha256": "47de35164291cd490d8088ac674da10bde538aa756b8cea338f3740e39248511",
+    "role": "glass_table",
+    "x": 1,
+    "z": 0,
+    "label": "Silver-framed glass coffee table with open underside",
+    "family": "glass_table",
+    "reason": "Construct the whole source-identified object before slicing, retaining native materials and excluding carpet/wall background. Supports, rims and floor-depth seams are explicit."
+  },
+  "g3q/8589-8590-8570-8572": {
+    "source_ordinal": 33,
+    "baseline_entry_sha256": "41db10f13bb2df7a52f327745f57dd4d10b03facd6fe7dcb99e6b4d2171c6d26",
+    "role": "glass_table",
+    "x": 3,
+    "z": 0,
+    "label": "Silver-framed glass coffee table with open underside",
+    "family": "glass_table",
+    "reason": "Construct the whole source-identified object before slicing, retaining native materials and excluding carpet/wall background. Supports, rims and floor-depth seams are explicit."
+  }
+}

@@ -510,7 +510,7 @@ public final class AddRegionFlow {
 		}
 		// The client's pack is left alone (one art set): the build must not replace it while it is in use.
 		this.request = BuildRequest.submit(chosen.folder(), bundle, null,
-				BuildOptions.defaults().withWritePack(false).withRegion(this.regionId, this.slot));
+				BuildOptions.defaults().withWritePack(false).withShapeReport(false).withRegion(this.regionId, this.slot));
 		this.moveTo(Step.LOADING);
 		this.minecraft.createWorldOpenFlows().openWorld(chosen.folder(), () -> {
 			AddRegionFlow flow = active;

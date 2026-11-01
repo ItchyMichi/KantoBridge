@@ -1,0 +1,1348 @@
+[
+  {
+    "id": "emerald_fan_club_east_sofa",
+    "kind": "object (model as one)",
+    "note": "east sofa; complete source-audited Fan Club object",
+    "map": "EM_SLATEPORT_CITY_POKEMON_FAN_CLUB",
+    "rect": [
+      10,
+      6,
+      1,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/8496-8497-8498-8499"
+      ],
+      [
+        "g3q/8505-8506-8507-8508"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/8496-8497-8498-8499"
+      ],
+      [
+        "g3q/8505-8506-8507-8508"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      }
+    ],
+    "baseline_layout": [
+      [
+        "g3q/8496-8497-8498-8499"
+      ],
+      [
+        "g3q/8505-8506-8507-8508"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "id": "emerald_fan_club_west_sofa",
+    "kind": "object (model as one)",
+    "note": "west sofa; complete source-audited Fan Club object",
+    "map": "EM_SLATEPORT_CITY_POKEMON_FAN_CLUB",
+    "rect": [
+      3,
+      6,
+      1,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/8500-8501-8502-8503"
+      ],
+      [
+        "g3q/8509-8510-8511-8512"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/8500-8501-8502-8503"
+      ],
+      [
+        "g3q/8509-8510-8511-8512"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      }
+    ],
+    "baseline_layout": [
+      [
+        "g3q/8500-8501-8502-8503"
+      ],
+      [
+        "g3q/8509-8510-8511-8512"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "id": "emerald_fan_club_north_sofa",
+    "kind": "object (model as one)",
+    "note": "north sofa; complete source-audited Fan Club object",
+    "map": "EM_SLATEPORT_CITY_POKEMON_FAN_CLUB",
+    "rect": [
+      5,
+      4,
+      4,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/8489-8489-8561-8562",
+        "g3q/8489-8489-8562-8562",
+        "g3q/8489-8489-8562-8562",
+        "g3q/8489-8489-8562-8563"
+      ],
+      [
+        "g3q/8573-8574-8575-8576",
+        "g3q/8574-8574-8576-8576",
+        "g3q/8574-8574-8576-8576",
+        "g3q/8574-8577-8576-8578"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/8489-8489-8561-8562",
+        "g3q/8489-8489-8562-8562",
+        "g3q/8489-8489-8562-8562",
+        "g3q/8489-8489-8562-8563"
+      ],
+      [
+        "g3q/8573-8574-8575-8576",
+        "g3q/8574-8574-8576-8576",
+        "g3q/8574-8574-8576-8576",
+        "g3q/8574-8577-8576-8578"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          3,
+          0
+        ],
+        "offset": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          2,
+          1
+        ],
+        "offset": [
+          2,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          3,
+          1
+        ],
+        "offset": [
+          3,
+          0,
+          1
+        ]
+      }
+    ],
+    "baseline_layout": [
+      [
+        "g3q/8489-8489-8561-8562",
+        "g3q/8489-8489-8562-8562",
+        "g3q/8489-8489-8562-8562",
+        "g3q/8489-8489-8562-8563"
+      ],
+      [
+        "g3q/8573-8574-8575-8576",
+        "g3q/8574-8574-8576-8576",
+        "g3q/8574-8574-8576-8576",
+        "g3q/8574-8577-8576-8578"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          3,
+          0
+        ],
+        "offset": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          2,
+          1
+        ],
+        "offset": [
+          2,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          3,
+          1
+        ],
+        "offset": [
+          3,
+          0,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "id": "emerald_fan_club_glass_table",
+    "kind": "object (model as one)",
+    "note": "glass table; complete source-audited Fan Club object",
+    "map": "EM_SLATEPORT_CITY_POKEMON_FAN_CLUB",
+    "rect": [
+      5,
+      6,
+      4,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/8588-8589-8566-8565",
+        "g3q/8589-8589-8567-8568",
+        "g3q/8589-8589-8567-8568",
+        "g3q/8589-8590-8570-8572"
+      ],
+      [
+        "g3q/8579-8580-8581-8582",
+        "g3q/8583-8584-8582-8582",
+        "g3q/8583-8583-8582-8582",
+        "g3q/8585-8586-8582-8587"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/8588-8589-8566-8565",
+        "g3q/8589-8589-8567-8568",
+        "g3q/8589-8589-8567-8568",
+        "g3q/8589-8590-8570-8572"
+      ],
+      [
+        "g3q/8579-8580-8581-8582",
+        "g3q/8583-8584-8582-8582",
+        "g3q/8583-8583-8582-8582",
+        "g3q/8585-8586-8582-8587"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          3,
+          0
+        ],
+        "offset": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          2,
+          1
+        ],
+        "offset": [
+          2,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          3,
+          1
+        ],
+        "offset": [
+          3,
+          0,
+          1
+        ]
+      }
+    ],
+    "baseline_layout": [
+      [
+        "g3q/8588-8589-8566-8565",
+        "g3q/8589-8589-8567-8568",
+        "g3q/8589-8589-8567-8568",
+        "g3q/8589-8590-8570-8572"
+      ],
+      [
+        "g3q/8579-8580-8581-8582",
+        "g3q/8583-8584-8582-8582",
+        "g3q/8583-8583-8582-8582",
+        "g3q/8585-8586-8582-8587"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          2,
+          0
+        ],
+        "offset": [
+          2,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          3,
+          0
+        ],
+        "offset": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          2,
+          1
+        ],
+        "offset": [
+          2,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          3,
+          1
+        ],
+        "offset": [
+          3,
+          0,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "id": "emerald_fan_club_low_bookcase",
+    "kind": "object (model as one)",
+    "note": "low bookcase; complete source-audited Fan Club object",
+    "map": "EM_SLATEPORT_CITY_POKEMON_FAN_CLUB",
+    "rect": [
+      0,
+      1,
+      2,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/8479-8479-8516-8517",
+        "g3q/8479-8479-8517-8518"
+      ],
+      [
+        "g3q/8535-8536-8537-8538",
+        "g3q/8539-8540-8541-8542"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/8479-8479-8516-8517",
+        "g3q/8479-8479-8517-8518"
+      ],
+      [
+        "g3q/8535-8536-8537-8538",
+        "g3q/8539-8540-8541-8542"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      }
+    ],
+    "baseline_layout": [
+      [
+        "g3q/8479-8479-8516-8517",
+        "g3q/8479-8479-8517-8518"
+      ],
+      [
+        "g3q/8535-8536-8537-8538",
+        "g3q/8539-8540-8541-8542"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "id": "emerald_fan_club_tall_bookcase",
+    "kind": "object (model as one)",
+    "note": "tall bookcase; complete source-audited Fan Club object",
+    "map": "EM_SLATEPORT_CITY_POKEMON_FAN_CLUB",
+    "rect": [
+      12,
+      1,
+      2,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/8519-8520-8521-8522",
+        "g3q/8519-8520-8521-8522"
+      ],
+      [
+        "g3q/8543-8544-8545-8546",
+        "g3q/8543-8544-8547-8548"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/8519-8520-8521-8522",
+        "g3q/8519-8520-8521-8522"
+      ],
+      [
+        "g3q/8543-8544-8545-8546",
+        "g3q/8543-8544-8547-8548"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      }
+    ],
+    "baseline_layout": [
+      [
+        "g3q/8519-8520-8521-8522",
+        "g3q/8519-8520-8521-8522"
+      ],
+      [
+        "g3q/8543-8544-8545-8546",
+        "g3q/8543-8544-8547-8548"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          1,
+          0
+        ],
+        "offset": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "source": [
+          1,
+          1
+        ],
+        "offset": [
+          1,
+          0,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "id": "emerald_fan_club_plant_nw",
+    "kind": "object (model as one)",
+    "note": "plant nw; complete source-audited Fan Club object",
+    "map": "EM_SLATEPORT_CITY_POKEMON_FAN_CLUB",
+    "rect": [
+      3,
+      1,
+      1,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/8523-8524-8525-8526"
+      ],
+      [
+        "g3q/8549-8550-8551-8552"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/8523-8524-8525-8526"
+      ],
+      [
+        "g3q/8549-8550-8551-8552"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    ],
+    "baseline_layout": [
+      [
+        "g3q/8523-8524-8525-8526"
+      ],
+      [
+        "g3q/8549-8550-8551-8552"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    ]
+  },
+  {
+    "id": "emerald_fan_club_plant_ne",
+    "kind": "object (model as one)",
+    "note": "plant ne; complete source-audited Fan Club object",
+    "map": "EM_SLATEPORT_CITY_POKEMON_FAN_CLUB",
+    "rect": [
+      10,
+      1,
+      1,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/8523-8524-8525-8526"
+      ],
+      [
+        "g3q/8549-8550-8553-8554"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/8523-8524-8525-8526"
+      ],
+      [
+        "g3q/8549-8550-8553-8554"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    ],
+    "baseline_layout": [
+      [
+        "g3q/8523-8524-8525-8526"
+      ],
+      [
+        "g3q/8549-8550-8553-8554"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "id": "emerald_fan_club_plant_sw",
+    "kind": "object (model as one)",
+    "note": "plant sw; complete source-audited Fan Club object",
+    "map": "EM_SLATEPORT_CITY_POKEMON_FAN_CLUB",
+    "rect": [
+      0,
+      9,
+      1,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/8527-8528-8529-8530"
+      ],
+      [
+        "g3q/8555-8556-8553-8554"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/8527-8528-8529-8530"
+      ],
+      [
+        "g3q/8555-8556-8553-8554"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    ],
+    "baseline_layout": [
+      [
+        "g3q/8527-8528-8529-8530"
+      ],
+      [
+        "g3q/8555-8556-8553-8554"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    ]
+  },
+  {
+    "id": "emerald_fan_club_plant_se",
+    "kind": "object (model as one)",
+    "note": "plant se; complete source-audited Fan Club object",
+    "map": "EM_SLATEPORT_CITY_POKEMON_FAN_CLUB",
+    "rect": [
+      13,
+      9,
+      1,
+      2
+    ],
+    "source_layout": [
+      [
+        "g3q/8531-8532-8533-8534"
+      ],
+      [
+        "g3q/8557-8558-8559-8560"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/8531-8532-8533-8534"
+      ],
+      [
+        "g3q/8557-8558-8559-8560"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    ],
+    "baseline_layout": [
+      [
+        "g3q/8531-8532-8533-8534"
+      ],
+      [
+        "g3q/8557-8558-8559-8560"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "source": [
+          0,
+          1
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    ]
+  },
+  {
+    "id": "emerald_fan_club_picture",
+    "kind": "object (model as one)",
+    "note": "picture; complete source-audited Fan Club object",
+    "map": "EM_SLATEPORT_CITY_POKEMON_FAN_CLUB",
+    "rect": [
+      6,
+      1,
+      1,
+      1
+    ],
+    "source_layout": [
+      [
+        "g3q/8467-8468-8469-8470"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/8467-8468-8469-8470"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    ],
+    "baseline_layout": [
+      [
+        "g3q/8467-8468-8469-8470"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    ]
+  },
+  {
+    "id": "emerald_fan_club_portrait",
+    "kind": "object (model as one)",
+    "note": "portrait; complete source-audited Fan Club object",
+    "map": "EM_SLATEPORT_CITY_POKEMON_FAN_CLUB",
+    "rect": [
+      7,
+      1,
+      1,
+      1
+    ],
+    "source_layout": [
+      [
+        "g3q/8471-8472-8473-8474"
+      ]
+    ],
+    "layout": [
+      [
+        "g3q/8471-8472-8473-8474"
+      ]
+    ],
+    "placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    ],
+    "baseline_layout": [
+      [
+        "g3q/8471-8472-8473-8474"
+      ]
+    ],
+    "baseline_placements": [
+      {
+        "source": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    ]
+  }
+]

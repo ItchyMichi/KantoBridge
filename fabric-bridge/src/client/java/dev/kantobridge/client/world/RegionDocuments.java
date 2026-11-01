@@ -504,6 +504,13 @@ public final class RegionDocuments {
 		return slot == null || slot.shapeIndexDeflated == null ? null : unpack(slot.shapeIndexDeflated);
 	}
 
+	/** Captures this version of the document without inflating it; invoke the returned source off-thread. */
+	public java.util.function.@Nullable Supplier<String> shapeIndexSource(@Nullable String region) {
+		Held slot = region == null ? null : this.held.get(region);
+		byte[] captured = slot == null ? null : slot.shapeIndexDeflated;
+		return captured == null ? null : () -> unpack(captured);
+	}
+
 	/** True when a region's shape index text is held ({@link #shapeIndexText} without inflating it). */
 	public boolean holdsShapeIndex(@Nullable String region) {
 		Held slot = region == null ? null : this.held.get(region);

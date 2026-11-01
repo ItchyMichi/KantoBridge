@@ -1,0 +1,816 @@
+[
+  {
+    "entity": {
+      "id": "emerald_compound_a77287fb86a2",
+      "kind": "object (model as one)",
+      "note": "Contest side-facing upholstered chair - complete object",
+      "layout": [
+        [
+          "g3q/3734-3735-3736-3737"
+        ],
+        [
+          "g3q/3753-3754-3755-3756"
+        ]
+      ]
+    },
+    "occurrences": [
+      {
+        "map": "EM_LILYCOVE_CITY_CONTEST_LOBBY",
+        "x": 0,
+        "y": 6
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_CONTEST_LOBBY",
+        "x": 0,
+        "y": 9
+      }
+    ]
+  },
+  {
+    "entity": {
+      "id": "emerald_compound_be6991bae716",
+      "kind": "object (model as one)",
+      "note": "Contest side-facing upholstered chair - complete object",
+      "layout": [
+        [
+          "g3q/3738-3739-3740-3741"
+        ],
+        [
+          "g3q/3757-3758-3759-3760"
+        ]
+      ]
+    },
+    "occurrences": [
+      {
+        "map": "EM_LILYCOVE_CITY_CONTEST_LOBBY",
+        "x": 30,
+        "y": 6
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_CONTEST_LOBBY",
+        "x": 30,
+        "y": 9
+      }
+    ]
+  },
+  {
+    "entity": {
+      "id": "emerald_compound_2e8789879db5",
+      "kind": "object (model as one)",
+      "note": "Contest side-facing upholstered chair - complete object",
+      "layout": [
+        [
+          "g3q/3773-3774-3736-3775"
+        ],
+        [
+          "g3q/3753-3754-3784-3756"
+        ]
+      ],
+      "replaces_stack": true
+    },
+    "occurrences": [
+      {
+        "map": "EM_LILYCOVE_CITY_CONTEST_HALL",
+        "x": 12,
+        "y": 10
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_CONTEST_HALL",
+        "x": 14,
+        "y": 10
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_CONTEST_HALL",
+        "x": 12,
+        "y": 14
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_CONTEST_HALL",
+        "x": 14,
+        "y": 14
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_CONTEST_HALL",
+        "x": 28,
+        "y": 21
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_CONTEST_HALL",
+        "x": 2,
+        "y": 22
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_CONTEST_HALL",
+        "x": 4,
+        "y": 22
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_CONTEST_HALL",
+        "x": 28,
+        "y": 25
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_CONTEST_HALL",
+        "x": 2,
+        "y": 26
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_CONTEST_HALL",
+        "x": 4,
+        "y": 26
+      }
+    ]
+  },
+  {
+    "entity": {
+      "id": "emerald_compound_822bffc3d596",
+      "kind": "object (model as one)",
+      "note": "Contest side-facing upholstered chair - complete object",
+      "layout": [
+        [
+          "g3q/3738-3776-3777-3741"
+        ],
+        [
+          "g3q/3757-3758-3759-3785"
+        ]
+      ],
+      "replaces_stack": true
+    },
+    "occurrences": [
+      {
+        "map": "EM_LILYCOVE_CITY_CONTEST_HALL",
+        "x": 36,
+        "y": 10
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_CONTEST_HALL",
+        "x": 38,
+        "y": 10
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_CONTEST_HALL",
+        "x": 36,
+        "y": 14
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_CONTEST_HALL",
+        "x": 38,
+        "y": 14
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_CONTEST_HALL",
+        "x": 22,
+        "y": 21
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_CONTEST_HALL",
+        "x": 46,
+        "y": 22
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_CONTEST_HALL",
+        "x": 48,
+        "y": 22
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_CONTEST_HALL",
+        "x": 22,
+        "y": 25
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_CONTEST_HALL",
+        "x": 46,
+        "y": 26
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_CONTEST_HALL",
+        "x": 48,
+        "y": 26
+      }
+    ]
+  },
+  {
+    "entity": {
+      "id": "emerald_compound_cf78ace354cd",
+      "kind": "object (model as one)",
+      "note": "Battle Tower long upholstered bench - complete object",
+      "layout": [
+        [
+          "g3q/1314-1315-1201-1202"
+        ],
+        [
+          "g3q/1201-1202-1201-1202"
+        ],
+        [
+          "g3q/1201-1202-1333-1334"
+        ]
+      ]
+    },
+    "occurrences": [
+      {
+        "map": "EM_BATTLE_FRONTIER_BATTLE_TOWER_LOBBY",
+        "x": 24,
+        "y": 4
+      },
+      {
+        "map": "EM_BATTLE_FRONTIER_BATTLE_TOWER_MULTI_PARTNER_ROOM",
+        "x": 20,
+        "y": 4
+      },
+      {
+        "map": "EM_BATTLE_FRONTIER_BATTLE_TOWER_MULTI_PARTNER_ROOM",
+        "x": 20,
+        "y": 9
+      }
+    ]
+  },
+  {
+    "entity": {
+      "id": "emerald_compound_eb61a32a8256",
+      "kind": "object (model as one)",
+      "note": "Devon president office side-facing sofa - complete object",
+      "layout": [
+        [
+          "g3q/5020-5021-5026-5027"
+        ],
+        [
+          "g3q/5038-4618-5039-4620"
+        ],
+        [
+          "g3q/5244-5245-5050-5051"
+        ]
+      ]
+    },
+    "occurrences": [
+      {
+        "map": "EM_RUSTBORO_CITY_DEVON_CORP_3F",
+        "x": 17,
+        "y": 4
+      }
+    ]
+  },
+  {
+    "entity": {
+      "id": "emerald_compound_3373ba71b563",
+      "kind": "object (model as one)",
+      "note": "Devon president office side-facing sofa - complete object",
+      "layout": [
+        [
+          "g3q/5020-5021-5116-5117"
+        ],
+        [
+          "g3q/5130-5131-5132-5133"
+        ],
+        [
+          "g3q/5242-5243-5050-5051"
+        ]
+      ]
+    },
+    "occurrences": [
+      {
+        "map": "EM_RUSTBORO_CITY_DEVON_CORP_3F",
+        "x": 5,
+        "y": 4
+      }
+    ]
+  },
+  {
+    "entity": {
+      "id": "emerald_compound_1d4804e7117a",
+      "kind": "stack (model as one)",
+      "note": "Battle Tower gold statue crown - complete object",
+      "layout": [
+        [
+          "g3q/1329-1330-1339-1340"
+        ],
+        [
+          "g3q/1283-1284-1285-1286"
+        ]
+      ]
+    },
+    "occurrences": [
+      {
+        "map": "EM_BATTLE_FRONTIER_BATTLE_TOWER_BATTLE_ROOM",
+        "x": 9,
+        "y": 1
+      },
+      {
+        "map": "EM_BATTLE_FRONTIER_BATTLE_TOWER_MULTI_BATTLE_ROOM",
+        "x": 9,
+        "y": 1
+      }
+    ]
+  },
+  {
+    "entity": {
+      "id": "emerald_compound_77b62c0d8194",
+      "kind": "stack (model as one)",
+      "note": "Battle Tower gold statue crown - complete object",
+      "layout": [
+        [
+          "g3q/1329-1330-1339-1340"
+        ],
+        [
+          "g3q/1283-1284-1348-1286"
+        ]
+      ]
+    },
+    "occurrences": [
+      {
+        "map": "EM_BATTLE_FRONTIER_BATTLE_TOWER_BATTLE_ROOM",
+        "x": 0,
+        "y": 1
+      },
+      {
+        "map": "EM_BATTLE_FRONTIER_BATTLE_TOWER_MULTI_BATTLE_ROOM",
+        "x": 0,
+        "y": 1
+      }
+    ]
+  },
+  {
+    "entity": {
+      "id": "emerald_compound_a48c9d1348ae",
+      "kind": "stack (model as one)",
+      "note": "Battle Tower gold statue crown - complete object",
+      "layout": [
+        [
+          "g3q/1325-1325-1337-1338"
+        ],
+        [
+          "g3q/1346-1347-1285-1286"
+        ]
+      ]
+    },
+    "occurrences": [
+      {
+        "map": "EM_BATTLE_FRONTIER_BATTLE_TOWER_BATTLE_ROOM",
+        "x": 9,
+        "y": 7
+      },
+      {
+        "map": "EM_BATTLE_FRONTIER_BATTLE_TOWER_MULTI_BATTLE_ROOM",
+        "x": 9,
+        "y": 7
+      }
+    ]
+  },
+  {
+    "entity": {
+      "id": "emerald_compound_b9179ca9be59",
+      "kind": "stack (model as one)",
+      "note": "Battle Tower gold statue crown - complete object",
+      "layout": [
+        [
+          "g3q/1336-1325-1439-1338"
+        ],
+        [
+          "g3q/1283-1347-1348-1286"
+        ]
+      ]
+    },
+    "occurrences": [
+      {
+        "map": "EM_BATTLE_FRONTIER_BATTLE_TOWER_BATTLE_ROOM",
+        "x": 0,
+        "y": 7
+      },
+      {
+        "map": "EM_BATTLE_FRONTIER_BATTLE_TOWER_MULTI_BATTLE_ROOM",
+        "x": 0,
+        "y": 7
+      }
+    ]
+  },
+  {
+    "entity": {
+      "id": "emerald_compound_0f5a97088c11",
+      "kind": "stack (model as one)",
+      "note": "Industrial control console head - complete object",
+      "layout": [
+        [
+          "g3q/4725-4726-4727-4728"
+        ],
+        [
+          "g3q/4749-4750-4668-4669"
+        ]
+      ]
+    },
+    "occurrences": [
+      {
+        "map": "EM_AQUA_HIDEOUT_1F",
+        "x": 15,
+        "y": 1
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_B1F",
+        "x": 8,
+        "y": 1
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_B1F",
+        "x": 26,
+        "y": 7
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_B1F",
+        "x": 27,
+        "y": 7
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_B2F",
+        "x": 9,
+        "y": 1
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_B2F",
+        "x": 20,
+        "y": 8
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_B2F",
+        "x": 7,
+        "y": 11
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_UNUSED_RUBY_MAP2",
+        "x": 19,
+        "y": 1
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_UNUSED_RUBY_MAP2",
+        "x": 26,
+        "y": 1
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_UNUSED_RUBY_MAP2",
+        "x": 7,
+        "y": 3
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_UNUSED_RUBY_MAP2",
+        "x": 36,
+        "y": 8
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_UNUSED_RUBY_MAP2",
+        "x": 37,
+        "y": 8
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_UNUSED_RUBY_MAP2",
+        "x": 16,
+        "y": 12
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_UNUSED_RUBY_MAP2",
+        "x": 19,
+        "y": 12
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_UNUSED_RUBY_MAP2",
+        "x": 20,
+        "y": 12
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_UNUSED_RUBY_MAP3",
+        "x": 9,
+        "y": 1
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_UNUSED_RUBY_MAP3",
+        "x": 1,
+        "y": 11
+      },
+      {
+        "map": "EM_SLATEPORT_CITY_STERNS_SHIPYARD_1F",
+        "x": 8,
+        "y": 1
+      }
+    ]
+  },
+  {
+    "entity": {
+      "id": "emerald_compound_6f241faca75f",
+      "kind": "stack (model as one)",
+      "note": "Industrial control console head - complete object",
+      "layout": [
+        [
+          "g3q/4729-4730-4731-4732"
+        ],
+        [
+          "g3q/4751-4752-4668-4669"
+        ]
+      ]
+    },
+    "occurrences": [
+      {
+        "map": "EM_AQUA_HIDEOUT_1F",
+        "x": 9,
+        "y": 1
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_1F",
+        "x": 18,
+        "y": 1
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_B1F",
+        "x": 9,
+        "y": 1
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_B1F",
+        "x": 15,
+        "y": 1
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_B1F",
+        "x": 16,
+        "y": 1
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_B1F",
+        "x": 28,
+        "y": 7
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_B2F",
+        "x": 10,
+        "y": 1
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_B2F",
+        "x": 8,
+        "y": 11
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_UNUSED_RUBY_MAP1",
+        "x": 5,
+        "y": 1
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_UNUSED_RUBY_MAP1",
+        "x": 21,
+        "y": 1
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_UNUSED_RUBY_MAP2",
+        "x": 20,
+        "y": 1
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_UNUSED_RUBY_MAP2",
+        "x": 27,
+        "y": 1
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_UNUSED_RUBY_MAP2",
+        "x": 8,
+        "y": 3
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_UNUSED_RUBY_MAP2",
+        "x": 38,
+        "y": 8
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_UNUSED_RUBY_MAP2",
+        "x": 17,
+        "y": 12
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_UNUSED_RUBY_MAP2",
+        "x": 21,
+        "y": 12
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_UNUSED_RUBY_MAP2",
+        "x": 22,
+        "y": 12
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_UNUSED_RUBY_MAP3",
+        "x": 10,
+        "y": 1
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_UNUSED_RUBY_MAP3",
+        "x": 2,
+        "y": 11
+      },
+      {
+        "map": "EM_SLATEPORT_CITY_STERNS_SHIPYARD_1F",
+        "x": 9,
+        "y": 1
+      }
+    ]
+  },
+  {
+    "entity": {
+      "id": "emerald_compound_863a000f432e",
+      "kind": "stack (model as one)",
+      "note": "Industrial control console head - complete object",
+      "layout": [
+        [
+          "g3q/4733-4734-4735-4736"
+        ],
+        [
+          "g3q/4753-4754-4668-4669"
+        ]
+      ]
+    },
+    "occurrences": [
+      {
+        "map": "EM_AQUA_HIDEOUT_1F",
+        "x": 8,
+        "y": 1
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_1F",
+        "x": 17,
+        "y": 1
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_B2F",
+        "x": 27,
+        "y": 8
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_B2F",
+        "x": 9,
+        "y": 11
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_UNUSED_RUBY_MAP1",
+        "x": 4,
+        "y": 1
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_UNUSED_RUBY_MAP1",
+        "x": 20,
+        "y": 1
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_UNUSED_RUBY_MAP3",
+        "x": 18,
+        "y": 6
+      },
+      {
+        "map": "EM_AQUA_HIDEOUT_UNUSED_RUBY_MAP3",
+        "x": 28,
+        "y": 8
+      },
+      {
+        "map": "EM_SLATEPORT_CITY_STERNS_SHIPYARD_1F",
+        "x": 10,
+        "y": 1
+      }
+    ]
+  },
+  {
+    "entity": {
+      "id": "emerald_compound_c6c3cc7ade23",
+      "kind": "object (model as one)",
+      "note": "Contest blue stage stair section - complete object",
+      "layout": [
+        [
+          "g3q/3810-3810-3823-3824",
+          "g3q/3810-3810-3824-3824",
+          "g3q/3810-3810-3824-3825"
+        ],
+        [
+          "g3q/3823-3824-3823-3824",
+          "g3q/3824-3824-3824-3824",
+          "g3q/3824-3825-3824-3825"
+        ]
+      ]
+    },
+    "occurrences": [
+      {
+        "map": "EM_CONTEST_HALL_BEAUTY",
+        "x": 6,
+        "y": 8
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_CONTEST_HALL",
+        "x": 24,
+        "y": 14
+      }
+    ]
+  },
+  {
+    "entity": {
+      "id": "emerald_compound_81c87297aec3",
+      "kind": "object (model as one)",
+      "note": "Contest green stage stair section - complete object",
+      "layout": [
+        [
+          "g3q/3810-3810-3847-3848",
+          "g3q/3810-3810-3848-3848",
+          "g3q/3810-3810-3848-3849"
+        ],
+        [
+          "g3q/3847-3848-3847-3848",
+          "g3q/3848-3848-3848-3848",
+          "g3q/3848-3849-3848-3849"
+        ]
+      ]
+    },
+    "occurrences": [
+      {
+        "map": "EM_CONTEST_HALL_SMART",
+        "x": 6,
+        "y": 8
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_CONTEST_HALL",
+        "x": 12,
+        "y": 26
+      }
+    ]
+  },
+  {
+    "entity": {
+      "id": "emerald_compound_f766c75a9bcc",
+      "kind": "object (model as one)",
+      "note": "Contest yellow stage stair section - complete object",
+      "layout": [
+        [
+          "g3q/3810-3810-3866-3867",
+          "g3q/3810-3810-3867-3867",
+          "g3q/3810-3810-3867-3868"
+        ],
+        [
+          "g3q/3866-3867-3866-3867",
+          "g3q/3867-3867-3867-3867",
+          "g3q/3867-3868-3867-3868"
+        ]
+      ]
+    },
+    "occurrences": [
+      {
+        "map": "EM_CONTEST_HALL_TOUGH",
+        "x": 6,
+        "y": 8
+      }
+    ]
+  },
+  {
+    "entity": {
+      "id": "emerald_compound_43811e104569",
+      "kind": "object (model as one)",
+      "note": "Contest pink stage stair section - complete object",
+      "layout": [
+        [
+          "g3q/3810-3810-3885-3886",
+          "g3q/3810-3810-3886-3886",
+          "g3q/3810-3810-3886-3887"
+        ],
+        [
+          "g3q/3885-3886-3885-3886",
+          "g3q/3886-3886-3886-3886",
+          "g3q/3886-3887-3886-3887"
+        ]
+      ]
+    },
+    "occurrences": [
+      {
+        "map": "EM_CONTEST_HALL_CUTE",
+        "x": 6,
+        "y": 8
+      },
+      {
+        "map": "EM_LILYCOVE_CITY_CONTEST_HALL",
+        "x": 36,
+        "y": 26
+      }
+    ]
+  },
+  {
+    "entity": {
+      "id": "emerald_compound_682bd277fa0d",
+      "kind": "object (model as one)",
+      "note": "Contest orange stage stair section - complete object",
+      "layout": [
+        [
+          "g3q/3810-3810-3897-3898",
+          "g3q/3810-3810-3898-3898",
+          "g3q/3810-3810-3898-3899"
+        ],
+        [
+          "g3q/3897-3898-3897-3898",
+          "g3q/3898-3898-3898-3898",
+          "g3q/3898-3899-3898-3899"
+        ]
+      ]
+    },
+    "occurrences": [
+      {
+        "map": "EM_CONTEST_HALL_COOL",
+        "x": 6,
+        "y": 8
+      }
+    ]
+  }
+]

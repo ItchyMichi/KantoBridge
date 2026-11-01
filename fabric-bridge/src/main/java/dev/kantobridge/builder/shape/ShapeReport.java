@@ -4,6 +4,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import dev.kantobridge.builder.plan.WorldPlan;
 import dev.kantobridge.builder.shape.geom.CellUnits;
+import dev.kantobridge.builder.shape.geom.ShapeOverrides;
 import dev.kantobridge.builder.shape.geom.TemplateRule;
 import dev.kantobridge.builder.shape.geom.ShapeTable;
 import dev.kantobridge.scene.ArtSource;
@@ -42,7 +43,6 @@ public final class ShapeReport {
 	public record TemplateRow(String signature, String kind, @Nullable String failed, double match, int quads, int roofRows, long places) {
 	}
 
-	private final ShapeTable table;
 	private final long tableMs;
 	private final List<SelfCheck.Scores> scores;
 	private final long checkMs;
@@ -53,9 +53,8 @@ public final class ShapeReport {
 	private final int shapeTemplates;
 	private final List<UnitRow> units;
 
-	private ShapeReport(ShapeTable table, long tableMs, List<SelfCheck.Scores> scores, long checkMs, QuadCounter.Stats quads, long quadMs,
+	private ShapeReport(long tableMs, List<SelfCheck.Scores> scores, long checkMs, QuadCounter.Stats quads, long quadMs,
 			Map<String, Long> structures, List<UnitRow> units, List<TemplateRow> templates, int shapeTemplates) {
-		this.table = table;
 		this.tableMs = tableMs;
 		this.scores = List.copyOf(scores);
 		this.checkMs = checkMs;
@@ -74,18 +73,34 @@ public final class ShapeReport {
 		if (scene == null || plan == null) {
 			throw new IllegalArgumentException("a plan without shapes");
 		}
-		ShapeReport checked = of(scene, plan, world.index().maps().values(), art);
 		long t0 = System.nanoTime();
-		QuadCounter.Stats quads = QuadCounter.count(world, plan.map(), checked.table);
-		return new ShapeReport(checked.table, checked.tableMs, checked.scores, checked.checkMs, quads, (System.nanoTime() - t0) / 1_000_000L,
+		ShapeTable table = table(plan, art);
+		ShapeReport checked = check(scene, plan, world.index().maps().values(), table, (System.nanoTime() - t0) / 1_000_000L);
+		long t1 = System.nanoTime();
+		QuadCounter.Stats quads = QuadCounter.count(world, plan.map(), table);
+		// Only numbers leave: the table (Hoenn's meshes, hundreds of MB) goes once this returns, not after the placement.
+		return new ShapeReport(checked.tableMs, checked.scores, checked.checkMs, quads, (System.nanoTime() - t1) / 1_000_000L,
 				checked.structures, checked.units, checked.templates, checked.shapeTemplates);
 	}
 
 	/** Builds the table with {@code art} and checks every placed map and unit (no quad count). */
 	public static ShapeReport of(Scene scene, ShapePlan plan, Collection<MapPlacement> placements, ArtSource art) {
 		long t0 = System.nanoTime();
-		ShapeTable table = ShapeTable.build(plan.index(), art);
-		long tableMs = (System.nanoTime() - t0) / 1_000_000L;
+		ShapeTable table = table(plan, art);
+		return check(scene, plan, placements, table, (System.nanoTime() - t0) / 1_000_000L);
+	}
+
+	/**
+	 * The geometry a client would build from the plan's shape index, its units and templates kept as summaries
+	 * ({@link ShapeTable.Keep#SUMMARY}: their kinds, gates and scores are all the report reads; Hoenn's kept whole ran to
+	 * gigabytes).
+	 */
+	private static ShapeTable table(ShapePlan plan, ArtSource art) {
+		return ShapeTable.build(plan.index(), art, ShapeTable.NO_OVERRIDES, ShapeOverrides.NONE, ShapeTable.Keep.SUMMARY);
+	}
+
+	/** Checks every placed map and unit against {@code table} (no quad count). */
+	private static ShapeReport check(Scene scene, ShapePlan plan, Collection<MapPlacement> placements, ShapeTable table, long tableMs) {
 		long t1 = System.nanoTime();
 		List<SelfCheck.Scores> scores = new ArrayList<>();
 		Map<String, Long> structures = new LinkedHashMap<>();
@@ -139,7 +154,7 @@ public final class ShapeReport {
 		templatesBySig.forEach((sig, template) -> templateRows.add(new TemplateRow(sig, template.kind().id(),
 				template.failed() == null ? null : template.failed().id(), template.match(), template.maxQuads(), template.roofRows(),
 				placesBySig.get(sig)[0])));
-		return new ShapeReport(table, tableMs, scores, (System.nanoTime() - t1) / 1_000_000L, QuadCounter.Stats.EMPTY, 0, structures, rows,
+		return new ShapeReport(tableMs, scores, (System.nanoTime() - t1) / 1_000_000L, QuadCounter.Stats.EMPTY, 0, structures, rows,
 				templateRows, plan.index().templates().size());
 	}
 
@@ -219,10 +234,6 @@ public final class ShapeReport {
 
 	public long quadMs() {
 		return this.quadMs;
-	}
-
-	public ShapeTable table() {
-		return this.table;
 	}
 
 	public long tableMs() {
