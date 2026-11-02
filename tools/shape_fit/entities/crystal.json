@@ -1,0 +1,2245 @@
+[
+ {
+  "id": "crystal_academy_desk_row",
+  "kind": "object (model as one)",
+  "note": "Academy school desk and chairs",
+  "layout": [
+   [
+    "g3q/2523-2524-2526-2527",
+    "g3q/2524-2525-2527-2528"
+   ],
+   [
+    "g3q/2529-2530-2531-2532",
+    "g3q/2529-2530-2531-2532"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_barn_railing_row",
+  "kind": "object (model as one)",
+  "note": "Route 39 barn railing (three cells)",
+  "layout": [
+   [
+    "g3q/2052-2052-2053-2053",
+    "g3q/2052-2052-2053-2053",
+    "g3q/2052-2052-2053-2053"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_bedroom_bookcase",
+  "kind": "stack (model as one)",
+  "note": "Bedroom bookcase (stack)",
+  "layout": [
+   [
+    "g3q/4217-4218-4219-4220"
+   ],
+   [
+    "g3q/4221-4222-4225-4226"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_bookcase_1954-1955-1956-1957",
+  "kind": "stack (model as one)",
+  "note": "Players-house bookcase (stack)",
+  "layout": [
+   [
+    "g3q/1952-1953-1968-1969"
+   ],
+   [
+    "g3q/1954-1955-1956-1957"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_bookcase_1968-1969-1911-1912",
+  "kind": "stack (model as one)",
+  "note": "Players-house bookcase (stack)",
+  "layout": [
+   [
+    "g3q/1952-1953-1966-1967"
+   ],
+   [
+    "g3q/1968-1969-1911-1912"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_bt_corner",
+  "kind": "stack (model as one)",
+  "note": "Battle room corner machine (stack)",
+  "layout": [
+   [
+    "g3q/547-548-507-508"
+   ],
+   [
+    "g3q/509-510-511-511"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_bt_counter",
+  "kind": "object (model as one)",
+  "note": "Battle Tower reception counter (part)",
+  "layout": [
+   [
+    "g3q/518-519-518-519",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    "g3q/530-531-532-533"
+   ],
+   [
+    "g3q/518-562-481-482",
+    "g3q/480-480-482-482",
+    "g3q/480-480-482-482",
+    null,
+    null,
+    "g3q/479-480-481-482",
+    "g3q/480-480-482-482",
+    "g3q/559-560-482-561"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_bt_elevator",
+  "kind": "object (model as one)",
+  "note": "Hallway elevator and cabinet",
+  "layout": [
+   [
+    "g3q/536-537-484-485",
+    "g3q/537-537-488-489"
+   ],
+   [
+    "g3q/486-487-483-483",
+    "g3q/490-491-483-483"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_bt_terminal",
+  "kind": "stack (model as one)",
+  "note": "Battle Tower terminal (stack)",
+  "layout": [
+   [
+    "g3q/496-497-498-499"
+   ],
+   [
+    "g3q/492-493-494-495"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_bto_house_roof",
+  "kind": "object (model as one)",
+  "note": "Battle Tower grounds: the house's roof (its walls are the template)",
+  "layout": [
+   [
+    "g3q/649-640-650-641",
+    "g3q/640-640-641-641",
+    "g3q/640-640-641-641",
+    "g3q/640-652-641-653"
+   ],
+   [
+    "g3q/650-641-651-642",
+    "g3q/641-641-642-642",
+    "g3q/641-641-642-642",
+    "g3q/641-653-642-654"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_cable_club_booth",
+  "kind": "object (model as one)",
+  "note": "Cable Club booth (5x3)",
+  "layout": [
+   [
+    "g3q/310-311-310-311",
+    "g3q/332-322-332-322",
+    "g3q/273-333-275-276",
+    "g3q/323-338-323-338",
+    "g3q/310-311-310-311"
+   ],
+   [
+    "g3q/310-311-312-313",
+    "g3q/334-335-322-323",
+    "g3q/335-335-336-337",
+    "g3q/335-339-322-323",
+    "g3q/310-311-312-313"
+   ],
+   [
+    "g3q/322-323-322-323",
+    "g3q/322-323-302-303",
+    "g3q/316-317-320-321",
+    "g3q/322-323-302-303",
+    "g3q/322-323-322-323"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_celadon_5f_cases",
+  "kind": "object (model as one)",
+  "note": "Celadon 5F display cases",
+  "layout": [
+   [
+    "g3q/135-136-187-188",
+    "g3q/31-31-187-188",
+    "g3q/31-31-187-188",
+    "g3q/135-136-187-188"
+   ],
+   [
+    "g3q/104-105-108-109",
+    "g3q/104-105-108-109",
+    "g3q/104-105-108-109",
+    "g3q/104-105-108-109"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_celadon_bench",
+  "kind": "object (model as one)",
+  "note": "Celadon lobby bench (1x2)",
+  "layout": [
+   [
+    "g3q/125-126-127-128"
+   ],
+   [
+    "g3q/129-130-131-132"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_celadon_tall_plant",
+  "kind": "stack (model as one)",
+  "note": "Celadon tall plant (stack)",
+  "layout": [
+   [
+    "g3q/141-142-143-144"
+   ],
+   [
+    "g3q/145-146-147-148"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_center_counter_row",
+  "kind": "object (model as one)",
+  "note": "Pokemon Center counter with Nurse Joy's balls",
+  "layout": [
+   [
+    "g3q/163-163-298-298",
+    "g3q/299-299-298-298",
+    "g3q/163-163-298-298",
+    "g3q/300-301-302-303"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_center_monitor_1f",
+  "kind": "stack (model as one)",
+  "note": "Counter-end monitor (1F, alsoOn stack)",
+  "layout": [
+   [
+    "g3q/291-295-296-297"
+   ],
+   [
+    "g3q/300-301-302-303"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_center_pc",
+  "kind": "stack (model as one)",
+  "note": "Pokemon Center PC (stack)",
+  "layout": [
+   [
+    "g3q/286-286-304-305"
+   ],
+   [
+    "g3q/306-307-308-309"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_center_terminal",
+  "kind": "stack (model as one)",
+  "note": "Pokemon Center terminal (stack)",
+  "layout": [
+   [
+    "g3q/284-285-287-288"
+   ],
+   [
+    "g3q/289-290-292-293"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_copycat_table_apron",
+  "kind": "object (model as one)",
+  "note": "Copycat 2F table with its solid apron row",
+  "layout": [
+   [
+    "g3q/1926-659-662-663",
+    "g3q/659-1929-663-665"
+   ],
+   [
+    "g3q/1915-1916-1938-1939",
+    "g3q/1916-1917-1939-1940"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_cv_rock",
+  "kind": "object (model as one)",
+  "note": "Cave rock formation",
+  "layout": [
+   [
+    "g3q/1011-1012-1013-1014",
+    "g3q/1012-1015-1014-1016"
+   ],
+   [
+    "g3q/1013-1014-1025-1026",
+    "g3q/1014-1016-1026-1027"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_dance_theater_stand",
+  "kind": "object (model as one)",
+  "note": "Dance Theater stand (2x1)",
+  "layout": [
+   [
+    "g3q/2043-2044-2045-2046",
+    "g3q/2021-2022-2023-2024"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_dc_rock",
+  "kind": "object (model as one)",
+  "note": "Cave rock formation",
+  "layout": [
+   [
+    "g3q/2071-2072-2073-2074",
+    "g3q/2072-2075-2074-2076"
+   ],
+   [
+    "g3q/2073-2074-2085-2086",
+    "g3q/2074-2076-2086-2087"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_dd_rock",
+  "kind": "object (model as one)",
+  "note": "Dragon's Den rock formation",
+  "layout": [
+   [
+    "g3q/2179-2180-2182-1009",
+    "g3q/2180-2181-1009-2183"
+   ],
+   [
+    "g3q/2182-1009-1025-1026",
+    "g3q/1009-2183-1026-1027"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_dd_shrine",
+  "kind": "object (model as one)",
+  "note": "Dragon's Den shrine (the door cell is not fitted)",
+  "layout": [
+   [
+    "g3q/2170-2238-2172-2238",
+    "g3q/2238-2238-2238-2238",
+    "g3q/2238-2238-2238-2238",
+    "g3q/2238-2176-2238-2177"
+   ],
+   [
+    "g3q/2172-2238-2174-2175",
+    "g3q/2238-2238-2175-2175",
+    "g3q/2238-2238-2175-2175",
+    "g3q/2238-2177-2175-2178"
+   ],
+   [
+    "g3q/2189-971-2245-2246",
+    null,
+    "g3q/971-971-2246-2246",
+    "g3q/2242-2187-2246-2251"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_elm_corner",
+  "kind": "object (model as one)",
+  "note": "Elm's corner machine and desk",
+  "layout": [
+   [
+    "g3q/2550-2551-2554-2555",
+    "g3q/2552-2553-2556-2557"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_elm_research_machine",
+  "kind": "object (model as one)",
+  "note": "Elm's research machine (2x2)",
+  "layout": [
+   [
+    "g3q/270-2533-274-275",
+    "g3q/2534-273-276-277"
+   ],
+   [
+    "g3q/278-0-280-2535",
+    "g3q/0-279-2536-283"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_fac_bookcase",
+  "kind": "stack (model as one)",
+  "note": "Bookcase over drawers (alsoOn stack)",
+  "layout": [
+   [
+    "g3q/667-3748-3763-3764"
+   ],
+   [
+    "g3q/3763-3764-3765-3766"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_fac_desks",
+  "kind": "object (model as one)",
+  "note": "Power Plant desks",
+  "layout": [
+   [
+    "g3q/3767-1421-1424-1425",
+    "g3q/1422-3768-1426-3769",
+    "g3q/667-659-662-3786",
+    "g3q/659-3748-3787-665"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_fac_generator",
+  "kind": "stack (model as one)",
+  "note": "Power Plant generator (stack)",
+  "layout": [
+   [
+    "g3q/667-3748-3749-3750"
+   ],
+   [
+    "g3q/3749-3750-3751-3752"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_fac_plant",
+  "kind": "stack (model as one)",
+  "note": "Potted plant in a gold urn (stack)",
+  "layout": [
+   [
+    "g3q/3774-3775-3776-3777"
+   ],
+   [
+    "g3q/3778-3779-3780-3781"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_fac_sofa",
+  "kind": "object (model as one)",
+  "note": "Blue sofa",
+  "layout": [
+   [
+    "g3q/3806-3807-3809-3810",
+    "g3q/3807-3808-3810-3811"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_fac_table",
+  "kind": "object (model as one)",
+  "note": "Power Plant table",
+  "layout": [
+   [
+    "g3q/667-659-662-663",
+    "g3q/659-659-663-663",
+    "g3q/659-3748-663-665"
+   ],
+   [
+    "g3q/662-663-3788-3789",
+    "g3q/663-663-3789-3789",
+    "g3q/663-665-3789-3790"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_fac_transformer",
+  "kind": "object (model as one)",
+  "note": "Power Plant transformer bank (part)",
+  "layout": [
+   [
+    "g3q/3795-3795-3797-3797",
+    "g3q/3796-3795-3798-3797",
+    "g3q/3795-3796-3797-3798",
+    "g3q/3795-3801-3797-3801"
+   ],
+   [
+    "g3q/3749-3750-3751-3752",
+    "g3q/3799-3749-3800-3751",
+    "g3q/3802-3799-3803-3800",
+    "g3q/3802-3801-3803-3801"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_fo_big_tree",
+  "kind": "object (model as one)",
+  "note": "Ilex Forest big tree",
+  "layout": [
+   [
+    "g3q/3548-3549-3552-3553",
+    "g3q/3550-3551-3554-3555"
+   ],
+   [
+    "g3q/3556-3557-3560-3561",
+    "g3q/3558-3559-3562-3563"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_fuji_bookcase_a",
+  "kind": "stack (model as one)",
+  "note": "Mr Fuji's bookcase (alsoOn stack)",
+  "layout": [
+   [
+    "g3q/667-668-669-670"
+   ],
+   [
+    "g3q/669-670-675-676"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_fuji_bookcase_b",
+  "kind": "stack (model as one)",
+  "note": "Mr Fuji's bookcase on the other base (alsoOn stack)",
+  "layout": [
+   [
+    "g3q/667-668-669-670"
+   ],
+   [
+    "g3q/671-672-675-676"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_gate_bush",
+  "kind": "stack (model as one)",
+  "note": "Underground bush planter (stack)",
+  "layout": [
+   [
+    "g3q/3106-3107-3058-3059"
+   ],
+   [
+    "g3q/3058-3059-3108-3109"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_gate_link_machine",
+  "kind": "object (model as one)",
+  "note": "Colosseum link machine",
+  "layout": [
+   [
+    "g3q/1854-1854-96-1855",
+    "g3q/1854-1854-1856-96"
+   ],
+   [
+    "g3q/1864-1865-1868-1869",
+    "g3q/1866-1867-1870-1871"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_gate_pc",
+  "kind": "stack (model as one)",
+  "note": "National Park gate PC (stack)",
+  "layout": [
+   [
+    "g3q/1828-1829-1881-1882"
+   ],
+   [
+    "g3q/700-701-1883-1884"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_gc_blue_table",
+  "kind": "object (model as one)",
+  "note": "Goldenrod blue table with chairs",
+  "layout": [
+   [
+    null,
+    "g3q/1076-1076-1200-1201",
+    "g3q/1076-1076-1201-1206",
+    null
+   ],
+   [
+    "g3q/1086-1087-1088-1089",
+    "g3q/1202-1203-1204-1205",
+    "g3q/1203-1207-1208-1209",
+    "g3q/1086-1087-1088-1089"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_gc_cafe_table",
+  "kind": "object (model as one)",
+  "note": "Celadon cafe table",
+  "layout": [
+   [
+    "g3q/1072-1073-1144-1145",
+    "g3q/1072-1073-1145-1146"
+   ],
+   [
+    "g3q/129-1196-129-1198",
+    "g3q/1197-130-1199-130"
+   ],
+   [
+    "g3q/1148-1149-1151-1152",
+    "g3q/1149-1150-1153-1154"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_gc_g_machine",
+  "kind": "stack (model as one)",
+  "note": "G prize machine (stack)",
+  "layout": [
+   [
+    "g3q/1115-1116-1117-1118"
+   ],
+   [
+    "g3q/1119-1120-1121-1122"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_gc_gym_statue",
+  "kind": "stack (model as one)",
+  "note": "Vermilion Gym statue (stack)",
+  "layout": [
+   [
+    "g3q/1158-1159-1160-1161"
+   ],
+   [
+    "g3q/1162-1163-1164-1165"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_gc_olivine_table",
+  "kind": "object (model as one)",
+  "note": "Olivine cafe table",
+  "layout": [
+   [
+    "g3q/1144-1145-129-1147",
+    "g3q/1145-1146-1147-130"
+   ],
+   [
+    "g3q/1148-1149-1151-1152",
+    "g3q/1149-1150-1153-1154"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_gc_phone",
+  "kind": "stack (model as one)",
+  "note": "Game Corner telephone (stack)",
+  "layout": [
+   [
+    "g3q/1076-1076-1190-1191"
+   ],
+   [
+    "g3q/1192-1193-1194-1195"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_gc_plant",
+  "kind": "stack (model as one)",
+  "note": "Game Corner plant in its gold urn (stack)",
+  "layout": [
+   [
+    "g3q/1130-1131-1132-1133"
+   ],
+   [
+    "g3q/1134-1135-1136-1137"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_gc_prize_machines",
+  "kind": "object (model as one)",
+  "note": "Prize exchange machines",
+  "layout": [
+   [
+    "g3q/1077-1078-1080-1081",
+    "g3q/1078-1079-1081-1082"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_gc_slot_end",
+  "kind": "object (model as one)",
+  "note": "Slot machine column end",
+  "layout": [
+   [
+    "g3q/1090-1091-1094-1095",
+    "g3q/1092-1093-1096-1097"
+   ],
+   [
+    "g3q/1107-1108-1111-1112",
+    "g3q/1109-1110-1113-1114"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_gym_bike",
+  "kind": "object (model as one)",
+  "note": "Bicycle",
+  "layout": [
+   [
+    "g3q/2759-2760-2763-2764",
+    "g3q/2761-2762-2765-2766"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_gym_bush",
+  "kind": "object (model as one)",
+  "note": "Two-cell bush",
+  "layout": [
+   [
+    "g3q/48-49-51-52",
+    "g3q/50-20-53-20"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_gym_lance_pillar",
+  "kind": "object (model as one)",
+  "note": "Lance's dragon pillar",
+  "layout": [
+   [
+    "g3q/2873-2874-2875-2876"
+   ],
+   [
+    "g3q/2877-2878-2877-2878"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_gym_lance_statue",
+  "kind": "stack (model as one)",
+  "note": "Lance's hall statue (stack)",
+  "layout": [
+   [
+    "g3q/2899-2900-2901-2902"
+   ],
+   [
+    "g3q/2903-2904-2905-2906"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_gym_statue",
+  "kind": "stack (model as one)",
+  "note": "Gym statue (stack)",
+  "layout": [
+   [
+    "g3q/38-39-40-41"
+   ],
+   [
+    "g3q/42-43-44-45"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_gym_statue_fuchsia",
+  "kind": "stack (model as one)",
+  "note": "Fuchsia Gym statue (alsoOn stack)",
+  "layout": [
+   [
+    "g3q/1158-1159-1160-1161"
+   ],
+   [
+    "g3q/1162-1163-2541-2542"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_healing_machine",
+  "kind": "object (model as one)",
+  "note": "Pokemon Center healing machine (2x2)",
+  "layout": [
+   [
+    "g3q/270-271-274-275",
+    "g3q/272-273-276-277"
+   ],
+   [
+    "g3q/278-0-280-281",
+    "g3q/0-279-282-283"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_hof_machine",
+  "kind": "object (model as one)",
+  "note": "Hall of Fame recording machine (the two front middle cells are floor)",
+  "layout": [
+   [
+    "g3q/3311-3311-3313-3312",
+    "g3q/3311-3311-3317-3318",
+    "g3q/3311-3311-3318-3319",
+    "g3q/3311-3311-3312-3328"
+   ],
+   [
+    "g3q/3314-3315-3313-3316",
+    "g3q/3320-3321-3324-3325",
+    "g3q/3322-3323-3326-3327",
+    "g3q/3329-3330-3331-3328"
+   ],
+   [
+    "g3q/3314-3316-3332-3333",
+    null,
+    null,
+    "g3q/3343-3330-3344-3345"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_house_bookcase_671-672-673-674",
+  "kind": "stack (model as one)",
+  "note": "House bookcase (stack)",
+  "layout": [
+   [
+    "g3q/667-668-669-670"
+   ],
+   [
+    "g3q/671-672-673-674"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_house_bookcase_671-672-675-676",
+  "kind": "stack (model as one)",
+  "note": "House bookcase (stack)",
+  "layout": [
+   [
+    "g3q/667-668-671-672"
+   ],
+   [
+    "g3q/671-672-675-676"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_house_table_2x2",
+  "kind": "object (model as one)",
+  "note": "Bill's-house 2x2 table",
+  "layout": [
+   [
+    "g3q/658-659-662-663",
+    "g3q/659-664-663-665"
+   ],
+   [
+    "g3q/691-663-673-692",
+    "g3q/663-693-692-674"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_house_table_4x4",
+  "kind": "object (model as one)",
+  "note": "Fan Club / Trainer House 4x4 table with the potted plant",
+  "layout": [
+   [
+    "g3q/658-659-662-663",
+    "g3q/659-659-663-663",
+    "g3q/659-659-663-663",
+    "g3q/659-664-663-665"
+   ],
+   [
+    "g3q/662-663-662-663",
+    "g3q/663-725-663-727",
+    "g3q/726-663-728-663",
+    "g3q/663-665-663-665"
+   ],
+   [
+    "g3q/662-663-662-663",
+    "g3q/663-729-663-663",
+    "g3q/730-663-663-663",
+    "g3q/663-665-663-665"
+   ],
+   [
+    "g3q/691-663-673-692",
+    "g3q/663-663-692-692",
+    "g3q/663-663-692-692",
+    "g3q/663-693-692-674"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_house_tall_plant",
+  "kind": "stack (model as one)",
+  "note": "Tall potted plant (stack)",
+  "layout": [
+   [
+    "g3q/681-682-683-684"
+   ],
+   [
+    "g3q/685-686-687-688"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_house_tall_planter",
+  "kind": "stack (model as one)",
+  "note": "Flower-shop tall planter (stack)",
+  "layout": [
+   [
+    "g3q/743-744-745-746"
+   ],
+   [
+    "g3q/745-746-747-748"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_indigo_rack",
+  "kind": "stack (model as one)",
+  "note": "Indigo Plateau rack (stack)",
+  "layout": [
+   [
+    "g3q/333-354-355-356"
+   ],
+   [
+    "g3q/355-356-357-358"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_ip_rock",
+  "kind": "object (model as one)",
+  "note": "Cave rock formation",
+  "layout": [
+   [
+    "g3q/3450-3451-3454-3455",
+    "g3q/3452-3453-3456-3457"
+   ],
+   [
+    "g3q/3458-3459-3462-3463",
+    "g3q/3460-3461-3464-3465"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_ip_rock_pair",
+  "kind": "object (model as one)",
+  "note": "Ice Path two-wide rock",
+  "layout": [
+   [
+    "g3q/3403-3404-3407-3408",
+    "g3q/3405-3406-3409-3410"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_jo_fence",
+  "kind": "object (model as one)",
+  "note": "Johto fence run",
+  "layout": [
+   [
+    "g3q/393-393-394-449",
+    "g3q/393-393-394-394",
+    "g3q/393-393-449-394"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_jo_rock",
+  "kind": "object (model as one)",
+  "note": "Johto rock formation",
+  "layout": [
+   [
+    "g3q/383-384-386-387",
+    "g3q/384-385-387-388"
+   ],
+   [
+    "g3q/386-387-389-390",
+    "g3q/387-388-390-391"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_jo_tree_bushy",
+  "kind": "stack (model as one)",
+  "note": "Johto tree, bushy (stack)",
+  "layout": [
+   [
+    "g3q/367-368-369-370"
+   ],
+   [
+    "g3q/369-370-371-372"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_jo_tree_standard",
+  "kind": "stack (model as one)",
+  "note": "Johto tree, standard (stack)",
+  "layout": [
+   [
+    "g3q/367-368-751-752"
+   ],
+   [
+    "g3q/751-752-371-372"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_kitchen_row",
+  "kind": "object (model as one)",
+  "note": "Players 1F kitchen: stove, sink, fridge",
+  "layout": [
+   [
+    "g3q/1918-1919-1922-1923",
+    "g3q/1920-1921-1911-1912",
+    "g3q/1943-1944-1945-1946"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_kurt_bench",
+  "kind": "object (model as one)",
+  "note": "Kurt's L-shaped workbench",
+  "layout": [
+   [
+    "g3q/2008-2009-2011-2012",
+    "g3q/2009-2009-2012-2064",
+    "g3q/2009-2009-2065-2012",
+    "g3q/2009-2010-1990-2013"
+   ],
+   [
+    "g3q/2011-2012-2008-2010",
+    "g3q/2012-2012-2018-2018",
+    "g3q/2012-2066-2018-2018",
+    "g3q/2067-2013-2018-2019"
+   ],
+   [
+    "g3q/2011-2013-2011-2013",
+    null,
+    null,
+    null
+   ],
+   [
+    "g3q/2011-2013-2011-2013",
+    null,
+    null,
+    null
+   ]
+  ]
+ },
+ {
+  "id": "crystal_lab_bookcase_elm",
+  "kind": "stack (model as one)",
+  "note": "Elm's lab bookcase (alsoOn stack)",
+  "layout": [
+   [
+    "g3q/2479-2480-1407-2481"
+   ],
+   [
+    "g3q/1407-2481-2482-2483"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_lab_bookcase_oak",
+  "kind": "stack (model as one)",
+  "note": "Oak's lab / Academy bookcase (stack)",
+  "layout": [
+   [
+    "g3q/2479-2480-1407-2481"
+   ],
+   [
+    "g3q/1407-2481-2521-2522"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_lab_table",
+  "kind": "object (model as one)",
+  "note": "Elm's / Oak's lab table and the Poke Ball display",
+  "layout": [
+   [
+    "g3q/2479-659-662-663",
+    "g3q/659-659-663-663",
+    "g3q/659-2480-663-2490",
+    "g3q/2488-2489-2491-2492"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_lattice_railing_row",
+  "kind": "object (model as one)",
+  "note": "Lattice railing (west end, middle, east end)",
+  "layout": [
+   [
+    "g3q/1447-1448-1449-1450",
+    "g3q/1448-1448-1450-1450",
+    "g3q/1448-1478-1450-1479"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_low_table_2x2",
+  "kind": "object (model as one)",
+  "note": "Ecruteak low table (2x2)",
+  "layout": [
+   [
+    "g3q/2008-2009-2011-2012",
+    "g3q/2009-2010-2012-2013"
+   ],
+   [
+    "g3q/2011-2012-2011-2012",
+    "g3q/2012-2013-2012-2013"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_mahogany_gondola",
+  "kind": "object (model as one)",
+  "note": "Mahogany shop gondola shelf (2x2)",
+  "layout": [
+   [
+    "g3q/333-1990-355-1991",
+    "g3q/1990-354-1991-356"
+   ],
+   [
+    "g3q/1992-1993-1995-1996",
+    "g3q/1993-1994-1996-1997"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_mansion_bed",
+  "kind": "object (model as one)",
+  "note": "Celadon Mansion 2F bed (1x2)",
+  "layout": [
+   [
+    "g3q/1434-1435-135-136"
+   ],
+   [
+    "g3q/135-136-1436-1437"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_mansion_cabinet",
+  "kind": "stack (model as one)",
+  "note": "Celadon Mansion display cabinet (stack)",
+  "layout": [
+   [
+    "g3q/480-480-1403-1404"
+   ],
+   [
+    "g3q/1407-1408-1411-1412"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_mansion_office_desks",
+  "kind": "object (model as one)",
+  "note": "Celadon Mansion 2F desks and chair",
+  "layout": [
+   [
+    "g3q/1420-1421-1424-1425",
+    "g3q/1422-1423-1426-1427"
+   ],
+   [
+    "g3q/1428-1429-1432-1433",
+    null
+   ]
+  ]
+ },
+ {
+  "id": "crystal_mansion_ornament_cabinet",
+  "kind": "stack (model as one)",
+  "note": "Celadon Mansion ornament cabinet (stack)",
+  "layout": [
+   [
+    "g3q/1403-1404-1405-1406"
+   ],
+   [
+    "g3q/1409-1410-1411-1412"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_mansion_table",
+  "kind": "object (model as one)",
+  "note": "Celadon Mansion 1F table (2x2)",
+  "layout": [
+   [
+    "g3q/1403-659-662-663",
+    "g3q/659-1404-663-665"
+   ],
+   [
+    "g3q/662-663-1413-1414",
+    "g3q/663-665-1414-1415"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_mart_blue_glass_cabinet",
+  "kind": "stack (model as one)",
+  "note": "Mart blue glass cabinet (stack)",
+  "layout": [
+   [
+    "g3q/164-165-166-167"
+   ],
+   [
+    "g3q/168-169-170-171"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_mart_plain_shelf",
+  "kind": "stack (model as one)",
+  "note": "Mart plain shelf (stack)",
+  "layout": [
+   [
+    "g3q/187-188-175-176"
+   ],
+   [
+    "g3q/175-176-195-196"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_mart_refrigerated_display",
+  "kind": "stack (model as one)",
+  "note": "Mart refrigerated display (stack)",
+  "layout": [
+   [
+    "g3q/187-188-189-190"
+   ],
+   [
+    "g3q/191-192-193-194"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_mart_shelf_of_red_goods",
+  "kind": "stack (model as one)",
+  "note": "Mart shelf of red goods (stack)",
+  "layout": [
+   [
+    "g3q/174-134-177-178"
+   ],
+   [
+    "g3q/181-182-185-186"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_mart_shelf_of_yellow_goods",
+  "kind": "stack (model as one)",
+  "note": "Mart shelf of yellow goods (stack)",
+  "layout": [
+   [
+    "g3q/172-173-175-176"
+   ],
+   [
+    "g3q/179-180-183-184"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_mart_vending_machine",
+  "kind": "stack (model as one)",
+  "note": "Mart vending machine (stack)",
+  "layout": [
+   [
+    "g3q/187-188-212-213"
+   ],
+   [
+    "g3q/212-213-214-215"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_mobile_trade_terminal",
+  "kind": "object (model as one)",
+  "note": "Mobile Trade Room terminal",
+  "layout": [
+   [
+    "g3q/1502-1503-1504-1505",
+    null,
+    null,
+    "g3q/1502-1503-1504-1505"
+   ],
+   [
+    "g3q/1506-1507-1508-1509",
+    "g3q/1512-1513-1514-1515",
+    "g3q/1513-1512-1516-1517",
+    "g3q/1518-1506-1519-1508"
+   ],
+   [
+    "g3q/1506-1524-1525-1526",
+    "g3q/1531-1532-1535-1535",
+    "g3q/1533-1534-1536-1537",
+    "g3q/1524-1506-1526-1525"
+   ],
+   [
+    "g3q/1527-1528-1529-1530",
+    null,
+    "g3q/1539-1525-1540-1529",
+    "g3q/1528-1527-1530-1529"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_pk_bench",
+  "kind": "object (model as one)",
+  "note": "National Park bench",
+  "layout": [
+   [
+    "g3q/3844-3845-3848-3849",
+    "g3q/3846-3847-3850-3851"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_pk_big_tree",
+  "kind": "object (model as one)",
+  "note": "National Park big tree",
+  "layout": [
+   [
+    "g3q/3824-3825-3828-3829",
+    "g3q/3826-3827-3830-3831"
+   ],
+   [
+    "g3q/3832-3833-3836-3837",
+    "g3q/3834-3835-3838-3839"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_pk_fence_ew",
+  "kind": "object (model as one)",
+  "note": "Park fence, an east-west run and its end",
+  "layout": [
+   [
+    "g3q/3861-3862-3864-3865",
+    "g3q/3872-3873-3874-3875",
+    "g3q/3872-3873-3874-3875",
+    "g3q/3872-3873-3874-3875"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_pk_fence_ns",
+  "kind": "object (model as one)",
+  "note": "Park fence, a north-south run",
+  "layout": [
+   [
+    "g3q/3859-3863-3859-3866"
+   ],
+   [
+    "g3q/3859-3867-3859-3860"
+   ],
+   [
+    "g3q/3859-3860-3859-3863"
+   ],
+   [
+    "g3q/3859-3866-3859-3867"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_players_house_pc",
+  "kind": "stack (model as one)",
+  "note": "Desk and PC (stack)",
+  "layout": [
+   [
+    "g3q/1905-1905-1947-1948"
+   ],
+   [
+    "g3q/700-1949-1950-1951"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_players_house_table_2x2",
+  "kind": "object (model as one)",
+  "note": "Players 1F table, 2x2 top",
+  "layout": [
+   [
+    "g3q/1926-659-662-663",
+    "g3q/659-1929-663-665"
+   ],
+   [
+    "g3q/662-663-1915-1916",
+    "g3q/663-665-1916-1917"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_pokecom_atrium_machine",
+  "kind": "object (model as one)",
+  "note": "Pokecom atrium machine (display, platform, glass, terminals)",
+  "layout": [
+   [
+    "g3q/4274-4302-4274-4310",
+    "g3q/4313-4313-4362-4362",
+    "g3q/4313-4313-4362-4362",
+    "g3q/4313-4313-4362-4362",
+    "g3q/4313-4313-4362-4362",
+    "g3q/4303-4274-4311-4274"
+   ],
+   [
+    "g3q/4286-4310-4287-4310",
+    "g3q/4362-4362-4362-4362",
+    "g3q/4362-4362-4362-4362",
+    "g3q/4362-4362-4362-4362",
+    "g3q/4362-4362-4362-4362",
+    "g3q/4311-4286-4311-4287"
+   ],
+   [
+    "g3q/4380-4310-4381-4304",
+    "g3q/4362-4362-4312-4312",
+    "g3q/4362-4362-4312-4312",
+    "g3q/4362-4362-4312-4312",
+    "g3q/4362-4362-4312-4312",
+    "g3q/4311-4275-4305-4273"
+   ],
+   [
+    "g3q/4415-4325-4326-4327",
+    "g3q/4302-4313-4310-1123",
+    "g3q/4313-4313-4404-4312",
+    "g3q/4313-4313-4312-4319",
+    "g3q/4313-4303-1123-4311",
+    "g3q/4329-4416-4331-4332"
+   ],
+   [
+    "g3q/4324-4325-4326-4327",
+    "g3q/4310-1123-4310-1123",
+    "g3q/4311-4405-4311-4365",
+    "g3q/4406-4310-4407-4310",
+    "g3q/1123-4311-1123-4311",
+    "g3q/4329-4330-4331-4332"
+   ],
+   [
+    "g3q/4324-4325-4326-4327",
+    "g3q/4310-1123-4310-1123",
+    "g3q/4311-4363-4311-4365",
+    "g3q/4364-4310-4316-4310",
+    "g3q/1123-4311-1123-4311",
+    "g3q/4329-4330-4331-4332"
+   ],
+   [
+    "g3q/4324-4325-4326-4327",
+    "g3q/4310-1123-4310-1123",
+    "g3q/4311-4368-4311-4370",
+    "g3q/4369-4310-4371-4310",
+    "g3q/1123-4311-1123-4311",
+    "g3q/4329-4330-4331-4332"
+   ],
+   [
+    "g3q/4324-4325-4326-4327",
+    "g3q/4310-1123-4310-1123",
+    "g3q/4311-4363-4311-4365",
+    "g3q/4364-4310-4316-4310",
+    "g3q/1123-4311-1123-4311",
+    "g3q/4329-4330-4331-4332"
+   ],
+   [
+    "g3q/4324-4325-4326-4328",
+    "g3q/4310-1123-4304-4312",
+    "g3q/4366-4313-4312-4312",
+    "g3q/4313-4367-4312-4312",
+    "g3q/1123-4311-4312-4305",
+    "g3q/4329-4330-4333-4332"
+   ],
+   [
+    "g3q/4338-4339-4342-4343",
+    "g3q/4340-4341-4344-4345",
+    "g3q/4340-4341-4344-4345",
+    "g3q/4340-4341-4344-4345",
+    "g3q/4340-4341-4344-4345",
+    "g3q/4354-4355-4356-4357"
+   ],
+   [
+    "g3q/4346-4347-4350-4351",
+    "g3q/4348-4349-4352-4353",
+    "g3q/4348-4349-4352-4353",
+    "g3q/4348-4349-4352-4353",
+    "g3q/4348-4349-4352-4353",
+    "g3q/4358-4359-4360-4361"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_pokecom_office_desk",
+  "kind": "object (model as one)",
+  "note": "Pokecom office computer desk",
+  "layout": [
+   [
+    "g3q/4393-4394-4395-4396",
+    "g3q/4287-4287-4399-4400"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_pokecom_office_plant",
+  "kind": "stack (model as one)",
+  "note": "Pokecom office plant (stack)",
+  "layout": [
+   [
+    "g3q/4275-4275-4383-4384"
+   ],
+   [
+    "g3q/4387-4388-4389-4390"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_pokecom_tall_plant",
+  "kind": "stack (model as one)",
+  "note": "Pokecom tall plant (stack)",
+  "layout": [
+   [
+    "g3q/4383-4384-4387-4388"
+   ],
+   [
+    "g3q/4387-4388-4385-4386"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_pokecom_tall_plant_urn",
+  "kind": "stack (model as one)",
+  "note": "Pokecom tall plant in the urn (alsoOn stack)",
+  "layout": [
+   [
+    "g3q/4383-4384-4387-4388"
+   ],
+   [
+    "g3q/4408-4409-4385-4386"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_pokecom_trade_machine",
+  "kind": "stack (model as one)",
+  "note": "Pokecom trade machine (stack)",
+  "layout": [
+   [
+    "g3q/274-277-280-283"
+   ],
+   [
+    "g3q/4294-4295-4297-4298"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_pr_cerulean_statue",
+  "kind": "stack (model as one)",
+  "note": "Cerulean Gym statue (alsoOn stack)",
+  "layout": [
+   [
+    "g3q/1359-1360-1361-1362"
+   ],
+   [
+    "g3q/1646-1647-1648-1649"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_pr_hull",
+  "kind": "object (model as one)",
+  "note": "Docked ship's waterline row",
+  "layout": [
+   [
+    "g3q/4023-4061-4023-4023",
+    "g3q/4062-4063-4023-4023",
+    "g3q/4063-4070-4023-4023",
+    "g3q/4071-4071-4023-4023",
+    "g3q/4077-4078-4023-4023",
+    "g3q/4078-4078-4023-4023",
+    "g3q/4084-4023-4023-4023"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_pr_ruins_statue",
+  "kind": "stack (model as one)",
+  "note": "Ruins statue (stack)",
+  "layout": [
+   [
+    "g3q/4514-4515-4517-4518"
+   ],
+   [
+    "g3q/4521-4522-4525-4526"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_radio_album_display",
+  "kind": "object (model as one)",
+  "note": "2F album display with table and stool",
+  "layout": [
+   [
+    "g3q/3705-3706-3709-3710",
+    "g3q/3707-3708-3711-3712"
+   ],
+   [
+    "g3q/3713-3714-3717-3718",
+    "g3q/3715-3716-3719-3720"
+   ],
+   [
+    "g3q/3626-3627-3628-3629",
+    "g3q/3703-3704-3653-3654"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_radio_console",
+  "kind": "object (model as one)",
+  "note": "Radio Tower 5F console",
+  "layout": [
+   [
+    "g3q/3605-3605-3663-3664"
+   ],
+   [
+    "g3q/3666-3667-3648-3649"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_radio_dj_desk",
+  "kind": "object (model as one)",
+  "note": "DJ desk (the microphone cell is a counter: Tier A draws it at runtime)",
+  "layout": [
+   [
+    "g3q/3660-3661-3674-3675",
+    "g3q/3660-3661-2992-3616"
+   ],
+   [
+    "g3q/3676-3677-2995-2984",
+    "g3q/2984-3617-2984-3617"
+   ],
+   [
+    "g3q/3684-3685-3686-3687",
+    "g3q/2984-3617-2984-3617"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_radio_hedge",
+  "kind": "stack (model as one)",
+  "note": "Radio Tower hedge (stack)",
+  "layout": [
+   [
+    "g3q/3690-3691-3640-3641"
+   ],
+   [
+    "g3q/3640-3641-3642-3643"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_radio_pc",
+  "kind": "stack (model as one)",
+  "note": "Radio Tower reception PC (stack)",
+  "layout": [
+   [
+    "g3q/3606-3606-3655-3656"
+   ],
+   [
+    "g3q/3092-3657-3658-3659"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_radio_record_rack",
+  "kind": "stack (model as one)",
+  "note": "Radio Tower record rack (stack)",
+  "layout": [
+   [
+    "g3q/3630-3631-3632-3633"
+   ],
+   [
+    "g3q/3632-3633-3634-3635"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_radio_studio_window",
+  "kind": "object (model as one)",
+  "note": "Radio Tower studio window (LAV 1F x 12-19)",
+  "layout": [
+   [
+    "g3q/3630-3631-3660-3661",
+    "g3q/3630-3631-3660-3661",
+    "g3q/3630-3631-3660-3661",
+    "g3q/3630-3631-3660-3661",
+    "g3q/3630-3631-3660-3661",
+    "g3q/3630-3631-3660-3661",
+    "g3q/3630-3631-3660-3661",
+    "g3q/3630-3631-3660-3661"
+   ],
+   [
+    "g3q/3701-3661-3702-3669",
+    "g3q/3660-3661-3668-3669",
+    "g3q/3670-3671-3672-3673",
+    "g3q/3660-3661-3674-3675",
+    "g3q/3660-3661-2992-3616",
+    "g3q/3660-3661-3668-3669",
+    "g3q/3701-3661-3702-3669",
+    "g3q/3660-3661-3668-3669"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_radio_wall_tables",
+  "kind": "object (model as one)",
+  "note": "Wall tables (LAV 1F)",
+  "layout": [
+   [
+    "g3q/3606-3606-3650-3651",
+    "g3q/3606-3606-3650-3652"
+   ],
+   [
+    "g3q/3653-3654-3605-3605",
+    "g3q/3653-3654-3605-3605"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_rb_bookcase",
+  "kind": "stack (model as one)",
+  "note": "Bookcase over drawers (alsoOn stack)",
+  "layout": [
+   [
+    "g3q/4932-4933-4948-4949"
+   ],
+   [
+    "g3q/4948-4949-4950-4951"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_rb_desks",
+  "kind": "object (model as one)",
+  "note": "Rocket base desks",
+  "layout": [
+   [
+    "g3q/4952-4953-4956-4957",
+    "g3q/4954-4955-4958-4959",
+    "g3q/4932-4976-4977-4979",
+    "g3q/4976-4933-4980-4978"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_rb_generator",
+  "kind": "stack (model as one)",
+  "note": "Rocket base generator (stack)",
+  "layout": [
+   [
+    "g3q/4932-4933-4934-4935"
+   ],
+   [
+    "g3q/4934-4935-4936-4937"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_rb_plant",
+  "kind": "stack (model as one)",
+  "note": "Potted plant (stack)",
+  "layout": [
+   [
+    "g3q/4964-4965-4966-4967"
+   ],
+   [
+    "g3q/4968-4969-4970-4971"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_rb_table",
+  "kind": "object (model as one)",
+  "note": "Rocket base table",
+  "layout": [
+   [
+    "g3q/4932-4976-4977-3114",
+    "g3q/4976-4976-3114-3114",
+    "g3q/4976-4933-3114-4978"
+   ],
+   [
+    "g3q/4977-3114-4981-4982",
+    "g3q/3114-3114-4982-4982",
+    "g3q/3114-4978-4982-4983"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_rb_transformer",
+  "kind": "object (model as one)",
+  "note": "Rocket base transformer bank (part)",
+  "layout": [
+   [
+    "g3q/4988-4988-4990-4990",
+    "g3q/4988-4989-4990-4991",
+    "g3q/4989-4988-4991-4990",
+    "g3q/4988-4994-4990-4994"
+   ],
+   [
+    "g3q/4934-4935-4936-4937",
+    "g3q/4992-4934-4993-4936",
+    "g3q/4935-4992-4937-4993",
+    "g3q/4995-4994-4996-4994"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_reds_bed",
+  "kind": "object (model as one)",
+  "note": "Red's bed lying north-south (1x2 on the floor)",
+  "layout": [
+   [
+    "g3q/1970-1971-1973-1974"
+   ],
+   [
+    "g3q/135-1975-1976-1977"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_roof_flower_bed",
+  "kind": "object (model as one)",
+  "note": "Goldenrod roof raised flower bed",
+  "layout": [
+   [
+    "g3q/257-220-258-259",
+    "g3q/220-220-254-254",
+    "g3q/220-220-254-254",
+    "g3q/220-253-254-255"
+   ],
+   [
+    "g3q/258-256-258-256",
+    "g3q/256-256-110-110",
+    "g3q/256-256-110-110",
+    "g3q/256-255-110-255"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_roof_south_railing",
+  "kind": "object (model as one)",
+  "note": "Goldenrod roof south railing",
+  "layout": [
+   [
+    "g3q/231-232-217-217",
+    "g3q/232-232-217-217",
+    "g3q/232-237-217-217"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_roof_stairwell",
+  "kind": "object (model as one)",
+  "note": "Celadon Mansion roof stairwell",
+  "layout": [
+   [
+    "g3q/1459-1460-1461-100",
+    "g3q/0-1466-1469-1470"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_sl_bed",
+  "kind": "object (model as one)",
+  "note": "Cabin bed",
+  "layout": [
+   [
+    "g3q/2683-2684-2685-2686"
+   ],
+   [
+    "g3q/2687-2688-2689-2690"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_sl_cabin_table",
+  "kind": "object (model as one)",
+  "note": "Cabin table under the porthole wall",
+  "layout": [
+   [
+    "g3q/2655-2656-2658-2659",
+    "g3q/96-96-2659-2660"
+   ],
+   [
+    "g3q/2708-2662-2722-2723",
+    "g3q/2709-2710-2722-2723"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_sl_cabinet",
+  "kind": "stack (model as one)",
+  "note": "Cabin cabinet (stack)",
+  "layout": [
+   [
+    "g3q/2714-2715-2716-2717"
+   ],
+   [
+    "g3q/2716-2717-2722-2723"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_sl_dining_table",
+  "kind": "object (model as one)",
+  "note": "S.S. Aqua dining table (part)",
+  "layout": [
+   [
+    "g3q/2658-2659-2661-2662",
+    "g3q/2659-2660-1123-2663"
+   ],
+   [
+    "g3q/2661-2702-2661-2704",
+    "g3q/2703-2663-2705-2663"
+   ],
+   [
+    "g3q/2661-1123-2661-1123",
+    "g3q/2662-2663-1123-2663"
+   ],
+   [
+    "g3q/2708-2709-2711-2712",
+    "g3q/2709-2710-2713-2711"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_traditional_altar",
+  "kind": "stack (model as one)",
+  "note": "Altar cabinet (stack)",
+  "layout": [
+   [
+    "g3q/2008-2010-2025-2026"
+   ],
+   [
+    "g3q/2027-2028-2031-2032"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_traditional_tansu",
+  "kind": "stack (model as one)",
+  "note": "Chest of drawers (stack)",
+  "layout": [
+   [
+    "g3q/2008-2010-2054-2055"
+   ],
+   [
+    "g3q/2056-2057-2033-2034"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_trainer_small_table",
+  "kind": "object (model as one)",
+  "note": "Trainer House small table with its box",
+  "layout": [
+   [
+    "g3q/658-659-711-712",
+    "g3q/659-664-663-665"
+   ],
+   [
+    "g3q/715-716-673-692",
+    "g3q/663-693-692-674"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_ts_gate",
+  "kind": "stack (model as one)",
+  "note": "Ticket gate booth (stack)",
+  "layout": [
+   [
+    "g3q/1299-1300-1301-1302"
+   ],
+   [
+    "g3q/1303-1304-1305-1306"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_ts_planter",
+  "kind": "stack (model as one)",
+  "note": "Tall flower planter (alsoOn stack)",
+  "layout": [
+   [
+    "g3q/1310-1311-1312-1313"
+   ],
+   [
+    "g3q/1312-1313-1314-1315"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_ts_statue",
+  "kind": "stack (model as one)",
+  "note": "Gym statue (stack)",
+  "layout": [
+   [
+    "g3q/1359-1360-1361-1362"
+   ],
+   [
+    "g3q/1162-1163-1363-1364"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_ts_statue_dojo",
+  "kind": "stack (model as one)",
+  "note": "Fighting Dojo statue (alsoOn stack)",
+  "layout": [
+   [
+    "g3q/1359-1360-1361-1362"
+   ],
+   [
+    "g3q/1369-1370-1363-1364"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_ts_train",
+  "kind": "object (model as one)",
+  "note": "Magnet Train (the door cells are walkable warps)",
+  "layout": [
+   [
+    "g3q/1320-1321-1324-1325",
+    "g3q/1322-1323-1326-1327",
+    "g3q/1323-1323-1327-1327",
+    "g3q/1334-1323-1335-1327",
+    "g3q/1323-1323-1327-1327",
+    "g3q/1323-1323-1327-1327",
+    "g3q/1323-1334-1327-1335",
+    "g3q/1323-1323-1327-1327",
+    "g3q/1323-1342-1327-1344",
+    "g3q/1343-1320-1345-1346"
+   ],
+   [
+    "g3q/1328-1329-1332-1320",
+    "g3q/1330-1331-1333-1320",
+    "g3q/1336-1337-1339-1340",
+    "g3q/1338-1331-1333-1320",
+    "g3q/1352-1352-1320-1320",
+    "g3q/1352-1352-1320-1320",
+    "g3q/1341-1338-1320-1333",
+    "g3q/1336-1337-1339-1340",
+    "g3q/1341-1347-1320-1333",
+    "g3q/1348-1349-1320-1350"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_ts_viridian_maze",
+  "kind": "object (model as one)",
+  "note": "Viridian Gym hedge segments",
+  "layout": [
+   [
+    "g3q/1294-1294-1316-1317",
+    "g3q/1316-1317-1316-1317"
+   ],
+   [
+    "g3q/1316-1317-1316-1317",
+    "g3q/1316-1317-1316-1317"
+   ],
+   [
+    "g3q/1316-1317-1318-1319",
+    "g3q/1318-1319-1318-1319"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_tw_burned_pillar",
+  "kind": "object (model as one)",
+  "note": "Burned Tower carved pillar",
+  "layout": [
+   [
+    "g3q/944-945-946-947"
+   ],
+   [
+    "g3q/963-964-950-951"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_tw_gym_statue",
+  "kind": "stack (model as one)",
+  "note": "Gym statue on its Cianwood/Ecruteak pedestal (alsoOn stack)",
+  "layout": [
+   [
+    "g3q/1359-1360-1361-1362"
+   ],
+   [
+    "g3q/1369-1370-1758-1759"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_tw_pillar",
+  "kind": "object (model as one)",
+  "note": "Sprout Tower central pillar",
+  "layout": [
+   [
+    "g3q/4821-4822-4828-0",
+    "g3q/4822-4846-0-4852"
+   ],
+   [
+    "g3q/4833-0-4839-4840",
+    "g3q/0-4857-4840-4863"
+   ],
+   [
+    "g3q/4839-4840-4869-4870",
+    "g3q/4840-4863-4870-4876"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_tw_sprout_statue",
+  "kind": "stack (model as one)",
+  "note": "Sprout Tower statue (stack)",
+  "layout": [
+   [
+    "g3q/4910-4911-4903-4904"
+   ],
+   [
+    "g3q/4906-4907-4879-4880"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_tw_tin_statue",
+  "kind": "stack (model as one)",
+  "note": "Tin Tower statue (stack)",
+  "layout": [
+   [
+    "g3q/4086-4087-4088-4089"
+   ],
+   [
+    "g3q/4888-4889-4879-4880"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_ug_crates",
+  "kind": "object (model as one)",
+  "note": "Warehouse crates",
+  "layout": [
+   [
+    "g3q/2972-2973-2974-2975",
+    "g3q/2972-2973-2974-2975"
+   ],
+   [
+    "g3q/2972-2973-2974-2975",
+    "g3q/2972-2973-2974-2975"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_ug_palm",
+  "kind": "stack (model as one)",
+  "note": "Port passage palm (stack)",
+  "layout": [
+   [
+    "g3q/4140-4141-4142-4143"
+   ],
+   [
+    "g3q/4144-4145-4104-4104"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_ug_persian",
+  "kind": "stack (model as one)",
+  "note": "Rocket base Persian statue (stack)",
+  "layout": [
+   [
+    "g3q/2955-2956-2958-2959"
+   ],
+   [
+    "g3q/2961-2962-2963-2964"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_ug_rocket_desk",
+  "kind": "object (model as one)",
+  "note": "Rocket base desk with its chair",
+  "layout": [
+   [
+    "g3q/2957-2957-2991-2992",
+    "g3q/2957-2957-2993-2994"
+   ],
+   [
+    "g3q/2995-2996-2999-3000",
+    "g3q/2997-2998-3001-3002"
+   ],
+   [
+    "g3q/3015-3016-3017-3018",
+    null
+   ]
+  ]
+ },
+ {
+  "id": "crystal_ug_saffron_statue",
+  "kind": "stack (model as one)",
+  "note": "Saffron Gym statue (stack)",
+  "layout": [
+   [
+    "g3q/4155-4156-4157-4158"
+   ],
+   [
+    "g3q/4119-4120-4121-4122"
+   ]
+  ]
+ },
+ {
+  "id": "crystal_ug_shelf",
+  "kind": "stack (model as one)",
+  "note": "Rocket base bookshelf (stack)",
+  "layout": [
+   [
+    "g3q/2991-3009-3011-3012"
+   ],
+   [
+    "g3q/3011-3012-3013-3014"
+   ]
+  ]
+ }
+]

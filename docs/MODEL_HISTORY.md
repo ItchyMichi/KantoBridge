@@ -79,6 +79,35 @@ python tools/model_history.py restore --archive $h --game emerald --model 'g3q/1
 
 Selectors are the same as above: a source key, a compound object ID, a building ID, or a room view (`emerald_claude_native_<room>`), which selects every source key in that room at once.
 
+## Crystal full pass (2 November 2026)
+
+The full Crystal pass has its own archive, so the October archive keeps its names and bytes:
+**`local/model-history/crystal-claude-final/`**, with the adjacent `.zip` and `.zip.sha256`. Name it with `--archive` for
+every Crystal command. The live table holds the new models (SHA-256 `26089dca…`); the archive keeps every earlier version:
+
+| Revision | Contents |
+|---|---|
+| `original`, `approved` | The October checkpoints (before Codex's building trial; with its two accepted buildings), byte-identical. |
+| `pre-pass` | The table before the full pass (`crystal-full-pass-baseline.json`): the old version of every model the pass changed. |
+| `capture-<hash>` | The exact tables the 40 review galleries captured, one per checkpoint batch (`crystal-review/*`). |
+| `claude-final` | **The live table:** every new model; the user reviewed the final comparison world on 2 November and approved the models. |
+
+43 revisions; 1,493 restorable models, objects and buildings; 1,028 differ between `pre-pass` and `claude-final`
+(`changed_in_pass`). Every checkpoint's pre-merge table is also kept as `local/model-history/crystal-premerge-<module>/`.
+
+```powershell
+$h = 'local/model-history/crystal-claude-final'
+python tools/model_history.py verify --archive $h
+python tools/model_history.py list --archive $h --game crystal --query b005
+# Back to the old model (preview; add --write to apply):
+python tools/model_history.py restore --archive $h --game crystal --model crystal_b005_G2_AZALEA_TOWN --revision pre-pass
+# Forward to the new one again:
+python tools/model_history.py restore --archive $h --game crystal --model crystal_b005_G2_AZALEA_TOWN --revision claude-final --write
+```
+
+Selectors are a source key (`g3q/…`), a complete object ID (`crystal_…`, the ids in `tools/shape_fit/entities/crystal.json`)
+or a building ID.
+
 ## Archive and runtime notes
 
 `python tools/model_history.py init` creates the archive from the preserved source snapshots. `verify` checks archive integrity. `--archive` selects a different archive location; `--table` targets a scratch table for verification or a restoration rehearsal.

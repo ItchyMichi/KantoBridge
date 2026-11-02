@@ -160,6 +160,8 @@ Run focused structural Python tests, relevant Java fitted/building tests, and `a
 
 The Blue final result was 496 voxel cells and 64 complete objects, 560 comparison models and 3,345 verified screenshots including available before companions and three views. It revised 319 cells after the pilots, added four, retained 173, and preserved all 34 buildings. See `local/model-gallery/blue-review/review.html`, `review-ledger.json` and `quality-audit.json` for the accepted result.
 
-The Emerald pilots have 42/42 tree screenshots and 7/7 sheets, plus 18/18 building screenshots and 3/3 sheets. Crystal's building trial has 12/12 screenshots and 2/2 sheets. These counts were rechecked against the saved reports when this document was written. They do not mean the remaining Emerald/Crystal models have been reviewed.
+The Emerald pilots have 42/42 tree screenshots and 7/7 sheets, plus 18/18 building screenshots and 3/3 sheets. Crystal's building trial has 12/12 screenshots and 2/2 sheets. These counts were rechecked against the saved reports when this document was written. They do not mean the remaining Emerald/Crystal models have been reviewed. (Both full passes have since been completed
+and approved: Emerald on 1 November, Crystal on 2 November; see [Model history](MODEL_HISTORY.md) and
+[the Crystal progress record](CRYSTAL_MODEL_PROGRESS.md).)
 
 Finish future work with an indexed old/current archive supporting per-model and whole-object restoration, a searchable comparison report, a complete decision ledger, and a gallery the user can open for final review. Keep accepted pilots unchanged unless a new comparison demonstrates a needed correction. Saved normal worlds retain geometry hashes; rebuilding the mod alone does not update already-generated shapes.

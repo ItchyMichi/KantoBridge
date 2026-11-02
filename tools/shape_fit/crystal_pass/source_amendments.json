@@ -1,0 +1,1277 @@
+{
+  "metadata": {
+    "g3q/537-537-488-489": {
+      "before": {
+        "class": "voxels",
+        "on": "g3q/490-491-483-483"
+      },
+      "after": {
+        "class": "voxels",
+        "on": "g3q/490-491-483-483",
+        "walk": true
+      },
+      "evidence": "BATTLE_TOWER_HALLWAY (11,0): a walkable wall-row cell over the elevator door 490-491-483-483 (a walkable warp). Its stack link names that walkable door, which never stacks (Units.stack needs a solid base), so the lone top was dropped and the back wall showed a one-cell gap; as walk voxels it draws in place.",
+      "witnesses": [
+        {
+          "map": "G2_BATTLE_TOWER_HALLWAY",
+          "x": 11,
+          "y": 0
+        }
+      ]
+    }
+  },
+  "stacks": {
+    "g3q/1970-1971-1973-1974": {
+      "before": {
+        "on": "g3q/135-1975-1976-1977"
+      },
+      "after": {},
+      "evidence": "REDS_HOUSE_2F (0,6) head and (0,7) foot, both collision 7: one bed drawn top-down across two rows, not a pillow end standing on the foot.",
+      "witnesses": [
+        {
+          "map": "G2_REDS_HOUSE_2F",
+          "x": 0,
+          "y": 6
+        }
+      ]
+    },
+    "g3q/1905-1905-1907-1908": {
+      "before": {
+        "on": "g3q/1909-1910-4223-4224"
+      },
+      "after": {},
+      "evidence": "Placed in the wall row over a TV in COPYCATS_HOUSE_1F/2F, ELMS_HOUSE, PLAYERS_HOUSE_1F and REDS_HOUSE_1F without stacking (different bases); only PLAYERS_HOUSE_2F (4,0) matched its link.",
+      "witnesses": [
+        {
+          "map": "G2_COPYCATS_HOUSE_1F",
+          "x": 4,
+          "y": 0
+        },
+        {
+          "map": "G2_COPYCATS_HOUSE_2F",
+          "x": 5,
+          "y": 0
+        },
+        {
+          "map": "G2_ELMS_HOUSE",
+          "x": 4,
+          "y": 0
+        },
+        {
+          "map": "G2_PLAYERS_HOUSE_1F",
+          "x": 4,
+          "y": 0
+        },
+        {
+          "map": "G2_PLAYERS_HOUSE_2F",
+          "x": 4,
+          "y": 0
+        },
+        {
+          "map": "G2_REDS_HOUSE_1F",
+          "x": 2,
+          "y": 0
+        }
+      ]
+    },
+    "g3q/1984-1984-2008-2010": {
+      "before": {
+        "on": "g3q/1954-1955-2031-2032"
+      },
+      "after": {},
+      "evidence": "Placed in the wall row over 2029-2030-2033-2034 (a bookshelf, no top of its own) in ECRUTEAK_ITEMFINDER_HOUSE, ECRUTEAK_LUGIA_SPEECH_HOUSE, KURTS_HOUSE, MAHOGANY_MART_1F, MOUNT_MOON_GIFT_SHOP, VIOLET_KYLES_HOUSE and VIOLET_NICKNAME_SPEECH_HOUSE: the same drawing is not a chest's upper part there.",
+      "witnesses": [
+        {
+          "map": "G2_ECRUTEAK_ITEMFINDER_HOUSE",
+          "x": 1,
+          "y": 0
+        },
+        {
+          "map": "G2_ECRUTEAK_ITEMFINDER_HOUSE",
+          "x": 6,
+          "y": 0
+        },
+        {
+          "map": "G2_ECRUTEAK_LUGIA_SPEECH_HOUSE",
+          "x": 1,
+          "y": 0
+        },
+        {
+          "map": "G2_ECRUTEAK_LUGIA_SPEECH_HOUSE",
+          "x": 6,
+          "y": 0
+        },
+        {
+          "map": "G2_KURTS_HOUSE",
+          "x": 5,
+          "y": 0
+        },
+        {
+          "map": "G2_KURTS_HOUSE",
+          "x": 10,
+          "y": 0
+        },
+        {
+          "map": "G2_MAHOGANY_MART_1F",
+          "x": 7,
+          "y": 0
+        },
+        {
+          "map": "G2_MOUNT_MOON_GIFT_SHOP",
+          "x": 7,
+          "y": 0
+        },
+        {
+          "map": "G2_VIOLET_KYLES_HOUSE",
+          "x": 1,
+          "y": 0
+        },
+        {
+          "map": "G2_VIOLET_KYLES_HOUSE",
+          "x": 6,
+          "y": 0
+        },
+        {
+          "map": "G2_VIOLET_NICKNAME_SPEECH_HOUSE",
+          "x": 1,
+          "y": 0
+        },
+        {
+          "map": "G2_VIOLET_NICKNAME_SPEECH_HOUSE",
+          "x": 6,
+          "y": 0
+        }
+      ]
+    },
+    "g3q/1434-1435-135-136": {
+      "before": {
+        "on": "g3q/135-136-1436-1437"
+      },
+      "after": {},
+      "evidence": "CELADON_MANSION_2F (0,6) head over (0,7) foot, both collision 7: one bed drawn top-down across two rows (as Red's bed), not a pillow end standing on the foot.",
+      "witnesses": [
+        {
+          "map": "G2_CELADON_MANSION_2F",
+          "x": 0,
+          "y": 6
+        }
+      ]
+    },
+    "g3q/667-668-669-670": {
+      "before": {
+        "on": "g3q/671-672-673-674"
+      },
+      "after": {
+        "on": "g3q/671-672-673-674",
+        "alsoOn": [
+          "g3q/669-670-675-676",
+          "g3q/671-672-675-676"
+        ]
+      },
+      "evidence": "MR_FUJIS_HOUSE (8,0) over 669-670-675-676 and (9,0) over 671-672-675-676: the same bookcase top drawn over two base variants; without the link it stood in place in the wall row.",
+      "witnesses": [
+        {
+          "map": "G2_MR_FUJIS_HOUSE",
+          "x": 8,
+          "y": 0,
+          "base": "g3q/669-670-675-676"
+        },
+        {
+          "map": "G2_MR_FUJIS_HOUSE",
+          "x": 9,
+          "y": 0,
+          "base": "g3q/671-672-675-676"
+        }
+      ]
+    },
+    "g3q/2479-2480-1407-2481": {
+      "before": {
+        "on": "g3q/1407-2481-2521-2522"
+      },
+      "after": {
+        "on": "g3q/1407-2481-2521-2522",
+        "alsoOn": [
+          "g3q/1407-2481-2482-2483"
+        ]
+      },
+      "evidence": "ELMS_LAB (6..9,0) over 1407-2481-2482-2483 (12 placements): the same bookcase top drawn over Elm's base variant; without the link it stood in place in the wall row.",
+      "witnesses": [
+        {
+          "map": "G2_ELMS_LAB",
+          "x": 6,
+          "y": 0,
+          "base": "g3q/1407-2481-2482-2483"
+        },
+        {
+          "map": "G2_ELMS_LAB",
+          "x": 7,
+          "y": 0,
+          "base": "g3q/1407-2481-2482-2483"
+        },
+        {
+          "map": "G2_ELMS_LAB",
+          "x": 8,
+          "y": 0,
+          "base": "g3q/1407-2481-2482-2483"
+        },
+        {
+          "map": "G2_ELMS_LAB",
+          "x": 9,
+          "y": 0,
+          "base": "g3q/1407-2481-2482-2483"
+        },
+        {
+          "map": "G2_ELMS_LAB",
+          "x": 0,
+          "y": 6,
+          "base": "g3q/1407-2481-2482-2483"
+        },
+        {
+          "map": "G2_ELMS_LAB",
+          "x": 1,
+          "y": 6,
+          "base": "g3q/1407-2481-2482-2483"
+        },
+        {
+          "map": "G2_ELMS_LAB",
+          "x": 2,
+          "y": 6,
+          "base": "g3q/1407-2481-2482-2483"
+        },
+        {
+          "map": "G2_ELMS_LAB",
+          "x": 3,
+          "y": 6,
+          "base": "g3q/1407-2481-2482-2483"
+        },
+        {
+          "map": "G2_ELMS_LAB",
+          "x": 6,
+          "y": 6,
+          "base": "g3q/1407-2481-2482-2483"
+        },
+        {
+          "map": "G2_ELMS_LAB",
+          "x": 7,
+          "y": 6,
+          "base": "g3q/1407-2481-2482-2483"
+        },
+        {
+          "map": "G2_ELMS_LAB",
+          "x": 8,
+          "y": 6,
+          "base": "g3q/1407-2481-2482-2483"
+        },
+        {
+          "map": "G2_ELMS_LAB",
+          "x": 9,
+          "y": 6,
+          "base": "g3q/1407-2481-2482-2483"
+        }
+      ]
+    },
+    "g3q/1158-1159-1160-1161": {
+      "before": {
+        "on": "g3q/1162-1163-1164-1165"
+      },
+      "after": {
+        "on": "g3q/1162-1163-1164-1165",
+        "alsoOn": [
+          "g3q/1162-1163-2541-2542"
+        ]
+      },
+      "evidence": "FUCHSIA_GYM (3,14) and (6,14) over 1162-1163-2541-2542: the same statue over Fuchsia's pedestal variant; without the link the figure stood on the floor behind its pedestal.",
+      "witnesses": [
+        {
+          "map": "G2_FUCHSIA_GYM",
+          "x": 3,
+          "y": 14,
+          "base": "g3q/1162-1163-2541-2542"
+        },
+        {
+          "map": "G2_FUCHSIA_GYM",
+          "x": 6,
+          "y": 14,
+          "base": "g3q/1162-1163-2541-2542"
+        }
+      ]
+    },
+    "g3q/291-295-296-297": {
+      "before": {
+        "on": "g3q/300-301-298-298"
+      },
+      "after": {
+        "on": "g3q/300-301-298-298",
+        "alsoOn": [
+          "g3q/300-301-302-303"
+        ]
+      },
+      "evidence": "Every Johto/Kanto POKECENTER_1F (5,1) over 300-301-302-303: the same monitor drawn over the 1F counter variant (22 placements); without the link it stood in place behind the counter.",
+      "witnesses": [
+        {
+          "map": "G2_AZALEA_POKECENTER_1F",
+          "x": 5,
+          "y": 1,
+          "base": "g3q/300-301-302-303"
+        },
+        {
+          "map": "G2_BLACKTHORN_POKECENTER_1F",
+          "x": 5,
+          "y": 1,
+          "base": "g3q/300-301-302-303"
+        },
+        {
+          "map": "G2_CELADON_POKECENTER_1F",
+          "x": 5,
+          "y": 1,
+          "base": "g3q/300-301-302-303"
+        },
+        {
+          "map": "G2_CERULEAN_POKECENTER_1F",
+          "x": 5,
+          "y": 1,
+          "base": "g3q/300-301-302-303"
+        },
+        {
+          "map": "G2_CHERRYGROVE_POKECENTER_1F",
+          "x": 5,
+          "y": 1,
+          "base": "g3q/300-301-302-303"
+        },
+        {
+          "map": "G2_CIANWOOD_POKECENTER_1F",
+          "x": 5,
+          "y": 1,
+          "base": "g3q/300-301-302-303"
+        },
+        {
+          "map": "G2_CINNABAR_POKECENTER_1F",
+          "x": 5,
+          "y": 1,
+          "base": "g3q/300-301-302-303"
+        },
+        {
+          "map": "G2_ECRUTEAK_POKECENTER_1F",
+          "x": 5,
+          "y": 1,
+          "base": "g3q/300-301-302-303"
+        },
+        {
+          "map": "G2_FUCHSIA_POKECENTER_1F",
+          "x": 5,
+          "y": 1,
+          "base": "g3q/300-301-302-303"
+        },
+        {
+          "map": "G2_GOLDENROD_POKECENTER_1F",
+          "x": 5,
+          "y": 1,
+          "base": "g3q/300-301-302-303"
+        },
+        {
+          "map": "G2_INDIGO_PLATEAU_POKECENTER_1F",
+          "x": 5,
+          "y": 7,
+          "base": "g3q/300-301-302-303"
+        },
+        {
+          "map": "G2_LAVENDER_POKECENTER_1F",
+          "x": 5,
+          "y": 1,
+          "base": "g3q/300-301-302-303"
+        },
+        {
+          "map": "G2_MAHOGANY_POKECENTER_1F",
+          "x": 5,
+          "y": 1,
+          "base": "g3q/300-301-302-303"
+        },
+        {
+          "map": "G2_OLIVINE_POKECENTER_1F",
+          "x": 5,
+          "y": 1,
+          "base": "g3q/300-301-302-303"
+        },
+        {
+          "map": "G2_PEWTER_POKECENTER_1F",
+          "x": 5,
+          "y": 1,
+          "base": "g3q/300-301-302-303"
+        },
+        {
+          "map": "G2_ROUTE_10_POKECENTER_1F",
+          "x": 5,
+          "y": 1,
+          "base": "g3q/300-301-302-303"
+        },
+        {
+          "map": "G2_ROUTE_32_POKECENTER_1F",
+          "x": 5,
+          "y": 1,
+          "base": "g3q/300-301-302-303"
+        },
+        {
+          "map": "G2_SAFFRON_POKECENTER_1F",
+          "x": 5,
+          "y": 1,
+          "base": "g3q/300-301-302-303"
+        },
+        {
+          "map": "G2_SILVER_CAVE_POKECENTER_1F",
+          "x": 5,
+          "y": 1,
+          "base": "g3q/300-301-302-303"
+        },
+        {
+          "map": "G2_VERMILION_POKECENTER_1F",
+          "x": 5,
+          "y": 1,
+          "base": "g3q/300-301-302-303"
+        },
+        {
+          "map": "G2_VIOLET_POKECENTER_1F",
+          "x": 5,
+          "y": 1,
+          "base": "g3q/300-301-302-303"
+        },
+        {
+          "map": "G2_VIRIDIAN_POKECENTER_1F",
+          "x": 5,
+          "y": 1,
+          "base": "g3q/300-301-302-303"
+        }
+      ]
+    },
+    "g3q/125-126-127-128": {
+      "before": {
+        "on": "g3q/129-130-131-132"
+      },
+      "after": {},
+      "evidence": "CELADON_DEPT_STORE_1F (2,4)/(2,5), (2,6)/(2,7), (4,4)/(4,5), (4,6)/(4,7): two cushions on one frame drawn top-down across two rows, legs at the south end: a bench lying flat, not a tall box.",
+      "witnesses": [
+        {
+          "map": "G2_CELADON_DEPT_STORE_1F",
+          "x": 2,
+          "y": 4
+        },
+        {
+          "map": "G2_CELADON_DEPT_STORE_1F",
+          "x": 4,
+          "y": 4
+        },
+        {
+          "map": "G2_CELADON_DEPT_STORE_1F",
+          "x": 2,
+          "y": 6
+        },
+        {
+          "map": "G2_CELADON_DEPT_STORE_1F",
+          "x": 4,
+          "y": 6
+        },
+        {
+          "map": "G2_CELADON_DEPT_STORE_5F",
+          "x": 0,
+          "y": 4
+        },
+        {
+          "map": "G2_CELADON_DEPT_STORE_5F",
+          "x": 0,
+          "y": 6
+        },
+        {
+          "map": "G2_CELADON_DEPT_STORE_6F",
+          "x": 2,
+          "y": 4
+        },
+        {
+          "map": "G2_CELADON_DEPT_STORE_6F",
+          "x": 5,
+          "y": 4
+        },
+        {
+          "map": "G2_CELADON_DEPT_STORE_6F",
+          "x": 2,
+          "y": 6
+        },
+        {
+          "map": "G2_CELADON_DEPT_STORE_6F",
+          "x": 5,
+          "y": 6
+        },
+        {
+          "map": "G2_GOLDENROD_DEPT_STORE_1F",
+          "x": 2,
+          "y": 4
+        },
+        {
+          "map": "G2_GOLDENROD_DEPT_STORE_1F",
+          "x": 4,
+          "y": 4
+        },
+        {
+          "map": "G2_GOLDENROD_DEPT_STORE_1F",
+          "x": 2,
+          "y": 6
+        },
+        {
+          "map": "G2_GOLDENROD_DEPT_STORE_1F",
+          "x": 4,
+          "y": 6
+        },
+        {
+          "map": "G2_GOLDENROD_DEPT_STORE_5F",
+          "x": 0,
+          "y": 4
+        },
+        {
+          "map": "G2_GOLDENROD_DEPT_STORE_5F",
+          "x": 0,
+          "y": 6
+        },
+        {
+          "map": "G2_GOLDENROD_DEPT_STORE_6F",
+          "x": 2,
+          "y": 4
+        },
+        {
+          "map": "G2_GOLDENROD_DEPT_STORE_6F",
+          "x": 5,
+          "y": 4
+        },
+        {
+          "map": "G2_GOLDENROD_DEPT_STORE_6F",
+          "x": 2,
+          "y": 6
+        },
+        {
+          "map": "G2_GOLDENROD_DEPT_STORE_6F",
+          "x": 5,
+          "y": 6
+        },
+        {
+          "map": "G2_GOLDENROD_DEPT_STORE_ROOF",
+          "x": 1,
+          "y": 2
+        },
+        {
+          "map": "G2_GOLDENROD_DEPT_STORE_ROOF",
+          "x": 1,
+          "y": 4
+        }
+      ]
+    },
+    "g3q/4383-4384-4387-4388": {
+      "before": {
+        "on": "g3q/4387-4388-4385-4386"
+      },
+      "after": {
+        "on": "g3q/4387-4388-4385-4386",
+        "alsoOn": [
+          "g3q/4408-4409-4385-4386"
+        ]
+      },
+      "evidence": "POKECOM_CENTER_ADMIN_OFFICE_MOBILE (22,14) and (31,14)... over 4408-4409-4385-4386: the same crown over the urn pot variant; without the link it stood in place on the floor behind it.",
+      "witnesses": [
+        {
+          "map": "G2_POKECOM_CENTER_ADMIN_OFFICE_MOBILE",
+          "x": 22,
+          "y": 14,
+          "base": "g3q/4408-4409-4385-4386"
+        },
+        {
+          "map": "G2_POKECOM_CENTER_ADMIN_OFFICE_MOBILE",
+          "x": 30,
+          "y": 14,
+          "base": "g3q/4408-4409-4385-4386"
+        }
+      ]
+    },
+    "g3q/1310-1311-1312-1313": {
+      "before": {
+        "on": "g3q/1314-1315-1294-1294"
+      },
+      "after": {
+        "on": "g3q/1314-1315-1294-1294",
+        "alsoOn": [
+          "g3q/1312-1313-1314-1315"
+        ]
+      },
+      "evidence": "CELADON_GYM (10), SAFFRON (4) and GOLDENROD (2) MAGNET_TRAIN_STATION: the crown over the planter base 1312-1313-1314-1315 stood in place on the floor beside it; its link names the station's walkable variant 1314-1315-1294-1294, which never stacks.",
+      "witnesses": [
+        {
+          "map": "G2_CELADON_GYM",
+          "x": 0,
+          "y": 2,
+          "base": "g3q/1312-1313-1314-1315"
+        },
+        {
+          "map": "G2_CELADON_GYM",
+          "x": 1,
+          "y": 2,
+          "base": "g3q/1312-1313-1314-1315"
+        },
+        {
+          "map": "G2_CELADON_GYM",
+          "x": 8,
+          "y": 2,
+          "base": "g3q/1312-1313-1314-1315"
+        },
+        {
+          "map": "G2_CELADON_GYM",
+          "x": 9,
+          "y": 2,
+          "base": "g3q/1312-1313-1314-1315"
+        },
+        {
+          "map": "G2_CELADON_GYM",
+          "x": 0,
+          "y": 4,
+          "base": "g3q/1312-1313-1314-1315"
+        },
+        {
+          "map": "G2_CELADON_GYM",
+          "x": 1,
+          "y": 4,
+          "base": "g3q/1312-1313-1314-1315"
+        },
+        {
+          "map": "G2_CELADON_GYM",
+          "x": 8,
+          "y": 4,
+          "base": "g3q/1312-1313-1314-1315"
+        },
+        {
+          "map": "G2_CELADON_GYM",
+          "x": 9,
+          "y": 4,
+          "base": "g3q/1312-1313-1314-1315"
+        },
+        {
+          "map": "G2_CELADON_GYM",
+          "x": 0,
+          "y": 10,
+          "base": "g3q/1312-1313-1314-1315"
+        },
+        {
+          "map": "G2_CELADON_GYM",
+          "x": 9,
+          "y": 10,
+          "base": "g3q/1312-1313-1314-1315"
+        },
+        {
+          "map": "G2_GOLDENROD_MAGNET_TRAIN_STATION",
+          "x": 4,
+          "y": 14,
+          "base": "g3q/1312-1313-1314-1315"
+        },
+        {
+          "map": "G2_GOLDENROD_MAGNET_TRAIN_STATION",
+          "x": 4,
+          "y": 16,
+          "base": "g3q/1312-1313-1314-1315"
+        },
+        {
+          "map": "G2_SAFFRON_MAGNET_TRAIN_STATION",
+          "x": 12,
+          "y": 14,
+          "base": "g3q/1312-1313-1314-1315"
+        },
+        {
+          "map": "G2_SAFFRON_MAGNET_TRAIN_STATION",
+          "x": 13,
+          "y": 14,
+          "base": "g3q/1312-1313-1314-1315"
+        },
+        {
+          "map": "G2_SAFFRON_MAGNET_TRAIN_STATION",
+          "x": 4,
+          "y": 16,
+          "base": "g3q/1312-1313-1314-1315"
+        },
+        {
+          "map": "G2_SAFFRON_MAGNET_TRAIN_STATION",
+          "x": 5,
+          "y": 16,
+          "base": "g3q/1312-1313-1314-1315"
+        }
+      ]
+    },
+    "g3q/1316-1317-1316-1317": {
+      "before": {
+        "on": "g3q/1316-1317-1318-1319"
+      },
+      "after": {},
+      "evidence": "VIRIDIAN_GYM: a maze of boxed hedge walls drawn several cells deep (bush tops over tops, tops over the boxes' faces); the link stacked these segments two cells tall over 1316-1317-1318-1319 while the rest of the maze stands one cell, so it is removed (each segment drawn in place).",
+      "witnesses": [
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 2,
+          "y": 0
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 3,
+          "y": 0
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 4,
+          "y": 0
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 5,
+          "y": 0
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 6,
+          "y": 0
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 7,
+          "y": 0
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 0,
+          "y": 1
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 1,
+          "y": 1
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 8,
+          "y": 1
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 9,
+          "y": 1
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 1,
+          "y": 4
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 8,
+          "y": 4
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 2,
+          "y": 5
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 3,
+          "y": 5
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 6,
+          "y": 5
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 7,
+          "y": 5
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 2,
+          "y": 8
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 7,
+          "y": 8
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 0,
+          "y": 13
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 1,
+          "y": 13
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 8,
+          "y": 13
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 9,
+          "y": 13
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 0,
+          "y": 14
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 9,
+          "y": 14
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 0,
+          "y": 15
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 9,
+          "y": 15
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 0,
+          "y": 16
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 3,
+          "y": 16
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 6,
+          "y": 16
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 9,
+          "y": 16
+        }
+      ]
+    },
+    "g3q/1316-1317-1316-1378": {
+      "before": {
+        "on": "g3q/1316-1317-1318-1319"
+      },
+      "after": {},
+      "evidence": "VIRIDIAN_GYM: a maze of boxed hedge walls drawn several cells deep (bush tops over tops, tops over the boxes' faces); the link stacked these segments two cells tall over 1316-1317-1318-1319 while the rest of the maze stands one cell, so it is removed (each segment drawn in place).",
+      "witnesses": [
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 0,
+          "y": 8
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 8,
+          "y": 8
+        }
+      ]
+    },
+    "g3q/1316-1317-1378-1317": {
+      "before": {
+        "on": "g3q/1316-1317-1318-1319"
+      },
+      "after": {},
+      "evidence": "VIRIDIAN_GYM: a maze of boxed hedge walls drawn several cells deep (bush tops over tops, tops over the boxes' faces); the link stacked these segments two cells tall over 1316-1317-1318-1319 while the rest of the maze stands one cell, so it is removed (each segment drawn in place).",
+      "witnesses": [
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 1,
+          "y": 8
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 9,
+          "y": 8
+        }
+      ]
+    },
+    "g3q/1294-1294-1316-1317": {
+      "before": {
+        "on": "g3q/1316-1317-1318-1319"
+      },
+      "after": {},
+      "evidence": "VIRIDIAN_GYM: a maze of boxed hedge walls drawn several cells deep (bush tops over tops, tops over the boxes' faces); the link stacked these segments two cells tall over 1316-1317-1318-1319 while the rest of the maze stands one cell, so it is removed (each segment drawn in place).",
+      "witnesses": [
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 0,
+          "y": 4
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 9,
+          "y": 4
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 3,
+          "y": 8
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 6,
+          "y": 8
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 2,
+          "y": 16
+        },
+        {
+          "map": "G2_VIRIDIAN_GYM",
+          "x": 7,
+          "y": 16
+        }
+      ]
+    },
+    "g3q/1359-1360-1361-1362": {
+      "before": {
+        "on": "g3q/1162-1163-1363-1364"
+      },
+      "after": {
+        "on": "g3q/1162-1163-1363-1364",
+        "alsoOn": [
+          "g3q/1162-1163-1758-1759",
+          "g3q/1369-1370-1363-1364",
+          "g3q/1369-1370-1758-1759",
+          "g3q/1646-1647-1648-1649"
+        ]
+      },
+      "evidence": "The same figure stood in place over four other pedestal variants: FIGHTING_DOJO (8) over 1369-1370-1363-1364; ECRUTEAK_TIN_TOWER_ENTRANCE (4), CIANWOOD_GYM (2), ECRUTEAK_GYM (2) over 1369-1370-1758-1759; CERULEAN_GYM (2) over 1646-1647-1648-1649; PEWTER_GYM (2) over 1162-1163-1758-1759 (composite _ts_statues: each a pedestal).",
+      "witnesses": [
+        {
+          "map": "G2_CERULEAN_GYM",
+          "x": 2,
+          "y": 12,
+          "base": "g3q/1646-1647-1648-1649"
+        },
+        {
+          "map": "G2_CERULEAN_GYM",
+          "x": 6,
+          "y": 12,
+          "base": "g3q/1646-1647-1648-1649"
+        },
+        {
+          "map": "G2_CIANWOOD_GYM",
+          "x": 3,
+          "y": 0,
+          "base": "g3q/1369-1370-1758-1759"
+        },
+        {
+          "map": "G2_CIANWOOD_GYM",
+          "x": 6,
+          "y": 0,
+          "base": "g3q/1369-1370-1758-1759"
+        },
+        {
+          "map": "G2_ECRUTEAK_GYM",
+          "x": 3,
+          "y": 0,
+          "base": "g3q/1369-1370-1758-1759"
+        },
+        {
+          "map": "G2_ECRUTEAK_GYM",
+          "x": 6,
+          "y": 0,
+          "base": "g3q/1369-1370-1758-1759"
+        },
+        {
+          "map": "G2_ECRUTEAK_TIN_TOWER_ENTRANCE",
+          "x": 0,
+          "y": 0,
+          "base": "g3q/1369-1370-1758-1759"
+        },
+        {
+          "map": "G2_ECRUTEAK_TIN_TOWER_ENTRANCE",
+          "x": 9,
+          "y": 0,
+          "base": "g3q/1369-1370-1758-1759"
+        },
+        {
+          "map": "G2_ECRUTEAK_TIN_TOWER_ENTRANCE",
+          "x": 0,
+          "y": 14,
+          "base": "g3q/1369-1370-1758-1759"
+        },
+        {
+          "map": "G2_ECRUTEAK_TIN_TOWER_ENTRANCE",
+          "x": 9,
+          "y": 14,
+          "base": "g3q/1369-1370-1758-1759"
+        },
+        {
+          "map": "G2_FIGHTING_DOJO",
+          "x": 2,
+          "y": 0,
+          "base": "g3q/1369-1370-1363-1364"
+        },
+        {
+          "map": "G2_FIGHTING_DOJO",
+          "x": 7,
+          "y": 0,
+          "base": "g3q/1369-1370-1363-1364"
+        },
+        {
+          "map": "G2_FIGHTING_DOJO",
+          "x": 3,
+          "y": 2,
+          "base": "g3q/1369-1370-1363-1364"
+        },
+        {
+          "map": "G2_FIGHTING_DOJO",
+          "x": 6,
+          "y": 2,
+          "base": "g3q/1369-1370-1363-1364"
+        },
+        {
+          "map": "G2_FIGHTING_DOJO",
+          "x": 2,
+          "y": 4,
+          "base": "g3q/1369-1370-1363-1364"
+        },
+        {
+          "map": "G2_FIGHTING_DOJO",
+          "x": 7,
+          "y": 4,
+          "base": "g3q/1369-1370-1363-1364"
+        },
+        {
+          "map": "G2_FIGHTING_DOJO",
+          "x": 2,
+          "y": 8,
+          "base": "g3q/1369-1370-1363-1364"
+        },
+        {
+          "map": "G2_FIGHTING_DOJO",
+          "x": 7,
+          "y": 8,
+          "base": "g3q/1369-1370-1363-1364"
+        },
+        {
+          "map": "G2_PEWTER_GYM",
+          "x": 2,
+          "y": 10,
+          "base": "g3q/1162-1163-1758-1759"
+        },
+        {
+          "map": "G2_PEWTER_GYM",
+          "x": 7,
+          "y": 10,
+          "base": "g3q/1162-1163-1758-1759"
+        }
+      ]
+    },
+    "g3q/667-3748-3763-3764": {
+      "before": {
+        "on": "g3q/3763-3764-3763-3764"
+      },
+      "after": {
+        "on": "g3q/3763-3764-3763-3764",
+        "alsoOn": [
+          "g3q/3763-3764-3765-3766"
+        ]
+      },
+      "evidence": "MR_POKEMONS_HOUSE and POWER_PLANT (0,0): the bookcase top over the drawer base 3763-3764-3765-3766 stood in place (3 of its 6 placements).",
+      "witnesses": [
+        {
+          "map": "G2_MR_POKEMONS_HOUSE",
+          "x": 0,
+          "y": 0,
+          "base": "g3q/3763-3764-3765-3766"
+        },
+        {
+          "map": "G2_POWER_PLANT",
+          "x": 0,
+          "y": 0,
+          "base": "g3q/3763-3764-3765-3766"
+        },
+        {
+          "map": "G2_RUINS_OF_ALPH_RESEARCH_CENTER",
+          "x": 6,
+          "y": 4,
+          "base": "g3q/3763-3764-3765-3766"
+        }
+      ]
+    },
+    "g3q/4932-4933-4948-4949": {
+      "before": {
+        "on": "g3q/4948-4949-4948-4949"
+      },
+      "after": {
+        "on": "g3q/4948-4949-4948-4949",
+        "alsoOn": [
+          "g3q/4948-4949-4950-4951"
+        ]
+      },
+      "evidence": "TEAM_ROCKET_BASE_B3F: the bookcase top over the drawer base 4948-4949-4950-4951 stood in place (4 of its 8 placements), as the facility tileset's (checkpoint 15).",
+      "witnesses": [
+        {
+          "map": "G2_TEAM_ROCKET_BASE_B3F",
+          "x": 10,
+          "y": 0,
+          "base": "g3q/4948-4949-4950-4951"
+        },
+        {
+          "map": "G2_TEAM_ROCKET_BASE_B3F",
+          "x": 12,
+          "y": 0,
+          "base": "g3q/4948-4949-4950-4951"
+        },
+        {
+          "map": "G2_TEAM_ROCKET_BASE_B3F",
+          "x": 4,
+          "y": 12,
+          "base": "g3q/4948-4949-4950-4951"
+        },
+        {
+          "map": "G2_TEAM_ROCKET_BASE_B3F",
+          "x": 6,
+          "y": 12,
+          "base": "g3q/4948-4949-4950-4951"
+        }
+      ]
+    },
+    "g3q/2683-2684-2685-2686": {
+      "before": {
+        "on": "g3q/2687-2688-2689-2690"
+      },
+      "after": {},
+      "evidence": "S.S. Aqua cabins and Olivine Lighthouse 6F: one bed drawn top-down across its head and foot cells; the link stacked the foot on the head two cells tall (as the players' house and mansion beds, amended at checkpoints 1 and 4).",
+      "witnesses": [
+        {
+          "map": "G2_FAST_SHIP_B1F",
+          "x": 21,
+          "y": 10
+        },
+        {
+          "map": "G2_FAST_SHIP_B1F",
+          "x": 23,
+          "y": 10
+        },
+        {
+          "map": "G2_FAST_SHIP_B1F",
+          "x": 25,
+          "y": 10
+        },
+        {
+          "map": "G2_FAST_SHIP_B1F",
+          "x": 27,
+          "y": 10
+        },
+        {
+          "map": "G2_FAST_SHIP_B1F",
+          "x": 21,
+          "y": 12
+        },
+        {
+          "map": "G2_FAST_SHIP_B1F",
+          "x": 23,
+          "y": 12
+        },
+        {
+          "map": "G2_FAST_SHIP_B1F",
+          "x": 25,
+          "y": 12
+        },
+        {
+          "map": "G2_FAST_SHIP_B1F",
+          "x": 27,
+          "y": 12
+        },
+        {
+          "map": "G2_FAST_SHIP_CABINS_NNW_NNE_NE",
+          "x": 7,
+          "y": 1
+        },
+        {
+          "map": "G2_FAST_SHIP_CABINS_NNW_NNE_NE",
+          "x": 1,
+          "y": 30
+        },
+        {
+          "map": "G2_FAST_SHIP_CABINS_NNW_NNE_NE",
+          "x": 3,
+          "y": 30
+        },
+        {
+          "map": "G2_FAST_SHIP_CABINS_SE_SSE_CAPTAINS_CABIN",
+          "x": 1,
+          "y": 2
+        },
+        {
+          "map": "G2_FAST_SHIP_CABINS_SE_SSE_CAPTAINS_CABIN",
+          "x": 3,
+          "y": 2
+        },
+        {
+          "map": "G2_FAST_SHIP_CABINS_SE_SSE_CAPTAINS_CABIN",
+          "x": 7,
+          "y": 13
+        },
+        {
+          "map": "G2_FAST_SHIP_CABINS_SE_SSE_CAPTAINS_CABIN",
+          "x": 9,
+          "y": 25
+        },
+        {
+          "map": "G2_FAST_SHIP_CABINS_SW_SSW_NW",
+          "x": 7,
+          "y": 1
+        },
+        {
+          "map": "G2_FAST_SHIP_CABINS_SW_SSW_NW",
+          "x": 7,
+          "y": 18
+        },
+        {
+          "map": "G2_FAST_SHIP_CABINS_SW_SSW_NW",
+          "x": 7,
+          "y": 28
+        },
+        {
+          "map": "G2_FAST_SHIP_CABINS_SW_SSW_NW",
+          "x": 7,
+          "y": 30
+        }
+      ]
+    },
+    "g3q/3961-3962-3963-3964": {
+      "before": {
+        "on": "g3q/3965-3966-3967-3968"
+      },
+      "after": {},
+      "evidence": "S.S. Aqua cabins and Olivine Lighthouse 6F: one bed drawn top-down across its head and foot cells; the link stacked the foot on the head two cells tall (as the players' house and mansion beds, amended at checkpoints 1 and 4).",
+      "witnesses": [
+        {
+          "map": "G2_OLIVINE_LIGHTHOUSE_6F",
+          "x": 11,
+          "y": 6
+        }
+      ]
+    },
+    "g3q/3346-3347-3309-3310": {
+      "before": {
+        "on": "g3q/3348-3349-3350-3351"
+      },
+      "after": {},
+      "evidence": "Its tiles are the dais's front step (3346/3347) and the floor (3309/3310), not the PC's top: the PC (3348-3349-3350-3351, south of it at G2_HALL_OF_FAME 6,4) is drawn whole in its own cell, and the stack put a blue step box on top of it.",
+      "witnesses": [
+        {
+          "map": "G2_HALL_OF_FAME",
+          "x": 6,
+          "y": 3
+        }
+      ]
+    }
+  },
+  "terrain": {}
+}

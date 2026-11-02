@@ -32,6 +32,7 @@ records every deviation, open issue and question.
 - [`docs/MODEL_GALLERY.md`](docs/MODEL_GALLERY.md): isolated model galleries, automatic front/side captures, and sprite comparison sheets
 - [`docs/MODEL_AUTHORING_WORKFLOW.md`](docs/MODEL_AUTHORING_WORKFLOW.md): the accepted sprite and building modeling process, source paint, and Minecraft quality checks
 - [`docs/EMERALD_MODEL_HANDOFF.md`](docs/EMERALD_MODEL_HANDOFF.md): resume the Emerald scenery and building pass after a context reset
+- [`docs/CRYSTAL_MODEL_PROGRESS.md`](docs/CRYSTAL_MODEL_PROGRESS.md): the Crystal scenery, interior and building pass, checkpoint by checkpoint
 - [`docs/MODEL_HISTORY.md`](docs/MODEL_HISTORY.md): preserved originals and approved models, with individual rollback
 - [`CLAUDE.md`](CLAUDE.md): working rules for this repo
 
