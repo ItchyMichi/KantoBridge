@@ -3483,6 +3483,36 @@ taken from what already arrived. `test_battle` and `test_route1` fail on cpu3g p
 **Deviation.** A real gym leader was not walked to (the drivers start trainer battles by script, as before); the Name
 Rater is its write to the record, not the walk to his house.
 
+## Emerald's text fits its box (2026-11-02)
+
+The user's report of 2026-11-02: Emerald's text doesn't always fit the text box; the top line often runs over its right
+edge.
+
+- *Cause.* Every game's text box was Gen 1's: a 160×144 canvas, 144 pixels a line (`TextBoxScreen`). Emerald's pages
+  arrive laid out by its engine for Gen 3's box: `TextIR.toTextBox` wraps each line greedily to 208 pixels of Gen 3's
+  proportional font (`src/core/game3/scripting/text_ir.lua:740-801`), and Minecraft's font is about as wide, so a full
+  line needs about 200 of the box's 144 pixels. The greedy wrap fills a paragraph's first line, hence the top line.
+- *Fix (the client only).* Our screens draw on a canvas of the followed game's own screen (`CanvasShape`, from
+  `hello.ok`'s family through `UiRuntime.shape()`): the Game Boy's 160×144 for Blue and Crystal, unchanged, and the GBA's
+  240×160 for Emerald, whose text box is 30×6 tiles with 224 pixels a line. Every dialog screen lays out on it: the
+  YES/NO and quantity boxes stand on its text box at the right, the start menu at its right edge, the list box and the
+  naming screen span its width, and a kept mirror picture is drawn under it at 1:1. A line still too wide is squeezed
+  sideways into the box by its whole width, so it keeps one squeeze while it types (`CanvasShape.squeeze`,
+  `TextBoxModel.visibleWhole`). Text with no layout of its own (a choice's question, a list's footer) wraps by width on
+  the GBA's canvas (`Gen1Text.wrap(markup, room, width)`) and by 18 glyphs on the Game Boy's, as before. Nothing in the
+  protocol or gen1-bridge changed: the box still moves in step with the hidden one, page for page and line for line.
+- *Size.* The dialog canvas stays about half the window wide, so Emerald's text is drawn at two thirds of Blue's size (4
+  window pixels per font pixel at 1920×1080 and GUI scale 4, against Blue's 6), never smaller than the GUI scale makes
+  text. Keeping Blue's size would need a box about three quarters of the window wide; not done.
+- Tests: `CanvasShapeTest` (new); `Gen1CanvasTest` (the GBA's dialog canvas on whole pixels and inside the window at
+  every size); `Gen1TextTest` (wrapping by width); `TextBoxModelTest` (the whole lines). The client UI suite passes (85
+  tests). Not yet confirmed in game: PLAYTEST.md "Emerald's text box".
+- *Open (found on the way, not this change).* On this PC the full JUnit suite stops with "Java heap space" in the
+  `builder` package at Gradle's default test heap (also with `-Pkb.testHeap=2g`), even with the Emerald proof fixtures
+  (`builder.shape.Emerald*`, which write `local/model-gallery/`) left out. Every package after `builder` ran: 977 of 978
+  pass. The one failure is `KbPackReloadTest.modelsReadFitAndStayWithinTheBudget`: the `pack.model_budget` warning is
+  no longer reported.
+
 ## Emerald's text keeps up with skipped pages (2026-11-02)
 
 The user's report of 2026-11-02: in Emerald, A or a click hurries the Minecraft text box, but the hidden box goes on

@@ -14,20 +14,20 @@ public final class ChoiceOverlay {
 	}
 
 	/** The box, standing on the text box at the right. */
-	static Gen1Box bounds(Font font, ChoiceModel choice) {
+	static Gen1Box bounds(Font font, CanvasShape shape, ChoiceModel choice) {
 		int labels = choice.labels().size();
 		int widest = 0;
 		for (String label : choice.labels()) {
 			widest = Math.max(widest, Gen1Draw.width(font, label));
 		}
-		int w = Math.min(Gen1Canvas.WIDTH, tiles(Math.max(6 * Gen1Draw.TILE, widest + 3 * Gen1Draw.TILE)));
+		int w = Math.min(shape.width(), tiles(Math.max(6 * Gen1Draw.TILE, widest + 3 * Gen1Draw.TILE)));
 		int h = (2 * labels + 1) * Gen1Draw.TILE;
-		int y = Math.max(0, TextBoxScreen.BOX_Y - h);
-		return new Gen1Box(Gen1Canvas.WIDTH - w, y, w, h);
+		int y = Math.max(0, shape.textBox().y() - h);
+		return new Gen1Box(shape.width() - w, y, w, h);
 	}
 
-	public static void draw(GuiGraphics graphics, Font font, ChoiceModel choice, boolean active) {
-		Gen1Box box = bounds(font, choice);
+	public static void draw(GuiGraphics graphics, Font font, CanvasShape shape, ChoiceModel choice, boolean active) {
+		Gen1Box box = bounds(font, shape, choice);
 		box.draw(graphics);
 		for (int i = 0; i < choice.labels().size(); i++) {
 			int y = box.y() + Gen1Draw.TILE + i * Gen1Draw.ROW;
@@ -55,12 +55,12 @@ public final class ChoiceOverlay {
 	}
 
 	/** A click: picks the label under the pointer; true when the click was on the box. */
-	static boolean click(UiRouter router, UiSession session, Font font, double x, double y, long now) {
+	static boolean click(UiRouter router, UiSession session, Font font, CanvasShape shape, double x, double y, long now) {
 		ChoiceModel choice = session.choice();
 		if (choice == null) {
 			return false;
 		}
-		Gen1Box box = bounds(font, choice);
+		Gen1Box box = bounds(font, shape, choice);
 		if (!box.contains(x, y)) {
 			return false;
 		}

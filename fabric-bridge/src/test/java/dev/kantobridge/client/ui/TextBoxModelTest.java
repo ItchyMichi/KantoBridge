@@ -47,6 +47,18 @@ class TextBoxModelTest {
 	}
 
 	@Test
+	void theWholeLinesBehindTheTypedOnesGiveEachLineOneSqueeze() {
+		TextBoxModel text = box(List.of(List.of("AAAA", "BBBB", "CCCC")), List.of(List.of(false, false, false)));
+		assertEquals(List.of(""), text.visible());
+		assertEquals(List.of("AAAA"), text.visibleWhole(), "the line being typed, whole");
+		text.tick(100);
+		assertEquals(List.of("AAAA", "BB"), text.visible());
+		assertEquals(List.of("AAAA", "BBBB"), text.visibleWhole());
+		text.tick(200);
+		assertEquals(text.visible(), text.visibleWhole(), "all typed: the same lines");
+	}
+
+	@Test
 	void aContLineWaitsForAPressThenScrollsIn() {
 		TextBoxModel text = box(List.of(List.of("AAAA", "BBBB", "CCCC")), List.of(List.of(false, false, true)));
 		text.tick(1000);

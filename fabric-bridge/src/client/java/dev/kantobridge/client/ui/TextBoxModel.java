@@ -197,6 +197,15 @@ public final class TextBoxModel {
 		return out;
 	}
 
+	/**
+	 * The whole lines of {@link #visible}, typed or not: a line too wide for the box is squeezed by its whole width, so it
+	 * keeps one squeeze while it types.
+	 */
+	public List<String> visibleWhole() {
+		List<String> lines = this.pages.get(this.page);
+		return this.line > 0 ? List.of(lines.get(this.line - 1), lines.get(this.line)) : List.of(lines.get(this.line));
+	}
+
 	/** The ▼ shows: waiting for a press that does something. */
 	public boolean arrow() {
 		return switch (this.stop) {

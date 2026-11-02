@@ -6,6 +6,7 @@ import dev.kantobridge.client.bridge.BridgeClock;
 import dev.kantobridge.client.bridge.BridgeRuntime;
 import dev.kantobridge.client.bridge.ConnectionState;
 import dev.kantobridge.client.bridge.Dispatcher;
+import dev.kantobridge.client.bridge.HelloOk;
 import dev.kantobridge.client.bridge.JsonFields;
 import dev.kantobridge.client.move.InputLock;
 import dev.kantobridge.client.move.MoveRuntime;
@@ -143,6 +144,15 @@ public final class UiRuntime {
 
 	public long now() {
 		return this.clock.millis();
+	}
+
+	/**
+	 * The shape of our screens' canvas: the followed game's own screen (hello.ok's family: the GBA's for Emerald, else the
+	 * Game Boy's), so the text its engine laid out fits the text box.
+	 */
+	public CanvasShape shape() {
+		HelloOk hello = this.bridge.state().handshake();
+		return CanvasShape.of(hello == null ? null : hello.family());
 	}
 
 	/** True while a hidden-game UI is open on our side, or a native battle runs (its mirror is up). */

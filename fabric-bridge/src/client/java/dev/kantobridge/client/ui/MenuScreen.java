@@ -41,17 +41,17 @@ public class MenuScreen extends BridgeScreen {
 
 	@Override
 	protected void drawView(GuiGraphics graphics, Gen1Canvas canvas, long now) {
-		this.draw(graphics, this.view.main().menu(), this.live(this.view.main(), now), now);
+		this.draw(graphics, canvas.shape(), this.view.main().menu(), this.live(this.view.main(), now), now);
 	}
 
 	/** Draws the model in this screen's style. */
-	protected void draw(GuiGraphics graphics, MenuModel menu, boolean active, long now) {
-		drawMenu(graphics, this.font, menu, active, now);
+	protected void draw(GuiGraphics graphics, CanvasShape shape, MenuModel menu, boolean active, long now) {
+		drawMenu(graphics, this.font, shape, menu, active, now);
 	}
 
 	/** This screen's layout of the model. */
-	protected Layout layout(MenuModel menu) {
-		return menuLayout(this.font, menu);
+	protected Layout layout(CanvasShape shape, MenuModel menu) {
+		return menuLayout(this.font, shape, menu);
 	}
 
 	@Override
@@ -85,7 +85,7 @@ public class MenuScreen extends BridgeScreen {
 		if (menu == null || !this.live(session, now)) {
 			return;
 		}
-		int row = this.layout(menu).rowAt(x, y, menu.window().size());
+		int row = this.layout(this.canvas().shape(), menu).rowAt(x, y, menu.window().size());
 		if (row >= 0) {
 			menu.select(menu.top() + row);
 			this.runtime.router().pick(session, menu.index(), now);
@@ -93,7 +93,7 @@ public class MenuScreen extends BridgeScreen {
 	}
 
 	/** A menu box at the left (the start menu at the right), sized to its widest row. */
-	static Layout menuLayout(Font font, MenuModel menu) {
+	static Layout menuLayout(Font font, CanvasShape shape, MenuModel menu) {
 		int rows = menu.window().size();
 		int titleRows = menu.title() != null ? 1 : 0;
 		int widest = menu.title() != null ? Gen1Draw.width(font, menu.title()) : 0;
@@ -101,15 +101,15 @@ public class MenuScreen extends BridgeScreen {
 			int width = Gen1Draw.width(font, item.label()) + (item.right() != null ? Gen1Draw.width(font, item.right()) + Gen1Draw.TILE : 0);
 			widest = Math.max(widest, width);
 		}
-		int w = Math.min(Gen1Canvas.WIDTH, tiles(Math.max(5 * Gen1Draw.TILE, widest + 3 * Gen1Draw.TILE)));
-		int h = Math.min(Gen1Canvas.HEIGHT, Gen1Draw.ROW * (Math.max(1, rows) + titleRows) + Gen1Draw.ROW);
-		int x = START_MENU.equals(menu.screen()) ? Gen1Canvas.WIDTH - w : 0;
+		int w = Math.min(shape.width(), tiles(Math.max(5 * Gen1Draw.TILE, widest + 3 * Gen1Draw.TILE)));
+		int h = Math.min(shape.height(), Gen1Draw.ROW * (Math.max(1, rows) + titleRows) + Gen1Draw.ROW);
+		int x = START_MENU.equals(menu.screen()) ? shape.width() - w : 0;
 		int y = 0;
 		return new Layout(x, y, w, h, y + Gen1Draw.ROW * (1 + titleRows), x + 2 * Gen1Draw.TILE, x + Gen1Draw.TILE, x + w - Gen1Draw.TILE);
 	}
 
-	static void drawMenu(GuiGraphics graphics, Font font, MenuModel menu, boolean active, long now) {
-		drawRows(graphics, font, menu, menuLayout(font, menu), true, active, now);
+	static void drawMenu(GuiGraphics graphics, Font font, CanvasShape shape, MenuModel menu, boolean active, long now) {
+		drawRows(graphics, font, menu, menuLayout(font, shape, menu), true, active, now);
 	}
 
 	/** The box, the title (when {@code withTitle}), the window's rows with their right column, the cursor, the ▼. */

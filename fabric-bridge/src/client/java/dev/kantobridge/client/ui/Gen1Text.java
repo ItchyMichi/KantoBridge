@@ -2,6 +2,7 @@ package dev.kantobridge.client.ui;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.ToIntFunction;
 
 /**
  * The protocol's text markup (docs/PROTOCOL.md "Text"): every text field is a UTF-8 string in which {@code <PK>} and
@@ -12,8 +13,6 @@ import java.util.List;
 public final class Gen1Text {
 	public static final String PK = "<PK>";
 	public static final String MN = "<MN>";
-	/** Glyphs a Gen 1 text box line holds. */
-	public static final int LINE_GLYPHS = 18;
 	/** The longest token a glyph may be on the wire ({@code ui.name.glyphs} items). */
 	public static final int MAX_TOKEN_CHARS = 8;
 
@@ -77,11 +76,22 @@ public final class Gen1Text {
 	 * without a layout of its own, such as a choice's question). Never returns an empty list.
 	 */
 	public static List<String> wrap(String markup, int glyphs) {
+		return wrap(markup, Math.max(1, glyphs), Gen1Text::count);
+	}
+
+	/**
+	 * Splits markup into lines no wider than {@code room} as {@code width} measures them (proportional text: Gen 3's),
+	 * breaking at spaces where it can; a line holds at least one glyph. Never returns an empty list.
+	 */
+	public static List<String> wrap(String markup, int room, ToIntFunction<String> width) {
 		List<String> lines = new ArrayList<>();
 		List<String> all = glyphs(markup);
 		int start = 0;
 		while (start < all.size()) {
-			int end = Math.min(all.size(), start + Math.max(1, glyphs));
+			int end = start + 1;
+			while (end < all.size() && width.applyAsInt(join(all.subList(start, end + 1))) <= room) {
+				end++;
+			}
 			if (end < all.size()) {
 				int space = end;
 				while (space > start && !all.get(space).equals(" ")) {

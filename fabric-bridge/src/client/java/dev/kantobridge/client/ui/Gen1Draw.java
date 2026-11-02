@@ -52,6 +52,22 @@ public final class Gen1Draw {
 		return Math.round(cursor);
 	}
 
+	/**
+	 * Draws markup text squeezed sideways by {@code squeeze} from {@code x} (1 or more: as it is), so a line too wide for
+	 * its box keeps inside it ({@link CanvasShape#squeeze}).
+	 */
+	public static void text(GuiGraphics graphics, Font font, String markup, int x, int y, int colour, float squeeze) {
+		if (squeeze >= 1.0F) {
+			text(graphics, font, markup, x, y, colour);
+			return;
+		}
+		graphics.pose().pushPose();
+		graphics.pose().translate(x, 0.0F, 0.0F);
+		graphics.pose().scale(squeeze, 1.0F, 1.0F);
+		text(graphics, font, markup, 0, y, colour);
+		graphics.pose().popPose();
+	}
+
 	/** Markup text right-aligned so it ends at {@code right}. */
 	public static void textRight(GuiGraphics graphics, Font font, String markup, int right, int y, int colour) {
 		text(graphics, font, markup, right - width(font, markup), y, colour);

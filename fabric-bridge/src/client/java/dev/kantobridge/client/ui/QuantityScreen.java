@@ -12,7 +12,6 @@ import net.minecraft.network.chat.Component;
  * ({@code ui.back}); a stray click does nothing (it could buy). The list it counts for stays drawn beneath.
  */
 public final class QuantityScreen extends BridgeScreen {
-	static final int BOX_Y = 9 * Gen1Draw.TILE;
 	static final int BOX_H = 3 * Gen1Draw.TILE;
 
 	public QuantityScreen(UiRuntime runtime, UiRouter.View view) {
@@ -21,7 +20,7 @@ public final class QuantityScreen extends BridgeScreen {
 
 	@Override
 	protected void drawView(GuiGraphics graphics, Gen1Canvas canvas, long now) {
-		drawQuantity(graphics, this.font, this.view.main().quantity());
+		drawQuantity(graphics, this.font, canvas.shape(), this.view.main().quantity());
 	}
 
 	@Override
@@ -43,7 +42,8 @@ public final class QuantityScreen extends BridgeScreen {
 		}
 	}
 
-	static void drawQuantity(GuiGraphics graphics, Font font, QuantityModel quantity) {
+	/** The box at the right, standing on the text box. */
+	static void drawQuantity(GuiGraphics graphics, Font font, CanvasShape shape, QuantityModel quantity) {
 		String count = "×" + String.format(Locale.ROOT, quantity.max() >= 100 ? "%03d" : "%02d", quantity.qty());
 		Long total = quantity.total();
 		String price = total == null ? null : "¥" + total;
@@ -51,12 +51,13 @@ public final class QuantityScreen extends BridgeScreen {
 		if (price != null) {
 			w = MenuScreen.tiles(Math.max(13 * Gen1Draw.TILE, Gen1Draw.width(font, count) + Gen1Draw.width(font, price) + 4 * Gen1Draw.TILE));
 		}
-		w = Math.min(Gen1Canvas.WIDTH, w);
-		int x = Gen1Canvas.WIDTH - w;
-		new Gen1Box(x, BOX_Y, w, BOX_H).draw(graphics);
-		Gen1Draw.text(graphics, font, count, x + Gen1Draw.TILE, BOX_Y + Gen1Draw.TILE, Gen1Draw.BLACK);
+		w = Math.min(shape.width(), w);
+		int x = shape.width() - w;
+		int y = shape.textBox().y() - BOX_H;
+		new Gen1Box(x, y, w, BOX_H).draw(graphics);
+		Gen1Draw.text(graphics, font, count, x + Gen1Draw.TILE, y + Gen1Draw.TILE, Gen1Draw.BLACK);
 		if (price != null) {
-			Gen1Draw.textRight(graphics, font, price, Gen1Canvas.WIDTH - Gen1Draw.TILE, BOX_Y + Gen1Draw.TILE, Gen1Draw.BLACK);
+			Gen1Draw.textRight(graphics, font, price, shape.width() - Gen1Draw.TILE, y + Gen1Draw.TILE, Gen1Draw.BLACK);
 		}
 	}
 }

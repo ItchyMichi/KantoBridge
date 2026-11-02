@@ -1,6 +1,7 @@
 package dev.kantobridge.client.ui;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -14,8 +15,24 @@ class Gen1CanvasTest {
 		float top = canvas.y() * gui;
 		assertEquals(Math.round(left), left, 1e-3, "the left edge on a window pixel");
 		assertEquals(Math.round(top), top, 1e-3, "the top edge on a window pixel");
-		assertTrue(left >= 0 && left + Gen1Canvas.WIDTH * windowPixels <= windowWidth, "inside the window horizontally");
-		assertTrue(top >= 0 && top + Gen1Canvas.HEIGHT * windowPixels <= windowHeight, "inside the window vertically");
+		assertTrue(left >= 0 && left + canvas.shape().width() * windowPixels <= windowWidth, "inside the window horizontally");
+		assertTrue(top >= 0 && top + canvas.shape().height() * windowPixels <= windowHeight, "inside the window vertically");
+	}
+
+	@Test
+	void emeraldsDialogIsTheGbasScreenAboutHalfTheWindowWide() {
+		Gen1Canvas canvas = Gen1Canvas.dialog(1920, 1080, 4, CanvasShape.GBA);
+		assertSame(CanvasShape.GBA, canvas.shape());
+		assertEquals(4, canvas.windowPixels(4), "1920 / 2 / 240");
+		checkCrisp(canvas, 1920, 1080, 4);
+		assertEquals(120.0F, canvas.x(), 1e-4, "centred: (1920 - 960) / 2 window pixels");
+		assertEquals((1080 - 640 - 8) / 4.0F, canvas.y(), 1e-4, "two pixels above the bottom");
+		for (int[] size : new int[][] {{854, 480}, {1280, 720}, {1920, 1080}, {2560, 1440}, {3840, 2160}, {640, 360}}) {
+			for (int gui = 1; gui <= 4; gui++) {
+				checkCrisp(Gen1Canvas.dialog(size[0], size[1], gui, CanvasShape.GBA), size[0], size[1], gui);
+			}
+		}
+		assertSame(CanvasShape.GAME_BOY, Gen1Canvas.dialog(1920, 1080, 4).shape(), "Blue's and Crystal's by default");
 	}
 
 	@Test
@@ -60,9 +77,8 @@ class Gen1CanvasTest {
 		for (int[] size : new int[][] {{854, 480}, {1280, 720}, {1920, 1080}, {2560, 1440}}) {
 			for (int gui = 1; gui <= 4; gui++) {
 				Gen1Canvas c = Gen1Canvas.mirror(size[0], size[1], gui, 14, 240, 160);
-				float px = c.scale() * gui;
-				assertEquals(Math.round(px), px, 1e-4);
-				assertTrue(c.x() * gui >= 0 && c.x() * gui + 240 * px <= size[0], "inside the window");
+				assertSame(CanvasShape.GBA, c.shape(), "a text box under it lays out as Emerald's");
+				checkCrisp(c, size[0], size[1], gui);
 			}
 		}
 	}

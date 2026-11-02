@@ -68,4 +68,35 @@ class Gen1TextTest {
 			assertFalse(line.startsWith(" "), "no leading space");
 		}
 	}
+
+	/** A proportional font for the tests: narrow i, l and space, every other glyph six pixels. */
+	static int proportional(String markup) {
+		int width = 0;
+		for (String glyph : Gen1Text.glyphs(markup)) {
+			width += switch (glyph) {
+				case "i", "l", "!", "." -> 2;
+				case " " -> 4;
+				default -> 6;
+			};
+		}
+		return width;
+	}
+
+	@Test
+	void proportionalWrappingBreaksAtSpacesWithinTheWidth() {
+		String text = "Well, I'll be! You still have the Pokédex? It's filled in quite nicely, isn't it!";
+		List<String> lines = Gen1Text.wrap(text, 100, Gen1TextTest::proportional);
+		assertEquals(text, String.join(" ", lines), "only the spaces at the breaks go");
+		for (String line : lines) {
+			assertTrue(proportional(line) <= 100, "line within the room: " + line);
+			assertFalse(line.startsWith(" ") || line.endsWith(" "), "broken at a space");
+		}
+		// Narrow glyphs make room: more of them fit a line than wide ones.
+		assertEquals(List.of("illi illi", "illi"), Gen1Text.wrap("illi illi illi", 24, Gen1TextTest::proportional));
+		assertEquals(List.of("WWWW", "WWWW", "WWWW"), Gen1Text.wrap("WWWW WWWW WWWW", 24, Gen1TextTest::proportional));
+		// No space: a hard break at the room; a glyph wider than the room still makes a line of its own.
+		assertEquals(List.of("ABC", "DE"), Gen1Text.wrap("ABCDE", 18, Gen1TextTest::proportional));
+		assertEquals(List.of("A", "B"), Gen1Text.wrap("AB", 3, Gen1TextTest::proportional));
+		assertEquals(List.of(""), Gen1Text.wrap("", 100, Gen1TextTest::proportional));
+	}
 }

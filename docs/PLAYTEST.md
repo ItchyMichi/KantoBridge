@@ -1193,3 +1193,13 @@ Quit" saves them first. Start every game the world needs (or use `-Engines minec
       both boxes together, with no wait before you can walk.
 - [ ] **Reading at your own pace:** the same text without hurrying still turns page by page, and a yes/no at the end
       (the nurse's) still opens over the text.
+
+## Emerald's text box (2026-11-02; the mod only: rebuild it, no world rebuild)
+- [ ] **Every line fits:** talk to several people in Emerald (Mom, a sign, a Pokémon Center nurse). Each line stays
+      inside the box, the top line too. A line drawn a little narrower than the others is the safety net working; note
+      who said it.
+- [ ] **The size reads well:** Emerald's box has the GBA's shape: wider than Blue's, with its text a little smaller. If
+      it is too small to read comfortably, note your window size and GUI scale.
+- [ ] **Boxes over it:** the nurse's yes/no stands on the text box at the right, the start menu sits at the right edge,
+      and naming a Pokémon fills the box with its letters inside it.
+- [ ] **Blue and Crystal unchanged:** their text box, menus and naming look as before.

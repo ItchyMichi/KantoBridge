@@ -12,15 +12,15 @@ final class UiLayers {
 	private UiLayers() {
 	}
 
-	static void draw(GuiGraphics graphics, Font font, UiSession session, long now) {
+	static void draw(GuiGraphics graphics, Font font, CanvasShape shape, UiSession session, long now) {
 		switch (session.kind()) {
-			case TEXT -> TextBoxScreen.drawText(graphics, font, session.text(), false, now);
-			case CHOICE -> ChoiceOverlay.draw(graphics, font, session.choice(), false);
-			case MENU -> MenuScreen.drawMenu(graphics, font, session.menu(), false, now);
-			case LIST -> ListScreen.drawList(graphics, font, session.menu(), false, now);
-			case QUANTITY -> QuantityScreen.drawQuantity(graphics, font, session.quantity());
-			case NAMING -> NamingScreen.drawNaming(graphics, font, session.naming(), false, now);
-			case MIRROR -> MirrorScreen.Picture.drawUnder(graphics, session.id());
+			case TEXT -> TextBoxScreen.drawText(graphics, font, shape, session.text(), false, now);
+			case CHOICE -> ChoiceOverlay.draw(graphics, font, shape, session.choice(), false);
+			case MENU -> MenuScreen.drawMenu(graphics, font, shape, session.menu(), false, now);
+			case LIST -> ListScreen.drawList(graphics, font, shape, session.menu(), false, now);
+			case QUANTITY -> QuantityScreen.drawQuantity(graphics, font, shape, session.quantity());
+			case NAMING -> NamingScreen.drawNaming(graphics, font, shape, session.naming(), false, now);
+			case MIRROR -> MirrorScreen.Picture.drawUnder(graphics, shape, session.id());
 		}
 	}
 }

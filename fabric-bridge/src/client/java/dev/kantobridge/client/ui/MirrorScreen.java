@@ -143,23 +143,23 @@ public final class MirrorScreen extends BridgeScreen {
 
 		/**
 		 * The last picture of mirror UI {@code ui}, if it is the one kept, drawn in canvas pixels under another UI's
-		 * dialog canvas (160×144): Gen 3's 240×160 picture is scaled to the canvas's width, its bottom on the canvas's
-		 * bottom, where the game's own text box sits.
+		 * dialog canvas: as it is on a canvas of its own shape (the Game Boy's 160×144 under Blue's text box, the GBA's
+		 * 240×160 under Emerald's), otherwise scaled to the canvas's width with its bottom on the canvas's bottom, where the
+		 * game's own text box sits.
 		 */
-		static void drawUnder(GuiGraphics graphics, int ui) {
+		static void drawUnder(GuiGraphics graphics, CanvasShape shape, int ui) {
 			if (!hasPicture || ui != shownUi) {
 				return;
 			}
-			if (shownWidth == MirrorLink.WIDTH) {
-				graphics.blit(ID, 0, 0, MirrorLink.WIDTH, MirrorLink.HEIGHT, 0.0F, 0.0F, MirrorLink.WIDTH, MirrorLink.HEIGHT, MirrorLink.WIDTH,
-						MirrorLink.HEIGHT);
+			if (shownWidth == shape.width() && shownHeight == shape.height()) {
+				graphics.blit(id(), 0, 0, shownWidth, shownHeight, 0.0F, 0.0F, shownWidth, shownHeight, shownWidth, shownHeight);
 				return;
 			}
-			float scale = (float) Gen1Canvas.WIDTH / shownWidth;
+			float scale = (float) shape.width() / shownWidth;
 			graphics.pose().pushPose();
-			graphics.pose().translate(0.0F, Gen1Canvas.HEIGHT - shownHeight * scale, 0.0F);
+			graphics.pose().translate(0.0F, shape.height() - shownHeight * scale, 0.0F);
 			graphics.pose().scale(scale, scale, 1.0F);
-			graphics.blit(GBA_ID, 0, 0, shownWidth, shownHeight, 0.0F, 0.0F, shownWidth, shownHeight, shownWidth, shownHeight);
+			graphics.blit(id(), 0, 0, shownWidth, shownHeight, 0.0F, 0.0F, shownWidth, shownHeight, shownWidth, shownHeight);
 			graphics.pose().popPose();
 		}
 

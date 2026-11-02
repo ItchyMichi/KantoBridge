@@ -16,7 +16,6 @@ import net.minecraft.network.chat.Component;
 public final class NamingScreen extends BridgeScreen {
 	static final int NAME_Y = 3 * Gen1Draw.TILE;
 	static final int GRID_TOP = 5 * Gen1Draw.TILE;
-	static final int GRID_BOTTOM = 17 * Gen1Draw.TILE;
 	static final int GRID_LEFT = 2 * Gen1Draw.TILE;
 
 	public NamingScreen(UiRuntime runtime, UiRouter.View view) {
@@ -25,7 +24,7 @@ public final class NamingScreen extends BridgeScreen {
 
 	@Override
 	protected void drawView(GuiGraphics graphics, Gen1Canvas canvas, long now) {
-		drawNaming(graphics, this.font, this.view.main().naming(), this.live(this.view.main(), now), now);
+		drawNaming(graphics, this.font, canvas.shape(), this.view.main().naming(), this.live(this.view.main(), now), now);
 	}
 
 	@Override
@@ -71,15 +70,16 @@ public final class NamingScreen extends BridgeScreen {
 			return;
 		}
 		List<String> send = null;
+		CanvasShape shape = this.canvas().shape();
 		if (naming.phase() == NamingModel.Phase.PRESETS) {
-			MenuScreen.Layout layout = MenuScreen.menuLayout(this.font, presetMenu(naming));
+			MenuScreen.Layout layout = MenuScreen.menuLayout(this.font, shape, presetMenu(naming));
 			int row = layout.rowAt(x, y, naming.presets().size() + 1);
 			if (row >= 0) {
 				naming.selectPreset(row);
 				send = naming.pressPreset();
 			}
 		} else {
-			Grid grid = Grid.of(naming);
+			Grid grid = Grid.of(naming, shape);
 			int row = (int) Math.floor((y - GRID_TOP + Gen1Draw.TILE / 2.0) / grid.rowStep());
 			int col = (int) Math.floor((x - GRID_LEFT + grid.colStep() / 2.0) / grid.colStep());
 			if (row >= 0 && row < naming.rows().size()) {
@@ -100,28 +100,30 @@ public final class NamingScreen extends BridgeScreen {
 
 	/** The grid's spacing: two tiles a cell as in Gen 1, tighter for an engine grid too big for that. */
 	record Grid(int colStep, int rowStep) {
-		static Grid of(NamingModel naming) {
+		static Grid of(NamingModel naming, CanvasShape shape) {
 			int columns = 1;
 			for (List<NamingModel.Cell> row : naming.rows()) {
 				columns = Math.max(columns, row.size());
 			}
-			int colStep = Math.max(6, Math.min(Gen1Draw.ROW, (Gen1Canvas.WIDTH - 2 * GRID_LEFT) / Math.max(1, columns - 1)));
-			int rowStep = Math.max(9, Math.min(Gen1Draw.ROW, (GRID_BOTTOM - GRID_TOP) / Math.max(1, naming.rows().size())));
+			int colStep = Math.max(6, Math.min(Gen1Draw.ROW, (shape.width() - 2 * GRID_LEFT) / Math.max(1, columns - 1)));
+			// The grid ends a tile above the canvas's bottom.
+			int gridBottom = shape.height() - Gen1Draw.TILE;
+			int rowStep = Math.max(9, Math.min(Gen1Draw.ROW, (gridBottom - GRID_TOP) / Math.max(1, naming.rows().size())));
 			return new Grid(colStep, rowStep);
 		}
 	}
 
-	static void drawNaming(GuiGraphics graphics, Font font, NamingModel naming, boolean active, long now) {
+	static void drawNaming(GuiGraphics graphics, Font font, CanvasShape shape, NamingModel naming, boolean active, long now) {
 		if (naming.phase() == NamingModel.Phase.PRESETS) {
 			MenuModel menu = presetMenu(naming);
-			MenuScreen.drawMenu(graphics, font, menu, active, now);
+			MenuScreen.drawMenu(graphics, font, shape, menu, active, now);
 			return;
 		}
-		new Gen1Box(0, 0, Gen1Canvas.WIDTH, Gen1Canvas.HEIGHT).draw(graphics);
+		new Gen1Box(0, 0, shape.width(), shape.height()).draw(graphics);
 		Gen1Draw.text(graphics, font, naming.title(), Gen1Draw.TILE, Gen1Draw.TILE, Gen1Draw.BLACK);
 		// The name: one glyph per 8-pixel slot over underscores, centred.
 		List<String> typed = naming.typed();
-		int left = (Gen1Canvas.WIDTH - naming.max() * Gen1Draw.TILE) / 2;
+		int left = (shape.width() - naming.max() * Gen1Draw.TILE) / 2;
 		for (int i = 0; i < naming.max(); i++) {
 			int x = left + i * Gen1Draw.TILE;
 			if (i < typed.size()) {
@@ -129,7 +131,7 @@ public final class NamingScreen extends BridgeScreen {
 			}
 			graphics.fill(x, NAME_Y + 9, x + Gen1Draw.TILE - 2, NAME_Y + 10, i == typed.size() ? Gen1Draw.BLACK : Gen1Draw.GREY);
 		}
-		Grid grid = Grid.of(naming);
+		Grid grid = Grid.of(naming, shape);
 		List<List<NamingModel.Cell>> rows = naming.rows();
 		for (int r = 0; r < rows.size(); r++) {
 			int y = GRID_TOP + r * grid.rowStep();

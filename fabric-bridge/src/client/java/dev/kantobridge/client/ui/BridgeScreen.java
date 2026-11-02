@@ -18,7 +18,8 @@ import org.lwjgl.glfw.GLFW;
 
 /**
  * The base of our screens for hidden-game UIs (docs/PLAN.md §4.3 "UI", U1): one at a time shows the router's
- * {@link UiRouter.View}, drawn on the Gen 1 canvas over the world, with the UIs under it drawn beneath.
+ * {@link UiRouter.View}, drawn over the world on a canvas of the game's own screen ({@link CanvasShape}), with the UIs
+ * under it drawn beneath.
  *
  * <ul>
  * <li>Never pauses the game (a pausing screen would stop the integrated server), and draws no background: the world
@@ -88,7 +89,7 @@ public abstract class BridgeScreen extends Screen implements InputLock.Holds, Li
 		Gen1Canvas canvas = this.canvas();
 		Gen1Draw.begin(graphics, canvas);
 		for (UiSession under : this.runtime.router().under(this.view)) {
-			UiLayers.draw(graphics, this.font, under, now);
+			UiLayers.draw(graphics, this.font, canvas.shape(), under, now);
 		}
 		this.drawView(graphics, canvas, now);
 		Gen1Draw.end(graphics);
@@ -109,10 +110,10 @@ public abstract class BridgeScreen extends Screen implements InputLock.Holds, Li
 	protected void onClick(double x, double y, long now) {
 	}
 
-	/** The canvas this screen draws on: the dialog canvas unless overridden. */
+	/** The canvas this screen draws on: the dialog canvas of the followed game's screen unless overridden. */
 	protected Gen1Canvas canvas() {
 		Window window = this.minecraft.getWindow();
-		return Gen1Canvas.dialog(window.getWidth(), window.getHeight(), window.getGuiScale());
+		return Gen1Canvas.dialog(window.getWidth(), window.getHeight(), window.getGuiScale(), this.runtime.shape());
 	}
 
 	@Override

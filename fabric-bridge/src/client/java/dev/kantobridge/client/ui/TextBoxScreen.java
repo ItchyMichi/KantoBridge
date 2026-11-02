@@ -7,19 +7,13 @@ import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A hidden-game text box (docs/PLAN.md §2.4 flow 2): Gen 1's box across the bottom of the canvas, two lines typed glyph
- * by glyph, the ▼ while it waits ({@link TextBoxModel}). A, B or a click is {@code ui.advance} at a stop and finishes
- * the typing otherwise. A choice that opens over the box ({@link ChoiceOverlay}) is shown and answered here too; a
- * choice with no text box under it is shown with its question in the box.
+ * A hidden-game text box (docs/PLAN.md §2.4 flow 2): the game's own box across the bottom of the canvas
+ * ({@link CanvasShape#textBox}: Gen 1's 20×6 tiles, the GBA's 30×6), two lines typed glyph by glyph, the ▼ while it
+ * waits ({@link TextBoxModel}). A line too wide for the box is squeezed into it. A, B or a click is {@code ui.advance}
+ * at a stop and finishes the typing otherwise. A choice that opens over the box ({@link ChoiceOverlay}) is shown and
+ * answered here too; a choice with no text box under it is shown with its question in the box.
  */
 public final class TextBoxScreen extends BridgeScreen {
-	/** Gen 1's text box: the bottom six tiles of the screen. */
-	public static final Gen1Box BOX = Gen1Box.tiles(0, 12, 20, 6);
-	public static final int BOX_Y = BOX.y();
-	public static final int BOX_HEIGHT = BOX.h();
-	static final int TEXT_X = 8;
-	static final int FIRST_LINE_Y = 112;
-
 	public TextBoxScreen(UiRuntime runtime, UiRouter.View view) {
 		super(runtime, view, Component.translatable("kantobridge.ui.text"));
 	}
@@ -30,12 +24,12 @@ public final class TextBoxScreen extends BridgeScreen {
 		UiSession choice = this.choice();
 		TextBoxModel text = main.text();
 		if (text != null) {
-			drawText(graphics, this.font, text, choice == null && this.live(main, now), now);
+			drawText(graphics, this.font, canvas.shape(), text, choice == null && this.live(main, now), now);
 		} else if (choice != null) {
-			drawQuestion(graphics, this.font, choice.choice());
+			drawQuestion(graphics, this.font, canvas.shape(), choice.choice());
 		}
 		if (choice != null) {
-			ChoiceOverlay.draw(graphics, this.font, choice.choice(), this.live(choice, now));
+			ChoiceOverlay.draw(graphics, this.font, canvas.shape(), choice.choice(), this.live(choice, now));
 		}
 	}
 
@@ -55,7 +49,7 @@ public final class TextBoxScreen extends BridgeScreen {
 	protected void onClick(double x, double y, long now) {
 		UiSession choice = this.choice();
 		if (choice != null) {
-			ChoiceOverlay.click(this.runtime.router(), choice, this.font, x, y, now);
+			ChoiceOverlay.click(this.runtime.router(), choice, this.font, this.canvas().shape(), x, y, now);
 			return;
 		}
 		this.runtime.router().press(this.view.main(), now);
@@ -70,26 +64,39 @@ public final class TextBoxScreen extends BridgeScreen {
 	}
 
 	/** The box with its visible lines; the ▼ only while the box takes input. */
-	public static void drawText(GuiGraphics graphics, Font font, TextBoxModel text, boolean active, long now) {
-		BOX.draw(graphics);
-		drawLines(graphics, font, text.visible());
+	public static void drawText(GuiGraphics graphics, Font font, CanvasShape shape, TextBoxModel text, boolean active, long now) {
+		shape.textBox().draw(graphics);
+		drawLines(graphics, font, shape, text.visible(), text.visibleWhole());
 		if (active && text.arrow()) {
-			Gen1Draw.downArrow(graphics, font, Gen1Canvas.WIDTH - 2 * Gen1Draw.TILE, FIRST_LINE_Y + Gen1Draw.ROW + 1, now);
+			Gen1Draw.downArrow(graphics, font, shape.width() - 2 * Gen1Draw.TILE, shape.firstLineY() + Gen1Draw.ROW + 1, now);
 		}
 	}
 
 	/** A lone choice's question (its last two lines) in the text box; an empty box when it has none. */
-	static void drawQuestion(GuiGraphics graphics, Font font, ChoiceModel choice) {
-		BOX.draw(graphics);
+	static void drawQuestion(GuiGraphics graphics, Font font, CanvasShape shape, ChoiceModel choice) {
+		shape.textBox().draw(graphics);
 		if (choice.question() != null) {
-			List<String> lines = Gen1Text.wrap(choice.question(), Gen1Text.LINE_GLYPHS);
-			drawLines(graphics, font, lines.size() <= 2 ? lines : lines.subList(lines.size() - 2, lines.size()));
+			drawWrapped(graphics, font, shape, choice.question(), true);
 		}
 	}
 
-	private static void drawLines(GuiGraphics graphics, Font font, List<String> lines) {
-		for (int i = 0; i < lines.size() && i < 2; i++) {
-			Gen1Draw.text(graphics, font, lines.get(i), TEXT_X, FIRST_LINE_Y + i * Gen1Draw.ROW, Gen1Draw.BLACK);
+	/**
+	 * Text with no layout of its own (a question, a list's footer) wrapped into the text box: its first two lines, or
+	 * with {@code last} its last two.
+	 */
+	static void drawWrapped(GuiGraphics graphics, Font font, CanvasShape shape, String markup, boolean last) {
+		List<String> lines = shape.wrap(markup, s -> Gen1Draw.width(font, s));
+		if (lines.size() > 2) {
+			lines = last ? lines.subList(lines.size() - 2, lines.size()) : lines.subList(0, 2);
+		}
+		drawLines(graphics, font, shape, lines, lines);
+	}
+
+	/** Up to two lines, each squeezed by its whole line's width when that is too wide for the box. */
+	private static void drawLines(GuiGraphics graphics, Font font, CanvasShape shape, List<String> shown, List<String> whole) {
+		for (int i = 0; i < shown.size() && i < 2; i++) {
+			float squeeze = shape.squeeze(Gen1Draw.width(font, i < whole.size() ? whole.get(i) : shown.get(i)));
+			Gen1Draw.text(graphics, font, shown.get(i), CanvasShape.TEXT_X, shape.firstLineY() + i * Gen1Draw.ROW, Gen1Draw.BLACK, squeeze);
 		}
 	}
 }
