@@ -4,7 +4,11 @@
 --
 --   ui.advance{ui}        text: A, queued until the box is ready (P2 3.3);
 --                         a box that never waits for A (auto, stay, a
---                         choice box's text) just lets its advances die with it
+--                         choice box's text) just lets its advances die with it.
+--                         While one waits on a page the hidden box is still
+--                         printing, the adapter's optional uiFinishPage(key)
+--                         finishes that page (Gen 3's message box), since the
+--                         client sent it after showing the page in full
 --   ui.pick{ui, index}    choice: 0 = YES (the cursor on YES, then A), 1 = NO
 --                         (B, which always answers NO, P2 4; MG7: the cursor on
 --                         NO and A when the choice's cursor says noByCursor,
@@ -86,7 +90,7 @@ function UiAct.new(opts)
   local counts = {
     answers = 0, advanced = 0, picked = 0, backs = 0, quantities = 0, names = 0, presets = 0,
     stale = 0, timeouts = 0, rejected = 0, buttons = 0, buttonTaps = 0, holds = 0, repressed = 0, continueConfirms = 0,
-    refused = 0,
+    refused = 0, finished = 0,
   }
 
   local function press(btn)
@@ -341,6 +345,18 @@ function UiAct.new(opts)
         budget.tap("a")
         p.advances = p.advances - 1
         counts.advanced = counts.advanced + 1
+      elseif p.advances > 0 and not c.ready then
+        -- the client has shown this page in full: an adapter that can finish
+        -- the hidden page's printing does, and A follows on a later step
+        local finish = rawget(engine, "uiFinishPage")
+        if type(finish) == "function" then
+          local ok, did = pcall(finish, top.key)
+          if ok and did then
+            counts.finished = counts.finished + 1
+          elseif not ok and log then
+            log.once("uiact.finish_failed", "warn", "uiact.finish_failed", {})
+          end
+        end
       end
       return
     end

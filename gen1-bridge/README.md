@@ -161,7 +161,9 @@ test drivers), guarded so the hook always calls `next`:
    engine tokens are written out or dropped).
 8. **UI answers and buttons** (`act/kb_uiact.lua`), one tap per step: `ui.advance` taps A only when
    the text box is ready (waiting with its 3-frame preWait over, or finished and closed by A/B; never
-   during a scroll or page clear, never for auto, stay or choice boxes); `ui.pick` puts the cursor on
+   during a scroll or page clear, never for auto, stay or choice boxes), and while one waits on a page
+   still printing, an adapter with `uiFinishPage` finishes that page at once (Gen 3's message box,
+   not an auto-scrolled one); `ui.pick` puts the cursor on
    the row and taps A (a YES/NO's NO is B, which always answers NO); `ui.back` taps B; `ui.qty` sets
    the number and taps A; `ui.name` checks the glyphs against the grid and the length, picks NEW
    NAME (or the preset itself) when the presets are up, then sets the glyphs and taps START, the

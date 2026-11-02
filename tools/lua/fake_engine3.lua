@@ -494,6 +494,13 @@ function FakeEngine3.new(opts)
     M._revealed = math.min(M._total, M._revealed + E.revealPerTick)
     if M._revealed >= M._total then M._waiting = true end
   end
+  -- skipReveal (:287-294): the page shown in full at once
+  E.skipReveals = 0
+  function M.skipReveal()
+    if not M.open then return end
+    E.skipReveals = E.skipReveals + 1
+    M._revealed, M._waiting = M._total, true
+  end
   function M.close()
     local done = M._done
     M.open, M._pages, M._page, M._done, M._stay, M._hold, M._held = false, nil, 1, nil, false, false, false

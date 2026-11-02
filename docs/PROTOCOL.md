@@ -312,8 +312,10 @@ request is in flight at a time; refusals show as one translated line over the ho
 - **Indexes are 0-based:** `page`, `line`, `index` (index 0 is the first label or item).
 - **Text boxes:** the client may run ahead locally: a press at a stop moves on at once and sends
   exactly one `ui.advance`; gen1-bridge queues it, taps A only when the box is ready, ties it to that
-  `ui` id and drops it if the UI closes first. A final press without `ui.close` within 1.5 s may be
-  sent again. `auto`/`stay` boxes and boxes with `choice: true` never get a `ui.advance` at their
+  `ui` id and drops it if the UI closes first. While an advance waits on a page the hidden box is
+  still printing, gen1-bridge finishes that page at once where the engine allows it (Gen 3's message
+  box), since the client sends an advance only after showing its page in full. A final press without
+  `ui.close` within 1.5 s may be sent again. `auto`/`stay` boxes and boxes with `choice: true` never get a `ui.advance` at their
   end. `ui.update` only moves a box forward.
 - **Several UIs can be open** (a choice over its text box); answers go to the top one, at most once
   until it changes. A dropped link closes every UI.

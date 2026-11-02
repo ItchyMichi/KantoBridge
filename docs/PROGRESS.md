@@ -3483,6 +3483,26 @@ taken from what already arrived. `test_battle` and `test_route1` fail on cpu3g p
 **Deviation.** A real gym leader was not walked to (the drivers start trainer battles by script, as before); the Name
 Rater is its write to the record, not the walk to his house.
 
+## Emerald's text keeps up with skipped pages (2026-11-02)
+
+The user's report of 2026-11-02: in Emerald, A or a click hurries the Minecraft text box, but the hidden box goes on
+printing every page at its own speed, so the two drift apart and later presses seem ignored until it catches up.
+
+- *Cause.* The client shows a page in full at once and sends one `ui.advance` per stop; gen1-bridge tapped A only once
+  the hidden page had finished printing. Emerald prints at the save's text speed (MID, a glyph every 4 frames,
+  `src/ui/game3/message.lua:36`, `:398-401`; the client types a glyph a frame), and an A tap while it prints only cuts
+  one glyph's delay (`pressAB`, `:406-411`). So each skipped page still printed in full on the hidden side before its
+  advance applied.
+- *Fix.* An optional adapter hook `uiFinishPage(key)`: while an advance waits on a page that isn't ready,
+  `act/kb_uiact.lua` asks the adapter to finish it (counted as `uiactFinished` in `debug.status`), and A follows on a
+  later step. Gen 3's (`lib/engine/game3/ui.lua`) calls the engine's own `Message.skipReveal` (`:287-294`), never on an
+  auto-scrolled box (the script's pacing), a held one or one under a choice. Gen 1 and Gen 2 have no hook and behave
+  as before. PROTOCOL.md's text-box rule says so.
+- Tests: `tools/lua/test_lua_game3_ui.py` (the hook on its own; three advances sent ahead to a box that never prints by
+  itself close it, a test that fails without the fix). Not yet confirmed in game: PLAYTEST.md "Emerald text skipping".
+- Not covered: Birch's speech (the scene-kit printer, whose pauses drive the intro's animations) still prints at its
+  own speed.
+
 ## Raised outdoors by default; the build's memory (2026-11-01)
 
 The user's report of 2026-11-01 (no raised ground in Emerald's outdoors) and their requests the same day: find why, bring

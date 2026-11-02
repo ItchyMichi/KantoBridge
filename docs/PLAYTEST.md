@@ -1185,3 +1185,11 @@ Quit" saves them first. Start every game the world needs (or use `-Engines minec
 - [ ] **The build fits your launcher's memory:** a Hoenn world from Create world built in a 4 GB heap on the server
       side here; with Minecraft's own memory on top, a 6 GB game setting should do. If Create world stalls or crashes
       for memory, note your game's memory setting.
+
+## Emerald text skipping (2026-11-02; no world rebuild needed, restart Emerald's Gen1Recomp)
+- [ ] **Hurrying a long text:** talk to someone with several pages (Mom at the start, a Pokémon Center nurse) and press A
+      (or click) as fast as you can read. Each page in Minecraft turns at once, and the Gen1Recomp window keeps up: its
+      box shows the same page within a moment instead of printing every page slowly behind you. The last press closes
+      both boxes together, with no wait before you can walk.
+- [ ] **Reading at your own pace:** the same text without hurrying still turns page by page, and a yes/no at the end
+      (the nurse's) still opens over the text.

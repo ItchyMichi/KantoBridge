@@ -122,6 +122,34 @@ def test_a_stay_boxs_last_page_waits_for_the_scripts_waitbuttonpress():
     assert plain(a.eng.uiCursor(top_key(a)))["ready"] is False
 
 
+def test_a_page_still_printing_is_finished_at_once_but_never_an_auto_scrolled_or_held_one():
+    a = Adapter3()
+    a.field()
+    E = a.E
+    E.Message.show(b"ONE\fTWO")
+    key = top_key(a)
+    assert plain(a.eng.uiCursor(key))["ready"] is False  # printing
+    assert a.eng.uiFinishPage(key) is True
+    assert E.Message._revealed == E.Message._total and plain(a.eng.uiCursor(key))["ready"] is True
+    assert a.eng.uiFinishPage(key) is False  # nothing left to print
+    E.Message.advance()  # page two, printing
+    E.Message._autoScroll = True  # the script's own pacing
+    assert a.eng.uiFinishPage(key) is False and E.Message._waiting is False
+    E.Message._autoScroll, E.Message._held = False, True  # already answered
+    assert a.eng.uiFinishPage(key) is False and E.Message._waiting is False
+    E.Message._held = False
+    assert E.skipReveals == 1
+    # only the message box it was asked for: a key from a box since replaced, a choice's key
+    E.closeMessage()
+    E.Message.show(b"NEW")
+    assert a.eng.uiFinishPage(key) is False
+    stack(a)
+    assert a.eng.uiFinishPage(key) is False
+    E.openChoice(b"yesno")
+    assert a.eng.uiFinishPage(top_key(a)) is False
+    assert E.skipReveals == 1 and E.Message._waiting is False
+
+
 # ------------------------------------------------------------ choices and lists
 
 
@@ -319,6 +347,25 @@ def test_a_scripts_text_box_is_advanced_page_by_page_and_closes_on_its_last_pres
     peer.send("ui.advance", {"ui": ui})
     msgs = pump(rig, peer, lambda m: m["type"] == "ui.close" and m["data"]["ui"] == ui)
     assert E.scriptPresses == 1 and not E.Message.open and not E.Space.vm.running
+    no_faults(rig)
+
+
+def test_advances_sent_ahead_finish_the_pages_the_hidden_box_is_still_printing():
+    # The client shows a page in full and moves on at once; the hidden box must not print every skipped
+    # page at its own speed first. Here it never finishes a page by itself.
+    rig = field_rig()
+    E = rig.E
+    E.revealPerTick = 0
+    peer = connected(rig)
+    E.scriptMessage(b"ONE\fTWO\fTHREE")
+    text = opened(pump(rig, peer, lambda m: m["type"] == "ui.open"), "text")
+    ui = text["ui"]
+    for _ in range(3):
+        peer.send("ui.advance", {"ui": ui})
+    msgs = pump(rig, peer, lambda m: m["type"] == "ui.close" and m["data"]["ui"] == ui, limit=30)
+    pages = [m["data"]["page"] for m in msgs if m["type"] == "ui.update" and "page" in m["data"]]
+    assert pages == [1, 2]
+    assert E.skipReveals == 3 and E.scriptPresses == 1 and not E.Message.open and not E.Space.vm.running
     no_faults(rig)
 
 

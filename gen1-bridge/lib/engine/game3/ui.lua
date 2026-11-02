@@ -508,6 +508,27 @@ function Ui.install(b)
     return {}
   end)
 
+  -- A ui.advance waits for a page the hidden box is still printing: finish
+  -- that page at once (Message.skipReveal, message.lua:287-294, the engine's
+  -- own instant reveal, :248-250). The client shows a page in full before it
+  -- sends the advance that turns it (PROTOCOL.md "UI rules"), so the player
+  -- has read it. Emerald prints at the save's text speed (MID, a glyph every
+  -- 4 frames, message.lua:36, :398-401), and an A tap while it prints only
+  -- cuts the current glyph's delay (pressAB, :406-411), so without this the
+  -- hidden box printed every page the player skipped in full and fell
+  -- further behind with each one. Never an auto-scrolled box (the script's own
+  -- pacing, :374-377), a held box (already answered) or one under a choice.
+  -- Returns true when it finished a page.
+  def("uiFinishPage", function(key)
+    local e = entryOf(key)
+    if not e or e.src ~= "message" then return false end
+    local M = b.ui3("message")
+    if type(M) ~= "table" or M._pages ~= e.obj or b.ask(M, "isOpen", false) ~= true then return false end
+    if b.ask(M, "isWaiting", false) == true or M._autoScroll or M._held or M._choice then return false end
+    if not b.call(M, "skipReveal") then return false end
+    return b.ask(M, "isWaiting", false) == true
+  end)
+
   def("uiItems", function(key)
     local e = entryOf(key)
     if not e then return nil end
