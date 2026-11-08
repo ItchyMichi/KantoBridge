@@ -128,14 +128,16 @@ class LedgerTest {
 	}
 
 	@Test
-	void theMirrorShowsTheLedgersBattleItemsOnly() {
-		Ledger ledger = Ledger.NONE.add("potion", 2).add("nugget", 1).add("moon_stone", 1).add("poke_ball", 20000);
+	void theMirrorShowsTheLedgersMirroredItemsOnly() {
+		Ledger ledger = Ledger.NONE.add("potion", 2).add("nugget", 1).add("moon_stone", 1).add("poke_ball", 20000).add("rare_candy", 3);
 		Map<String, Integer> targets = LedgerRules.mirrorTargets(ledger, CAT);
-		assertEquals(29, targets.size());
+		assertEquals(29 + 7 + 5, targets.size(), "the battle items, Rare Candy, the vitamins, PP Up and the placeholders");
 		assertEquals(2, targets.get("POTION"));
 		assertEquals(9999, targets.get("POKE_BALL"), "capped like the protocol's counts");
 		assertEquals(0, targets.get("ANTIDOTE"));
-		assertFalse(targets.containsKey("NUGGET") || targets.containsKey("MOON_STONE"));
+		assertEquals(3, targets.get("RARE_CANDY"));
+		assertEquals(1, targets.get("NUGGET"), "a placeholder");
+		assertFalse(targets.containsKey("MOON_STONE") || targets.containsKey("POKE_DOLL"));
 	}
 
 	@Test

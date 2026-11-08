@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kantobridge.invalid/protocol/items.schema.json",
   "title": "item catalogue",
-  "description": "protocol/items.json, the canonical items of the one trainer economy (MULTI_GAME_PLAN §4.9, MG6): every item the ledger can hold, its class, the Cobblemon item it is mirrored as (when it is), the move a machine teaches (TMs cross by move), and each game's symbol for it. Items a game lacks have no symbol for it; class key never crosses (key items, HMs, badges, story items). Copied into the fabric-bridge jar and generated into gen1-bridge/lib/kb_items.lua. Ids and symbols only, never game content.",
+  "description": "protocol/items.json, the canonical items of the one trainer economy (MULTI_GAME_PLAN §4.9, MG6): every item the ledger can hold, its class, the Cobblemon item it is mirrored as (when it is) or the placeholder item standing in for one Cobblemon lacks, the move a machine teaches (TMs cross by move), and each game's symbol for it. Items a game lacks have no symbol for it; class key never crosses (key items, HMs, badges, story items). Copied into the fabric-bridge jar and generated into gen1-bridge/lib/kb_items.lua. Ids and symbols only, never game content.",
   "type": "object",
   "required": [
     "version",
@@ -46,6 +46,12 @@
             "pattern": "^[a-z0-9_./-]+$",
             "maxLength": 64,
             "description": "The Cobblemon item path (namespace cobblemon) the Minecraft mirror creates for it; absent = never mirrored (ledger only)."
+          },
+          "placeholder": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$",
+            "maxLength": 64,
+            "description": "An item Cobblemon lacks (Repel, Escape Rope, Nugget): the Minecraft mirror creates kantobridge's own placeholder item kantobridge:<path> for it, whatever its class. It does nothing in Minecraft; the hidden game's bag uses or sells it. Never with cobblemon or hiddenOnly, never on a key item."
           },
           "hiddenOnly": {
             "const": true,

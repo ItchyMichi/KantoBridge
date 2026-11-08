@@ -229,6 +229,10 @@ public final class SessionRuntime {
 				GameRelay ours = relay.relay(this.link);
 				if (stale) {
 					ours.dropQueue();
+				} else {
+					// the hidden game stayed on its save: its bag is the one it last sent, which this world's server hasn't had
+					// (a stale opening asks for a fresh snapshot instead, and that sends the bag)
+					ours.resendBag();
 				}
 				ours.resendSyncs();
 				ours.flushUses();

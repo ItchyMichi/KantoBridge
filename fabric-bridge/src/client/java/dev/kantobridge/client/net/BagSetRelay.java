@@ -29,6 +29,10 @@ public final class BagSetRelay {
 
 		/** Sends to the server with {@code re}; false when it couldn't go. */
 		boolean toServer(String type, JsonObject data, @Nullable Long re);
+
+		/** A bag trace line ({@code dev.kantobridge.bag.BagTrace}): {@code kv} alternates keys and values. Nothing by default. */
+		default void trace(String event, Object... kv) {
+		}
 	}
 
 	/** Counters for the debug overlay and tests. */
@@ -53,6 +57,9 @@ public final class BagSetRelay {
 	/** The server's {@code bag.set}: down to gen1-bridge, remembered by the seq it got there. */
 	public void fromServer(Envelope message) {
 		long seq = this.port.toBridge(MsgTypes.BAG_SET, message.data().deepCopy());
+		JsonObject items = message.data().has("items") && message.data().get("items").isJsonObject()
+				? message.data().getAsJsonObject("items") : new JsonObject();
+		this.port.trace("set.down", "serverSeq", message.seq(), "bridgeSeq", seq, "stamp", stamp(message.data()), "items", items);
 		if (seq <= 0) {
 			this.stats.dropped++;
 			return;
@@ -77,17 +84,26 @@ public final class BagSetRelay {
 		}
 		Long serverSeq = this.forwarded.remove(re);
 		if (serverSeq == null) {
+			this.port.trace("set.answer", "bridgeSeq", re, "serverSeq", "unknown", "ok", message.data().get("ok"));
 			return false;
 		}
 		JsonObject data = message.data().deepCopy();
 		this.left = Math.max(0, JsonFields.integer(data, "left", 0));
 		this.lastReason = JsonFields.bool(data, "ok", false) ? null : JsonFields.str(data, "reason");
-		if (this.port.toServer(MsgTypes.ACT_RESULT, data, serverSeq)) {
+		boolean sent = this.port.toServer(MsgTypes.ACT_RESULT, data, serverSeq);
+		if (sent) {
 			this.stats.resultsForwarded++;
 		} else {
 			this.stats.dropped++;
 		}
+		this.port.trace("set.answer", "bridgeSeq", re, "serverSeq", serverSeq, "ok", data.get("ok"), "reason", data.get("reason"), "left",
+				data.has("left") && data.get("left").isJsonObject() ? data.getAsJsonObject("left") : null, "up", sent);
 		return true;
+	}
+
+	private static String stamp(JsonObject data) {
+		String stamp = JsonFields.str(data, "stamp");
+		return stamp == null ? "-" : stamp.substring(0, Math.min(6, stamp.length()));
 	}
 
 	/** gen1-bridge's {@code bag.sync}: the wallet it carries (MG6), kept for the overlay. */

@@ -117,8 +117,17 @@ function Log.new(opts)
   function log.setForward(fn) forward = fn end
   function log.setDebug(on) debugOn = on == true end
   function log.redact(v) return Log.redact(v, hash) end
+  function log.wall() return Log.wall() end
 
   return log
+end
+
+-- The wall clock as HH:MM:SS (to line a log up with Minecraft's), or nil
+-- where the sandbox has no os.date.
+function Log.wall()
+  if type(os) ~= "table" or type(os.date) ~= "function" then return nil end
+  local ok, s = pcall(os.date, "%H:%M:%S")
+  return ok and type(s) == "string" and s or nil
 end
 
 -- The write function for the engine's mod.log: format strings always go

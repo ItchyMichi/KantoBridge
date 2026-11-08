@@ -360,5 +360,15 @@
   "kantobridge.create_world.link_down": "%s isn't running",
   "kantobridge.create_world.none": "Tick at least one game.",
   "kantobridge.create.error.link_down": "%s isn't running.",
-  "kantobridge.hud.engine.starting": "Starting %s…"
+  "kantobridge.hud.engine.starting": "Starting %s…",
+  "item.kantobridge.repel": "Repel",
+  "item.kantobridge.repel.desc": "Use it from the game's bag.",
+  "item.kantobridge.super_repel": "Super Repel",
+  "item.kantobridge.super_repel.desc": "Use it from the game's bag.",
+  "item.kantobridge.max_repel": "Max Repel",
+  "item.kantobridge.max_repel.desc": "Use it from the game's bag.",
+  "item.kantobridge.escape_rope": "Escape Rope",
+  "item.kantobridge.escape_rope.desc": "Use it from the game's bag.",
+  "item.kantobridge.nugget": "Nugget",
+  "item.kantobridge.nugget.desc": "Sell it at a Poké Mart."
 }

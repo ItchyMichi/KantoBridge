@@ -116,24 +116,32 @@ public final class RelayService {
 
 	/** Sends one message to {@code player}'s client. Returns false if the type may not travel s2c or is too big. */
 	public boolean send(ServerPlayer player, String type, JsonObject data, @Nullable Long re) {
+		return this.post(player, type, data, re) > 0;
+	}
+
+	/**
+	 * {@link #send}, returning the message's {@code seq} (an answer the client relays back carries it as {@code re}), or -1
+	 * when it wasn't sent.
+	 */
+	public long post(ServerPlayer player, String type, JsonObject data, @Nullable Long re) {
 		Envelope message = new Envelope(type, this.takeSeq(player.getUUID()), re, data);
 		try {
 			this.catalog.check(message, Catalog.Leg.S2C);
 		} catch (ProtocolException e) {
 			KantoBridge.LOGGER.error("relay: refusing to send {}: {}", type, e.code());
-			return false;
+			return -1;
 		}
 		String json = message.toJson();
 		int bytes = json.getBytes(StandardCharsets.UTF_8).length;
 		if (bytes > this.catalog.relayMaxBytes()) {
 			KantoBridge.LOGGER.error("relay: {} is over the relay limit", Redact.summary(message, bytes));
-			return false;
+			return -1;
 		}
 		for (BiConsumer<ServerPlayer, Envelope> tap : this.taps) {
 			tap.accept(player, message);
 		}
 		ServerPlayNetworking.send(player, new KbJsonPayload(json));
-		return true;
+		return message.seq();
 	}
 
 	/** Answers a client message the server could not use with {@code error{code}} (a short code, never data). */

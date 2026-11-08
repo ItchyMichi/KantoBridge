@@ -94,27 +94,43 @@ class ItemsTest {
 	}
 
 	@Test
-	void theMirrorIsTodaysTwentyNineBattleItems() {
+	void theMirrorIsTheBattleItemsCandyVitaminsAndPlaceholders() {
 		List<String> mirrored = Items.mirrored();
-		assertEquals(29, mirrored.size(), "5 balls, 17 medicines, 7 battle boosters");
+		assertEquals(29 + 7 + 5, mirrored.size(), "PLAN Appendix B's 29, Rare Candy, five vitamins and PP Up, five placeholders");
 		Map<String, String> table = BagItems.table();
-		assertEquals(29, table.size());
+		assertEquals(mirrored.size(), table.size());
 		for (String id : mirrored) {
 			Items.Item item = Items.get(id);
-			assertTrue(item.mirrored() && Items.MIRRORED_CLASSES.contains(item.clazz()), id);
-			assertEquals(item.cobblemon(), table.get(item.symbol("gen1")), id);
+			assertTrue(item.mirrored(), id);
+			if (item.placeholder() != null) {
+				assertEquals("kantobridge:" + item.placeholder(), table.get(item.symbol("gen1")), id);
+				assertNull(item.cobblemon(), id);
+			} else {
+				assertTrue(Items.MIRRORED_CLASSES.contains(item.clazz()), id);
+				assertEquals("cobblemon:" + item.cobblemon(), table.get(item.symbol("gen1")), id);
+			}
 		}
-		assertEquals(table.size(), new HashSet<>(table.values()).size(), "each Gen 1 item has its own Cobblemon item");
+		assertEquals(table.size(), new HashSet<>(table.values()).size(), "each Gen 1 item has its own item");
 		assertEquals("paralyze_heal", Items.cobblemonPath("parlyz_heal"));
 		assertEquals("elixir", Items.cobblemonPath("elixer"));
 		assertEquals("x_defence", Items.cobblemonPath("x_defend"));
 		assertEquals("x_special_attack", Items.cobblemonPath("x_special"));
-		// Stones carry a Cobblemon item for the party flow but are not mirrored into the inventory; candy is ledger-only.
+		// Stones carry a Cobblemon item for the party flow but are not mirrored into the inventory.
 		assertEquals("moon_stone", Items.cobblemonPath("moon_stone"));
 		assertFalse(mirrored.contains("moon_stone"));
-		assertNull(Items.cobblemonPath("rare_candy"));
-		assertFalse(mirrored.contains("rare_candy"));
 		assertNull(BagItems.cobblemonPath("MOON_STONE"));
+		// Rare Candy, the vitamins and PP Up are Cobblemon's own items.
+		for (String id : List.of("rare_candy", "hp_up", "protein", "iron", "calcium", "carbos", "pp_up")) {
+			assertTrue(mirrored.contains(id), id);
+			assertEquals(id, Items.cobblemonPath(id), id);
+		}
+		assertEquals("cobblemon:rare_candy", BagItems.itemId("RARE_CANDY"));
+		// Items Cobblemon lacks are this mod's placeholders; the rest of the field items stay in the hidden bag.
+		assertEquals(List.of("escape_rope", "max_repel", "nugget", "repel", "super_repel"), Items.placeholders());
+		assertEquals("kantobridge:repel", BagItems.itemId("REPEL"));
+		assertTrue(BagItems.placeholder("NUGGET") && !BagItems.placeholder("POKE_BALL"));
+		assertNull(BagItems.cobblemonPath("ESCAPE_ROPE"), "a placeholder is no Cobblemon item");
+		assertFalse(mirrored.contains("poke_doll"));
 	}
 
 	@Test
@@ -171,6 +187,17 @@ class ItemsTest {
 		assertThrows(DataException.class, () -> Items.parse("{\"version\":1,\"items\":{\"orange_mail\":{\"class\":\"held\",\"hiddenOnly\":false,\"symbols\":{\"gen3\":\"ORANGE_MAIL\"}}}}"));
 		assertThrows(DataException.class, () -> Items.parse("{\"version\":1,\"items\":{\"orange_mail\":{\"class\":\"held\",\"cobblemon\":\"x\",\"hiddenOnly\":true,\"symbols\":{\"gen3\":\"ORANGE_MAIL\"}}}}"));
 		assertTrue(Items.bundled().entry("flower_mail").hiddenOnly() && !Items.bundled().entry("leftovers").hiddenOnly());
+		// A placeholder stands in for a missing Cobblemon item, on any class but key, and is mirrored whatever its class
+		Items rope = Items.parse("{\"version\":1,\"items\":{\"escape_rope\":{\"class\":\"field\",\"placeholder\":\"escape_rope\",\"symbols\":{\"gen1\":\"ESCAPE_ROPE\"}}}}");
+		assertEquals(List.of("escape_rope"), rope.mirroredIds());
+		assertEquals("kantobridge:escape_rope", rope.entry("escape_rope").mirrorItem());
+		assertThrows(DataException.class, () -> Items.parse("{\"version\":1,\"items\":{\"repel\":{\"class\":\"field\",\"cobblemon\":\"repel\",\"placeholder\":\"repel\",\"symbols\":{\"gen1\":\"REPEL\"}}}}"),
+				"a placeholder with a Cobblemon item");
+		assertThrows(DataException.class, () -> Items.parse("{\"version\":1,\"items\":{\"town_map\":{\"class\":\"key\",\"placeholder\":\"town_map\",\"symbols\":{\"gen1\":\"TOWN_MAP\"}}}}"),
+				"a key item is never mirrored");
+		assertThrows(DataException.class, () -> Items.parse("{\"version\":1,\"items\":{\"orange_mail\":{\"class\":\"held\",\"placeholder\":\"orange_mail\",\"hiddenOnly\":true,\"symbols\":{\"gen3\":\"ORANGE_MAIL\"}}}}"),
+				"a hidden-only item with a placeholder");
+		assertThrows(DataException.class, () -> Items.parse("{\"version\":1,\"items\":{\"repel\":{\"class\":\"field\",\"placeholder\":\"Repel!\",\"symbols\":{\"gen1\":\"REPEL\"}}}}"));
 		assertEquals("leek", Items.bundled().canonical("gen3", "STICK"));
 		assertThrows(DataException.class, () -> Items.parse("{\"version\":1,\"items\":{}}"));
 		assertThrows(DataException.class, () -> Items.parse("not json"));

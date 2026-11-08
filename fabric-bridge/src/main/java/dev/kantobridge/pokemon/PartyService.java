@@ -306,6 +306,9 @@ public final class PartyService {
 		}
 		PlayerExtensionsKt.party(player).heal();
 		markDirty(player);
+		// a marker in the bag trace: the user saw used balls come back around a heal (2026-11-07)
+		dev.kantobridge.bag.BagTrace.server("party.heal", "p", dev.kantobridge.bag.BagTrace.who(player.getUUID()), "region",
+				dev.kantobridge.server.Regions.tagOf(message.data()));
 	}
 
 	static void onRename(ServerPlayer player, Envelope message) {

@@ -15,9 +15,11 @@
 --     back; never a key item, an HM or a badge (kb_engine.isKeyItem), and
 --     never a story item the catalogue doesn't know;
 --   * the MIRRORED set is the synced items with a Cobblemon item and a
---     battle-usable class (ball, medicine, battle: PLAN Appendix B's 29):
---     the ones Minecraft creates stacks for, and the only ones bag.use may
---     take out (error bag.not_mirrored otherwise).
+--     battle-usable class (ball, medicine, battle: PLAN Appendix B's battle
+--     items, Rare Candy, the vitamins, PP Up), and those with a placeholder
+--     (kantobridge's own item for one Cobblemon lacks: Repel, Escape Rope,
+--     Nugget): the ones Minecraft creates stacks for, and the only ones
+--     bag.use may take out (error bag.not_mirrored otherwise).
 -- bag.sync also carries save.money and, once the server has projected its
 -- ledger into this save (bag.set, act/kb_ledger.lua), the projection's
 -- stamp (mod.save "ledger"), so the server can tell a diff from a save it
@@ -30,7 +32,9 @@
 -- (kb_engine.bagRemove), never below zero: asking for more than the bag
 -- holds takes what is there and counts a mismatch (a warning). Uses wait
 -- for an overworld, then apply in order, and the bag.sync that follows
--- shows the result.
+-- shows the result. Each use keeps its arrival (main.lua's count, shared
+-- with bag.set): a bag.set that arrives has every use before it applied
+-- first (bag.applyUses), since the server's projection already counts them.
 --
 -- Logs show codes, item symbols and counts only.
 
@@ -63,7 +67,10 @@ function Bag.sets(items, family)
     local sym = type(entry) == "table" and type(entry.symbols) == "table" and entry.symbols[family] or nil
     if type(sym) == "string" and entry.class ~= "key" then
       synced[#synced + 1] = sym
-      if type(entry.cobblemon) == "string" and Bag.MIRROR_CLASSES[entry.class] then mirrored[sym] = true end
+      if type(entry.placeholder) == "string"
+          or type(entry.cobblemon) == "string" and Bag.MIRROR_CLASSES[entry.class] then
+        mirrored[sym] = true
+      end
     end
   end
   table.sort(synced)
@@ -88,6 +95,16 @@ function Bag.new(opts)
   local queue = {}           -- bag.use requests waiting to apply
   local counts = { syncs = 0, uses = 0, removed = 0, mismatch = 0, refused = 0, dropped = 0 }
 
+  -- The bag trace (fabric-bridge's BagTrace has Minecraft's side): one
+  -- bagtrace.* line per bag event, item symbols as fields, the wall clock
+  -- as t where the sandbox has one.
+  local function trace(code, fields, items)
+    if not log then return end
+    fields.t = type(log.wall) == "function" and log.wall() or nil
+    for sym, n in pairs(items or {}) do fields[sym] = n end
+    log.info("bagtrace." .. code, fields)
+  end
+
   -- The projection stamp in the save's mod data (act/kb_ledger.lua), or nil.
   local function ledgerStamp()
     local rec = store and store.get("ledger") or nil
@@ -96,9 +113,10 @@ function Bag.new(opts)
     return nil
   end
 
-  -- bag.use from the session (role already checked). Returns true, or false
-  -- plus an error code (bad_message, bag.not_mirrored).
-  function bag.use(data)
+  -- bag.use from the session (role already checked); `at` is its arrival
+  -- (optional). Returns true, or false plus an error code (bad_message,
+  -- bag.not_mirrored).
+  function bag.use(data, at)
     local item, qty = data.item, data.qty
     if not (type(item) == "string" and #item <= 64 and item:find("^[A-Z0-9_]+$") and whole(qty, 1, 999)) then
       return false, "bad_message"
@@ -106,6 +124,7 @@ function Bag.new(opts)
     if not MIRRORED[item] then
       counts.refused = counts.refused + 1
       if log then log.warn("bag.use_refused", { count = counts.refused }) end
+      trace("use_refused", { item = item, qty = qty, at = at })
       return false, "bag.not_mirrored"
     end
     if #queue >= Bag.MAX_QUEUE then
@@ -113,13 +132,15 @@ function Bag.new(opts)
       counts.dropped = counts.dropped + 1
       if log then log.warn("bag.use_dropped", { count = counts.dropped }) end
     end
-    queue[#queue + 1] = { item = item, qty = qty }
+    queue[#queue + 1] = { item = item, qty = qty, at = at }
+    trace("use_in", { item = item, qty = qty, at = at, ingame = engine.inGame() == true, waiting = #queue })
     return true
   end
 
   local function apply(u)
     counts.uses = counts.uses + 1
     local removed, held = engine.bagRemove(u.item, u.qty)
+    trace("use_applied", { item = u.item, asked = u.qty, removed = removed, held = held, at = u.at })
     counts.removed = counts.removed + removed
     if removed < u.qty then
       counts.mismatch = counts.mismatch + 1
@@ -133,13 +154,27 @@ function Bag.new(opts)
   -- synced quantities, the money or the stamp changed, or a snapshot asked
   -- for everything again. out gets { "bag.sync", data, tag }; link = { live,
   -- generation }.
+  -- The waiting uses that arrived up to `through` (every one when nil)
+  -- apply now, in order, while in game; the rest keep waiting. Returns how
+  -- many applied.
+  function bag.applyUses(through)
+    if #queue == 0 or not engine.inGame() then return 0 end
+    local keep, n = {}, 0
+    for _, u in ipairs(queue) do
+      if through == nil or u.at == nil or u.at <= through then
+        apply(u)
+        n = n + 1
+      else
+        keep[#keep + 1] = u
+      end
+    end
+    queue = keep
+    return n
+  end
+
   function bag.step(out, link)
     local inGame = engine.inGame()
-    if inGame and #queue > 0 then
-      local list = queue
-      queue = {}
-      for _, u in ipairs(list) do apply(u) end
-    end
+    bag.applyUses(nil)
     if not (link and link.live and inGame) then return end
     local items = engine.bagCounts(SYNCED)
     local save = engine.saveView()
@@ -150,6 +185,7 @@ function Bag.new(opts)
       local data = { items = json.object(items), money = money }
       if stamp then data.stamp = stamp end
       out[#out + 1] = { "bag.sync", data, "bag" }
+      trace("sync_out", { stamp = stamp and stamp:sub(1, 6) or "-", money = money, resend = resend }, items)
       sent, sentGen, sentMoney, sentStamp = items, link.generation, money, stamp
       counts.syncs = counts.syncs + 1
     end

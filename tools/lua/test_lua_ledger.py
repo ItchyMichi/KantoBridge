@@ -4,7 +4,8 @@ cap): the projection replaces the bag's non-key catalogue items and writes the m
 game's limits (what doesn't fit comes back as too_many with `left`), key items, HMs, badges and items
 the catalogue doesn't know are never touched, the stamp lands in the save's mod data and every
 bag.sync echoes it (the confirming one in the same step), not_ingame at the title, busy under a
-screen, bad requests refused, roles. Every message the peer receives is schema-checked (rig.Peer,
+screen, bad requests refused, roles. What changes while a projection waits for a free world (a bag.use,
+an item found, prize money) stays when it lands; a bag.use that came before it isn't applied twice. Every message the peer receives is schema-checked (rig.Peer,
 strict). All data is made up (battlesim.py)."""
 
 import pytest
@@ -173,3 +174,73 @@ def test_a_builder_cannot_project():
     seq = bag_set(g, {"POTION": 9})
     g.run(2)
     assert ("role", seq) in errors(g) and inv(g)["POTION"] == 2
+
+
+# ---- what happens while a projection waits ----
+
+STAMP2 = "fedcba98765432100123456789abcdef"
+
+
+def test_a_ball_thrown_while_the_projection_waits_stays_thrown():
+    """The server worked the projection out before the throw; the throw's bag.use came after it and applied at once.
+    The landing must not put the ball back (the server's remembered projection is already one ball less)."""
+    g = ledger_game()
+    g.connect()
+    g.E.push(g.E.text())
+    bag_set(g, {"POKE_BALL": 5, "POTION": 2}, money=3000)
+    g.send("bag.use", {"item": "POKE_BALL", "qty": 1})
+    g.run(5)
+    assert inv(g)["POKE_BALL"] == 4 and results(g) == [], "the use applies at once; the projection waits"
+    g.E.pop()
+    g.run()
+    assert inv(g)["POKE_BALL"] == 4, "the landing put the thrown ball back"
+    assert syncs(g)[-1]["items"] == {"POKE_BALL": 4, "POTION": 2} and syncs(g)[-1]["stamp"] == STAMP
+    assert g.status()["ledgerKept"] == 1
+    # the bag trace tells the story: the use in and applied, the projection noted, landing with the throw kept
+    logs = g.rig.logs()
+    assert any("bagtrace.use_in" in line and "item=POKE_BALL" in line for line in logs)
+    assert any("bagtrace.use_applied" in line and "removed=1" in line for line in logs)
+    assert any("bagtrace.set_in" in line and "noted=true" in line for line in logs)
+    assert any("bagtrace.set_land" in line and "POKE_BALL=4" in line and "kept=1" in line for line in logs)
+    assert any("bagtrace.sync_out" in line and "POKE_BALL=4" in line and "stamp=012345" in line for line in logs)
+
+
+def test_an_item_found_and_prize_money_while_the_projection_waits_are_kept():
+    g = ledger_game()
+    g.connect()
+    g.E.push(g.E.text())
+    bag_set(g, {"POTION": 2}, money=3000)
+    g.run(5)
+    stock(g, POTION=1)          # an item ball
+    g.E.save.money = 3200       # prize money
+    g.E.pop()
+    g.run()
+    assert inv(g)["POTION"] == 3 and g.E.save.money == 3200, "the landing wiped what the game gained meanwhile"
+    sync = syncs(g)[-1]
+    assert sync["items"] == {"POTION": 3} and sync["money"] == 3200 and sync["stamp"] == STAMP,         "the confirming sync carries the gains, so the server reads them back"
+
+
+def test_a_use_that_came_before_the_projection_is_not_applied_twice():
+    """The server debited the ledger, sent the bag.use, then a projection that already counts it: same frame."""
+    g = ledger_game()
+    g.connect()
+    g.send("bag.use", {"item": "POKE_BALL", "qty": 1})
+    bag_set(g, {"POKE_BALL": 4, "POTION": 2}, money=3000)
+    g.run()
+    assert inv(g)["POKE_BALL"] == 4, "the use applied after the landing too"
+    assert syncs(g)[-1]["items"] == {"POKE_BALL": 4, "POTION": 2}
+
+
+def test_a_landing_is_no_change_of_the_games_own_for_the_projection_after_it():
+    g = ledger_game()
+    g.connect()
+    g.E.push(g.E.text())
+    bag_set(g, {"POTION": 5}, money=3000)
+    bag_set(g, {"POTION": 7}, money=3000, stamp=STAMP2)
+    g.run(5)
+    stock(g, POTION=1)          # found while both wait
+    g.E.pop()
+    g.run(4)
+    assert [r["ok"] for r, _ in results(g)] == [True, True]
+    assert inv(g)["POTION"] == 8, "the second projection plus the one found, not the first landing again"
+    assert syncs(g)[-1]["stamp"] == STAMP2 and syncs(g)[-1]["items"] == {"POTION": 8}

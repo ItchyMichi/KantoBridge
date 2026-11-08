@@ -1,7 +1,7 @@
 """The canonical item catalogue, protocol/items.json (docs/specs/MULTI_GAME_PLAN.md §4.9, MG6).
 
 Every item the one trainer economy can hold: id -> class, the Cobblemon item it is mirrored as (when it
-is), the move a machine teaches (TMs cross by move) and each family's symbol. Java bundles the file in
+is) or the placeholder item standing in for one Cobblemon lacks, the move a machine teaches (TMs cross by move) and each family's symbol. Java bundles the file in
 the jar (``Items``), gen1-bridge carries the generated ``lib/kb_items.lua`` (``catalog.py --write``),
 and the stand-ins and tests read it through here.
 """
@@ -34,13 +34,14 @@ class Item:
     move: int | None
     symbols: dict
     hidden_only: bool = False  # FP4: no Cobblemon item exists for it; a member keeps it in the hidden game
+    placeholder: str | None = None  # an item Cobblemon lacks: the mirror creates kantobridge:<placeholder>
 
 
 class Items:
     def __init__(self, data):
         self.version = data["version"]
         self.items = {i: Item(i, e["class"], e.get("cobblemon"), e.get("move"), dict(e["symbols"]),
-                              e.get("hiddenOnly") is True)
+                              e.get("hiddenOnly") is True, e.get("placeholder"))
                       for i, e in data["items"].items()}
 
     @property
@@ -62,8 +63,9 @@ class Items:
         return None
 
     def mirrored(self):
-        """Ids the Minecraft mirror creates stacks for: battle-usable classes with a Cobblemon item."""
-        return sorted(i for i, it in self.items.items() if it.cobblemon and it.clazz in ("ball", "medicine", "battle"))
+        """Ids the Minecraft mirror creates stacks for: battle-usable classes with a Cobblemon item, and placeholders."""
+        return sorted(i for i, it in self.items.items()
+                      if it.placeholder or it.cobblemon and it.clazz in ("ball", "medicine", "battle"))
 
     def crossing(self):
         """Ids the ledger may hold (every class but key)."""

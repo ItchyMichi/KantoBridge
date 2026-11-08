@@ -38,6 +38,11 @@ public final class BagSetRuntime {
 					SessionGate gate = gate(link);
 					return (gate == null || gate.serverOpen()) && link.toServer(type, data, re);
 				}
+
+				@Override
+				public void trace(String event, Object... kv) {
+					GameRelayRuntime.traceFor(link, event, kv);
+				}
 			}));
 		}
 	}

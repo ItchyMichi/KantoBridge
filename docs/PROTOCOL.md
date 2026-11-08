@@ -510,11 +510,17 @@ it for that player's collision.
   stay native. Results: `win`, `fled` and `caught` run the engine's wild-battle ending; `lose` shows
   the blackout text and blacks out; `aborted` changes nothing. A `caught` result carries
   `caught{uid, dex, level}`; the Pokémon then appears in `dex.sync` and `party.sync`.
-- **`bag.sync`** is the full map of the battle-usable items (Appendix B) held with quantity ≥ 1
-  (absent means 0), never key items, sent while in game after every snapshot and on any change. A
+- **`bag.sync`** is the full map of the battle-usable items (Appendix B; MG6: every non-key catalogue item) held with quantity ≥ 1
+  (absent means 0), never key items, sent while in game after every snapshot and on any change. When a world opens on a
+  link that stayed up (no snapshot), the client sends that link's last `bag.sync` to the server again (2026-11-07), and
+  the server's mirror watches a player's inventory from their join, not from the first `bag.sync`. A
   `bag.sync` can cross `bag.use` messages still in flight; Minecraft reconciles them.
 - **`bag.use`** is applied in the hidden game (queued at the title), never below zero, and answered by
-  the resulting `bag.sync`; an item that isn't mirrored gets `error{code:"bag.not_mirrored"}`.
+  the resulting `bag.sync`; an item that isn't mirrored gets `error{code:"bag.not_mirrored"}`. The mirrored items
+  (2026-11-07): Appendix B's 29 battle items, Rare Candy, the vitamins (HP Up, Protein, Iron, Calcium, Carbos) and PP Up
+  as Cobblemon's items, and Repel, Super Repel, Max Repel, Escape Rope and Nugget as kantobridge's placeholder items
+  (`kantobridge:<id>`: no function in Minecraft, used or sold from the hidden bag). A `bag.use` that arrives after a
+  `bag.set` still waiting applies at once, and the projection keeps it when it lands (see "One economy").
 - **`dex.sync`** is the only source of the hidden game's Pokédex: applied in game as a union (owned
   implies seen; nothing is ever cleared), newest wins, re-applied after New Game or CONTINUE.
 - **`party.item`** (an item used from the Gen 1 bag on a party member with a uid, outside battles,
@@ -1017,7 +1023,8 @@ compat profile (`hello.ok.compat`: Gen 1 151 and 165, Emerald 386 and 354), appl
 items, HMs and the story stay per game. [`protocol/items.json`](../protocol/items.json) (schema
 [`items.schema.json`](../protocol/items.schema.json)) is the **canonical item catalogue**: id → `class` (`ball`,
 `medicine`, `battle`, `field`, `stone`, `held`, `valuable`, `tm`, `key`), the Cobblemon item it is mirrored as (when it
-is), the `move` a machine teaches (TMs cross **by move**), and each family's symbol (`symbols.gen1`: the Gen 1 import's
+is) or the `placeholder` item standing in for one Cobblemon lacks (`kantobridge:<placeholder>`, mirrored whatever its
+class), the `move` a machine teaches (TMs cross **by move**), and each family's symbol (`symbols.gen1`: the Gen 1 import's
 ids, e.g. `POTION`, `TM_MEGA_PUNCH`). fabric-bridge bundles it (`Items`); gen1-bridge carries the generated
 `lib/kb_items.lua`; `kb_protocol.items` reads it in Python.
 
@@ -1027,6 +1034,15 @@ ids, e.g. `POTION`, `TM_MEGA_PUNCH`). fabric-bridge bundles it (`Items`); gen1-b
   the followed link: the adapter writes `save.money` and replaces the bag's non-key items with the projection, within
   the game's limits (Gen 1: 20 bag slots, 99 a stack; `too_many` with `left` for what did not fit, which stays in the
   ledger: "in your trunk", shown on F7); the `stamp` goes into the save's mod data.
+- **While a projection waits** (2026-11-07): `bag.set` waits in the hidden game for a free world, and the game plays on
+  meanwhile. gen1-bridge notes the bag and money when the request arrives (after every `bag.use` that arrived before
+  it: the projection already counts those) and lands the projection **plus what changed since** (a `bag.use` applied
+  meanwhile, an item found, prize money), so the confirming `bag.sync` reads those back; a landing is no change of the
+  game's own for a second request still waiting. The server keeps **one projection on its way per region**: it matches
+  the forwarded `act.result` to its `bag.set` by `re` (the client sends the server's `seq`), a projection asked for
+  meanwhile is sent when that answer comes, and a `bag.sync` with an older stamp while one is on its way predates it
+  and is left alone (no re-projection; before, two on their way answered each other's stamps forever). A projection
+  unanswered for 300 ticks counts as lost.
 - **Read-back:** while followed, every `bag.sync` carries `money` and the `stamp`; the server applies the diff of that
   game's bag and money since the last projection to the ledger (prize money, purchases, found items, blackout
   halving). On park the last `bag.sync` is final. A save with no `stamp` (never projected) is **adopted once**: its
@@ -1034,7 +1050,10 @@ ids, e.g. `POTION`, `TM_MEGA_PUNCH`). fabric-bridge bundles it (`Items`); gen1-b
   the ledger's view and is re-projected.
 - **The Minecraft mirror** (`bag.sync` → Cobblemon items → `bag.use`) is one per player from the ledger, not one per
   hidden game; the stacks it creates are **marked**, so items found in Minecraft are never counted or deleted by it
-  and a use debits the ledger (reaching the followed game through the next projection).
+  and a use debits the ledger. Its `bag.use` goes to the followed game (else the legacy region's), **tagged with that
+  region and named by that game's symbol** (2026-11-07: before, it went untagged, so the client sent it to the slot-0
+  game whatever was followed); the same region's remembered projection falls by it. A game whose family lacks the item
+  gets no `bag.use` (the ledger alone held it).
 - **Legacy worlds** (no `regions.json`) keep today's per-game bag path on the server: the hidden bag's battle
   items mirrored as before and no `bag.set`. On the wire `bag.sync` always carries `money` (MG6) and carries
   `stamp` only once the save was projected.

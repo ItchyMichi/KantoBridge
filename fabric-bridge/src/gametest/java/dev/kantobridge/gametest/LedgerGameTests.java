@@ -237,6 +237,118 @@ public class LedgerGameTests implements FabricGameTest {
 		helper.succeed();
 	}
 
+	// ---- one projection on its way ----
+
+	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH + "_3")
+	public void aProjectionOnItsWayIsWaitedFor(GameTestHelper helper) {
+		MinecraftServer server = helper.getLevel().getServer();
+		WorldIndex before = WorldIndexSync.current(server);
+		try {
+			publish(server);
+			MockPlayers.with(helper, player -> {
+				try {
+					RelayTap.capture(player, sent -> {
+						long deferred = LedgerService.deferred();
+						long waited = LedgerService.waited();
+						long stray = LedgerService.stray();
+						long reprojected = LedgerService.reprojected();
+
+						// (a) An adoption: its projection goes on its way.
+						sync(player, 1, KANTO, "{\"POTION\":3,\"POKE_BALL\":10}", 3000, null);
+						Envelope first = assertSet(helper, sent, 1, KANTO, 3, 10, 3000, "the adoption's projection");
+
+						// (b) The game reports again before it lands (no stamp yet): the next projection waits for the answer.
+						sync(player, 2, KANTO, "{\"POTION\":3,\"POKE_BALL\":10}", 3000, null);
+						helper.assertTrue(count(sent, MsgTypes.BAG_SET) == 1, "a second projection went while the first was on its way");
+						helper.assertTrue(LedgerService.deferred() == deferred + 1, "the second projection didn't wait");
+
+						// (c) The answer comes: the projection that waited goes now.
+						result(player, 3, first.seq(), "{\"ok\":true,\"kind\":\"bag.set\"}");
+						Envelope second = assertSet(helper, sent, 2, KANTO, 3, 10, 3000, "the projection that waited");
+						String firstStamp = first.data().get("stamp").getAsString();
+						String secondStamp = second.data().get("stamp").getAsString();
+
+						// (d) A report with the first stamp predates the second projection: left alone, not "an older save".
+						sync(player, 4, KANTO, "{\"POTION\":3,\"POKE_BALL\":9}", 3000, firstStamp);
+						helper.assertTrue(LedgerService.waited() == waited + 1, "the report from before the landing wasn't waited out");
+						helper.assertTrue(LedgerService.reprojected() == reprojected, "a report from before the landing was taken for an older save");
+						helper.assertTrue(count(sent, MsgTypes.BAG_SET) == 2, "a report from before the landing projected again");
+						assertLedger(helper, player, 3, 10, 3000, "after a report from before the landing");
+
+						// (e) An older projection's answer changes nothing.
+						result(player, 5, first.seq(), "{\"ok\":false,\"kind\":\"bag.set\",\"reason\":\"too_many\",\"left\":{\"POTION\":3}}");
+						helper.assertTrue(LedgerService.stray() == stray + 1, "an older projection's answer wasn't set aside");
+						LedgerRules.Projection projected = LedgerService.projected(player, KANTO);
+						helper.assertTrue(projected != null && projected.items().getOrDefault("POTION", 0) == 3,
+								"an older projection's answer shrank the projection on its way");
+
+						// (f) The second projection lands: its report reads back (a Potion drunk since).
+						sync(player, 6, KANTO, "{\"POTION\":2,\"POKE_BALL\":10}", 3000, secondStamp);
+						assertLedger(helper, player, 2, 10, 3000, "after the landing's report");
+
+						// (g) Landed, a stamp this server never gave is an older save again.
+						sync(player, 7, KANTO, "{\"POTION\":9,\"POKE_BALL\":1}", 100, STALE_STAMP);
+						helper.assertTrue(LedgerService.reprojected() == reprojected + 1, "the stale stamp wasn't noticed after the landing");
+						assertSet(helper, sent, 3, KANTO, 2, 10, 3000, "the re-projection");
+					});
+				} finally {
+					LedgerService.forget(player);
+				}
+			});
+		} finally {
+			restore(server, before);
+		}
+		helper.succeed();
+	}
+
+	// ---- a use in Minecraft goes to the followed game ----
+
+	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH + "_4", timeoutTicks = 100)
+	public void aUseGoesToTheFollowedGamesRegion(GameTestHelper helper) {
+		MinecraftServer server = helper.getLevel().getServer();
+		WorldIndex before = WorldIndexSync.current(server);
+		publish(server);
+		ServerPlayer player = MockPlayers.join(helper);
+		RelayTap.Recorder relay = RelayTap.open(player);
+		Runnable end = () -> {
+			relay.close();
+			LedgerService.forget(player);
+			MockPlayers.leave(helper, player);
+			restore(server, before);
+		};
+		try {
+			// Kanto's game is adopted (five balls in the mirror); then the player follows test2, which gets the ledger.
+			sync(player, 1, KANTO, "{\"POKE_BALL\":5}", 3000, null);
+			helper.assertTrue(BagGameTests.count(player, "poke_ball") == 5, "the mirror didn't show the ledger's balls");
+			receive(player, MsgTypes.REGION_STATE, 2, "{\"followed\":\"" + TEST2 + "\",\"parked\":[\"" + KANTO + "\"]}");
+			helper.assertTrue(LedgerService.project(player, TEST2, GAME), "the projection into test2 wasn't sent");
+			BagGameTests.consume(helper, player, "poke_ball");
+		} catch (RuntimeException e) {
+			end.run();
+			throw e;
+		}
+		helper.startSequence()
+				.thenWaitUntil(() -> helper.assertTrue(!BagGameTests.uses(relay).isEmpty(), "no bag.use yet"))
+				.thenExecute(() -> {
+					try {
+						List<Envelope> uses = BagGameTests.uses(relay);
+						helper.assertTrue(uses.size() == 1, "expected one bag.use, got " + uses.size());
+						Envelope use = uses.get(0);
+						helper.assertTrue(TEST2.equals(regionOf(use)), "the use went tagged " + regionOf(use) + ", not to the followed region");
+						helper.assertTrue(use.data().get("item").getAsString().equals("POKE_BALL") && use.data().get("qty").getAsInt() == 1,
+								"the use names " + use.data());
+						LedgerRules.Projection test2 = LedgerService.projected(player, TEST2);
+						LedgerRules.Projection kanto = LedgerService.projected(player, KANTO);
+						helper.assertTrue(test2 != null && test2.items().getOrDefault("POKE_BALL", 0) == 4, "test2's projection didn't follow the use");
+						helper.assertTrue(kanto != null && kanto.items().getOrDefault("POKE_BALL", 0) == 5, "kanto's projection took a use it never hears");
+						helper.assertTrue(Ledger.of(player).count("poke_ball") == 4, "the ledger didn't fall");
+					} finally {
+						end.run();
+					}
+				})
+				.thenSucceed();
+	}
+
 	// ---- a legacy world ----
 
 	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH + "_2")

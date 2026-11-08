@@ -26,6 +26,8 @@ import org.jetbrains.annotations.Nullable;
  * them; meanwhile a sync's target is its count minus what is still in flight, so a crossing sync neither gives a used
  * item back nor counts it twice. A use no sync acknowledges within {@link #IN_FLIGHT_TICKS} (lost with a link) is
  * dropped, and the last bag applies again.</li>
+ * <li><b>Before the first sync</b> ({@link #seed}): the inventory a player joins with is the reference and the last bag,
+ * so what is used before the hidden game reports is a use, not something the first sync gives back.</li>
  * </ul>
  */
 public final class BagLedger {
@@ -49,6 +51,8 @@ public final class BagLedger {
 	/** The counts of the last sync, as the hidden game sent them. */
 	private @Nullable Map<String, Integer> lastBag;
 	private final Map<String, Deque<Use>> inFlight = new HashMap<>();
+	/** A sync has arrived (a {@link #seed} no longer applies). */
+	private boolean synced;
 
 	/** True once a sync has set the reference. */
 	public boolean known() {
@@ -74,6 +78,7 @@ public final class BagLedger {
 			}
 		}
 		this.lastBag = counts;
+		this.synced = true;
 		return this.changes(actual);
 	}
 
@@ -91,6 +96,26 @@ public final class BagLedger {
 			}
 		}
 		return changes;
+	}
+
+	/**
+	 * The player joined before any sync (2026-11-07): the inventory's marked stacks are what the mirror last showed (they
+	 * were saved with the world), so they become the reference and the last bag. A ball thrown before the hidden game
+	 * reports is then a use like any other (reported, in flight), and the first sync acknowledges it by its fall instead of
+	 * putting it back. Nothing once a sync has arrived; false then.
+	 */
+	public boolean seed(Map<String, Integer> actual) {
+		if (this.synced || !this.inFlight().isEmpty()) {
+			// a sync arrived, or a use from the last seed is on its way: the bag it left is the reference now
+			return false;
+		}
+		this.settled(actual);
+		Map<String, Integer> bag = new LinkedHashMap<>();
+		for (String item : BagItems.gen1Items()) {
+			bag.put(item, Math.max(0, Math.min(MAX, actual.getOrDefault(item, 0))));
+		}
+		this.lastBag = bag;
+		return true;
 	}
 
 	/** The inventory after a sync was applied: the new reference (an item that didn't fit counts as it is). */
@@ -162,6 +187,18 @@ public final class BagLedger {
 			}
 		}
 		return total;
+	}
+
+	/** Every item with uses reported and not yet seen applied, and how many (diagnostics), in item order. */
+	public Map<String, Integer> inFlight() {
+		Map<String, Integer> out = new java.util.TreeMap<>();
+		for (String item : this.inFlight.keySet()) {
+			int qty = this.inFlight(item);
+			if (qty > 0) {
+				out.put(item, qty);
+			}
+		}
+		return out;
 	}
 
 	/** The reference count of an item (tests, diagnostics); -1 before the first sync. */

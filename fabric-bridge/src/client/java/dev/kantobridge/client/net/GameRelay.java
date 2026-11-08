@@ -67,6 +67,10 @@ public final class GameRelay {
 
 		/** A counted warning: a short code and how many so far. */
 		void warn(String code, long count);
+
+		/** A bag trace line ({@code dev.kantobridge.bag.BagTrace}): {@code kv} alternates keys and values. Nothing by default. */
+		default void trace(String event, Object... kv) {
+		}
 	}
 
 	/**
@@ -134,6 +138,8 @@ public final class GameRelay {
 	private final Map<String, Long> warnings = new TreeMap<>();
 	/** bag.use messages gen1-bridge couldn't get yet. */
 	private final Deque<JsonObject> pendingUses = new ArrayDeque<>();
+	/** The last {@code bag.sync} gen1-bridge sent: its bag as it stands (it sends a new one whenever the bag changes). */
+	private @Nullable JsonObject lastBag;
 	private final boolean dexUp;
 	/** FP4: party.item id -> the seq gen1-bridge sent it with (the newest {@link #RECORDS_MAX}). */
 	private final Map<String, Long> itemSeqs = new LinkedHashMap<>();
@@ -189,12 +195,35 @@ public final class GameRelay {
 	 * replaces an older one there (it is a whole state, not a request), at the end, behind what came before it.
 	 */
 	private void bagSync(JsonObject data) {
+		this.lastBag = data.deepCopy();
 		if (this.queue.isEmpty() && this.port.toServer(MsgTypes.BAG_SYNC, data)) {
 			this.stats.bagSyncsRelayed++;
+			this.port.trace("sync.up", "stamp", traceStamp(data), "items", data.get("items"));
 			return;
 		}
-		this.queue.removeIf(queued -> queued.type().equals(MsgTypes.BAG_SYNC));
+		boolean replaced = this.queue.removeIf(queued -> queued.type().equals(MsgTypes.BAG_SYNC));
 		this.enqueue(MsgTypes.BAG_SYNC, data);
+		this.port.trace("sync.queued", "stamp", traceStamp(data), "replaced", replaced, "waiting", this.queue.size(), "items",
+				data.get("items"));
+	}
+
+	/**
+	 * The last bag gen1-bridge sent goes to the server again (a world opened on a link that stayed up: gen1-bridge sends a
+	 * {@code bag.sync} only when its bag changes, so the new world's server would otherwise go without one, and the mirror
+	 * wouldn't follow the bag until it changed). Nothing when there is none yet or one already waits. True when sent or queued.
+	 */
+	public boolean resendBag() {
+		if (this.lastBag == null || this.bagPending()) {
+			return false;
+		}
+		this.port.trace("sync.resent", "why", "a world opened");
+		this.bagSync(this.lastBag.deepCopy());
+		return true;
+	}
+
+	private static String traceStamp(JsonObject data) {
+		JsonElement stamp = data.get("stamp");
+		return stamp != null && stamp.isJsonPrimitive() ? stamp.getAsString().substring(0, Math.min(6, stamp.getAsString().length())) : "-";
 	}
 
 	private void battleStart(JsonObject data, long now) {
@@ -315,9 +344,14 @@ public final class GameRelay {
 
 	/** {@code bag.use}s that waited for gen1-bridge go to it, in order, as far as it takes them. */
 	public void flushUses() {
+		int sent = 0;
 		while (!this.pendingUses.isEmpty() && this.port.toBridge(MsgTypes.BAG_USE, this.pendingUses.peekFirst().deepCopy())) {
 			this.pendingUses.removeFirst();
 			this.stats.bagUsesForwarded++;
+			sent++;
+		}
+		if (sent > 0 || !this.pendingUses.isEmpty()) {
+			this.port.trace("use.flushed", "sent", sent, "stillWaiting", this.pendingUses.size());
 		}
 	}
 
@@ -337,6 +371,7 @@ public final class GameRelay {
 		if (dropped > 0) {
 			this.pendingUses.clear();
 			this.warn("bag.uses_dropped");
+			this.port.trace("use.dropped", "count", dropped, "why", "another world");
 		}
 		return dropped;
 	}
@@ -376,6 +411,7 @@ public final class GameRelay {
 	private void bagUse(JsonObject data) {
 		if (this.pendingUses.isEmpty() && this.port.toBridge(MsgTypes.BAG_USE, data)) {
 			this.stats.bagUsesForwarded++;
+			this.port.trace("use.down", "item", data.get("item"), "qty", data.get("qty"), "region", data.get("region"), "to", "bridge");
 			return;
 		}
 		if (this.pendingUses.size() >= QUEUE_MAX) {
@@ -384,6 +420,8 @@ public final class GameRelay {
 		}
 		this.pendingUses.addLast(data);
 		this.stats.bagUsesQueued++;
+		this.port.trace("use.down", "item", data.get("item"), "qty", data.get("qty"), "region", data.get("region"), "to", "queue",
+				"waiting", this.pendingUses.size());
 	}
 
 	/** Joined a server: party requests that waited go out. */
@@ -469,6 +507,7 @@ public final class GameRelay {
 			this.queue.removeFirst();
 			if (next.type().equals(MsgTypes.BAG_SYNC)) {
 				this.stats.bagSyncsRelayed++;
+				this.port.trace("sync.up", "stamp", traceStamp(next.data()), "from", "queue", "items", next.data().get("items"));
 			} else if (next.type().equals(MsgTypes.GAME_STATUS)) {
 				this.stats.statusRelayed++;
 			} else {

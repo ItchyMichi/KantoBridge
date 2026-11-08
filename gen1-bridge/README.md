@@ -266,8 +266,10 @@ test drivers), guarded so the hook always calls `next`:
     and, once the server has projected its ledger into this save, the projection's stamp (`mod.save
     "ledger"`), after every snapshot and whenever one of them changes, only in game. `bag.use{item,
     qty}` takes the **mirrored** items -- the catalogue's items with a Cobblemon item and a battle-usable
-    class, PLAN Appendix B's 29 -- out of the hidden game's bag through the engine's `Bag.remove`, never
-    below zero (a counted mismatch warning); anything else is refused (`error bag.not_mirrored`).
+    class (PLAN Appendix B's 29, Rare Candy, the vitamins, PP Up) and those with a `placeholder`
+    (Repel, Super Repel, Max Repel, Escape Rope, Nugget) -- out of the hidden game's bag through the
+    engine's `Bag.remove`, never below zero (a counted mismatch warning); anything else is refused
+    (`error bag.not_mirrored`). Each use keeps its arrival, counted together with `bag.set`'s.
     **`bag.set{items, money, stamp}`** (`act/kb_ledger.lua`, MG6) is the server's projection of the
     player's ledger into this save on a `region.resume` or after a `region.start`: when the world is
     free (in game, standing, no script, warp, battle or screen, no save-slot switch waiting; at most 120
@@ -277,7 +279,14 @@ test drivers), guarded so the hook always calls `next`:
     answered as `act.result{kind:"bag.set", ok:false, reason:"too_many", left}` (the rest is written
     anyway), else `ok:true`; `save.money` is written; the stamp lands in `mod.save "ledger"` and the
     `bag.sync` of the same step echoes it. Symbols the game's table doesn't know are dropped and counted
-    (`bag.set_unknown`).
+    (`bag.set_unknown`). What changed while the request waited stays: the bag and money are noted when
+    it arrives (once every `bag.use` that arrived before it has applied), and the landing writes the
+    projection plus the change since (a `bag.use` applied meanwhile, an item found, prize money;
+    `ledgerKept` counts such landings); a landing moves the notes of the requests still waiting, so it
+    never counts as their game's own change. Both log a **bag trace** at info (`bagtrace.use_in`,
+    `use_applied`, `use_refused`, `sync_out`, `set_in`, `set_before`, `set_land`, `set_answer`,
+    `set_dropped`; item symbols as fields, the wall clock as `t`), the hidden half of fabric-bridge's
+    `logs/kb-bagtrace.log`.
 17. **Items on a party member** (kb_engine's `item.use` wrapper around BagMenu's use-flow): while a
     client is connected, an evolution stone the member's species evolves with and RARE_CANDY (below
     level 100) are Cobblemon's to apply: the Gen 1 effect is skipped, the item is used up from the
@@ -677,8 +686,8 @@ checked once at `game.ready` (`engine.missing`), and gets the pin as `opts.check
 | `act/kb_save.lua` | Saving and sessions (M7): `save.writing` → `save.begin` (reason `menu` or `center`, the newest waiting while no client is connected; M9: the save before a slot switch never announced, nothing announced while a switch waits), the nurse's heal (Cobblemon's `party.heal`, then the center save), `save.done` (log only, counted), the bound world kept in `mod.save` once the pairing answers. M10: each save's pair written into its own mod data and announced as `save.begin.pair`/`at`; the running save's identity (fresh, pair, ops) in the process-lifetime slot; `save.loaded` after a bind and on entering the game; the operations counted as they first go out; the save before a slot switch keeping its world's pair. |
 | `act/kb_pairing.lua` | M9: online save pairing (item 27): `session.bind` → the world's slot (created and labelled on its first bind) or, singleplayer, the current or home slot; the runtime switch (title, an unsaved New Game, a saved game saved first), waiting with its reason (M10: `session.waiting`), `session.bound{slot, switched}` once done; the pairing file in `mod.cache` (MG1: one per game, `session/pairings.<game>.json`, through `.tmp`, with `.bak`; the legacy `session/pairings.json` read once for the game's entry); the drivers' exports. |
 | `act/kb_pc.lua` | Bill's PC (M7): `pc.open` once per hold kb_engine's `ui.pc.items` wrapper sets up, `pc.closed` ending it, a dropped link releasing it, counts. M10: a fresh id per `pc.open`, only the `pc.closed` naming it ending the hold (stale ids counted and ignored). |
-| `observe/kb_bag.lua` | The bag for the ledger (MG6): every non-key catalogue item, the money and the projection stamp as `bag.sync` (after snapshots and on change, in game only); `bag.use` on the mirrored items (PLAN Appendix B's 29: a Cobblemon item and a battle-usable class) applied through kb_engine's `Bag.remove` (never below zero, mismatches counted, unmirrored items refused). |
-| `act/kb_ledger.lua` | MG6: `bag.set`, the server's projection of the player's ledger into this save (the adapter's `bagSet`: the catalogue's non-key items replaced within 20 slots and 99 a stack, class order, the money written, key items and unknown items untouched), answered by `act.result{kind:"bag.set"}` with `too_many` and `left` for what did not fit, `not_ingame`, `busy`; the stamp into `mod.save "ledger"`. |
+| `observe/kb_bag.lua` | The bag for the ledger (MG6): every non-key catalogue item, the money and the projection stamp as `bag.sync` (after snapshots and on change, in game only); `bag.use` on the mirrored items (a Cobblemon item and a battle-usable class: PLAN Appendix B's 29, Rare Candy, the vitamins, PP Up; or a placeholder: the repels, Escape Rope, Nugget) applied through kb_engine's `Bag.remove` (never below zero, mismatches counted, unmirrored items refused); `applyUses(through)` applies the waiting uses that arrived before a `bag.set`. |
+| `act/kb_ledger.lua` | MG6: `bag.set`, the server's projection of the player's ledger into this save (the adapter's `bagSet`: the catalogue's non-key items replaced within 20 slots and 99 a stack, class order, the money written, key items and unknown items untouched), answered by `act.result{kind:"bag.set"}` with `too_many` and `left` for what did not fit, `not_ingame`, `busy`; the stamp into `mod.save "ledger"`; the landing keeps what changed in the bag and money while it waited. |
 | `observe/kb_npcs.lua` | The NPC observer: `npc.set`/`add`/`remove`/`move`/`face` and `emote` from a per-step diff by id; `Npcs.shape`, the one place an NPC becomes a protocol entry. |
 | `observe/kb_story.lua` | M8: the story diffs (`story.flags`, `story.toggles`, `story.blocks`, `story.lit`), the snapshot's story parts (`rebase`), and the check that every block change is a known one (`story.unknown_block`). |
 | `observe/kb_ui.lua` | The UI observer: the stack's states as `ui.open`/`update`/`close` by kind, the protocol text markup (`Ui.markup`), re-announcing after a snapshot. |

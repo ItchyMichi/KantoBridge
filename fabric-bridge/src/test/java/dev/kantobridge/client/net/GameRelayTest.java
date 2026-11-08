@@ -245,6 +245,30 @@ class GameRelayTest {
 		assertEquals(2, this.links.server.size());
 	}
 	@Test
+	void aWorldOpeningSendsTheLastBagAgain() throws Exception {
+		// Nothing to send before gen1-bridge's first bag.
+		assertFalse(this.relay.resendBag());
+		Envelope bag = this.message(MsgTypes.BAG_SYNC, "{\"items\":{\"POKE_BALL\":5},\"money\":3000,\"stamp\":\"0123456789abcdef\"}");
+		this.relay.fromBridge(bag, 0);
+		assertEquals(1, this.links.server.size());
+		// A world opened on the link that stayed up: the new world's server gets the bag as it stands, unchanged.
+		assertTrue(this.relay.resendBag());
+		assertEquals(List.of(MsgTypes.BAG_SYNC, MsgTypes.BAG_SYNC), this.links.server.stream().map(Sent::type).toList());
+		assertEquals(ProtoJson.write(bag.data()), ProtoJson.write(this.links.server.get(1).data()));
+		// A newer bag waiting for the server is the one that goes: no resend in front of it.
+		this.links.serverUp = false;
+		this.relay.fromBridge(this.message(MsgTypes.BAG_SYNC, "{\"items\":{\"POKE_BALL\":4}}"), 10);
+		assertFalse(this.relay.resendBag());
+		this.links.serverUp = true;
+		this.relay.tick(20);
+		assertEquals(3, this.links.server.size());
+		assertEquals(4, this.links.server.get(2).data().getAsJsonObject("items").get("POKE_BALL").getAsInt());
+		// The last bag is now that one.
+		assertTrue(this.relay.resendBag());
+		assertEquals(4, this.links.server.get(3).data().getAsJsonObject("items").get("POKE_BALL").getAsInt());
+	}
+
+	@Test
 	void theBagGoesUpAndTheNewestWaitsForTheServer() throws Exception {
 		Envelope bag = this.message(MsgTypes.BAG_SYNC, "{\"items\":{\"POKE_BALL\":5,\"POTION\":2}}");
 		this.relay.fromBridge(bag, 0);

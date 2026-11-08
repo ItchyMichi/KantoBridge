@@ -10,6 +10,7 @@ import dev.kantobridge.builder.HeadlessBuild;
 import dev.kantobridge.dungeon.DungeonService;
 import dev.kantobridge.entity.DeferredRemovals;
 import dev.kantobridge.entity.KbEntities;
+import dev.kantobridge.item.KbItems;
 import dev.kantobridge.net.RelayHandshake;
 import dev.kantobridge.net.RelayService;
 import dev.kantobridge.pokemon.DaycareService;
@@ -53,6 +54,8 @@ public class KantoBridge implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		KbBlocks.register();
+		// The bag mirror's placeholders for hidden-game items Cobblemon has no item for (Repel, Escape Rope, Nugget).
+		KbItems.register();
 		// The NPC puppet type: registered on both sides so registries agree, spawned only by clients (docs/PLAN.md §4.2).
 		KbEntities.register();
 		// Entity removals that can't run inside the server's entity tracking (a Pokémon whose owner leaves).

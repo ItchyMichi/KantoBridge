@@ -162,6 +162,8 @@ public final class SaveService {
 			return;
 		}
 		// The hidden game saved: its pair goes into the player's data before this save writes it (a repeat changes nothing).
+		dev.kantobridge.bag.BagTrace.server("save.begin", "p", dev.kantobridge.bag.BagTrace.who(player.getUUID()), "region", region,
+				"reason", reason, "pair", dev.kantobridge.bag.BagTrace.stamp(pair));
 		SavePairService.saveBegun(player, region, pair, at);
 		LinkedHashMap<String, Boolean> answers = ANSWERS.computeIfAbsent(player.getUUID(), key -> new LinkedHashMap<>());
 		Boolean before = answers.get(save);

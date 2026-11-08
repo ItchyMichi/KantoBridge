@@ -4,8 +4,9 @@ catalogue the bag holds (MG6: balls, medicine, X items, field items, stones, val
 the server's ledger; never key items, HMs or badges), with the money and the projection stamp,
 after every snapshot and whenever one of them changes; bag.use takes items out of the hidden game's
 bag through Bag.remove (never below zero, a counted mismatch warning), refuses items that aren't
-mirrored (the 29 battle items of PLAN Appendix B with a Cobblemon item), waits at the title, and is
-for client and test roles only. Every message the peer receives is schema-checked (rig.Peer,
+mirrored (the 29 battle items of PLAN Appendix B, Rare Candy, the vitamins and PP Up with a Cobblemon
+item, and the placeholders for Repel, Escape Rope and Nugget), waits at the title, and is for client
+and test roles only. Every message the peer receives is schema-checked (rig.Peer,
 strict). All data is made up (battlesim.py)."""
 
 import pytest
@@ -22,6 +23,10 @@ APPENDIX_B = [
     "ETHER", "MAX_ETHER", "ELIXER", "MAX_ELIXER",
     "X_ATTACK", "X_ACCURACY", "X_SPEED", "X_DEFEND", "X_SPECIAL", "DIRE_HIT", "GUARD_SPEC",
 ]
+# Rare Candy, the vitamins and PP Up as Cobblemon's items; the placeholders for items Cobblemon lacks
+CANDY_AND_VITAMINS = ["RARE_CANDY", "HP_UP", "PROTEIN", "IRON", "CALCIUM", "CARBOS", "PP_UP"]
+PLACEHOLDERS = ["REPEL", "SUPER_REPEL", "MAX_REPEL", "ESCAPE_ROPE", "NUGGET"]
+MIRRORED = APPENDIX_B + CANDY_AND_VITAMINS + PLACEHOLDERS
 
 
 def syncs(g):
@@ -52,15 +57,15 @@ def lua_list(t):
     return [t[i].decode() for i in range(1, len(t) + 1)]
 
 
-def test_the_mirrored_set_is_appendix_b_and_the_synced_set_every_non_key_item():
+def test_the_mirrored_set_and_the_synced_set_every_non_key_item():
     # MG6: both sets come from the canonical item catalogue (lib/kb_items.lua), never a literal list
     from kblua import Bridge
     b = Bridge()
     Bag = b.module("observe/kb_bag.lua")
     mirrored, synced = Bag.sets(b.module("lib/kb_items.lua"), b"gen1")
-    assert sorted(k.decode() for k in mirrored.keys()) == sorted(APPENDIX_B)
+    assert sorted(k.decode() for k in mirrored.keys()) == sorted(MIRRORED)
     synced = lua_list(synced)
-    assert synced == sorted(synced) and set(APPENDIX_B) <= set(synced)
+    assert synced == sorted(synced) and set(MIRRORED) <= set(synced)
     assert {"REPEL", "RARE_CANDY", "NUGGET", "MOON_STONE", "TM_MEGA_PUNCH", "HP_UP"} <= set(synced)
     assert not {"TOWN_MAP", "HM_CUT", "BOULDERBADGE", "BICYCLE", "COIN"} & set(synced), "key items, HMs and badges never"
     assert len(synced) == 128 - 28, "the catalogue's 128 items minus its 28 key ones"
@@ -170,11 +175,23 @@ def test_items_that_are_not_mirrored_are_refused():
     g = bag_game()
     g.connect()
     a = g.send("bag.use", {"item": "TOWN_MAP", "qty": 1})
-    b = g.send("bag.use", {"item": "REPEL", "qty": 1})
+    b = g.send("bag.use", {"item": "MOON_STONE", "qty": 1})
     g.run()
     assert ("bag.not_mirrored", a) in errors(g) and ("bag.not_mirrored", b) in errors(g)
-    assert g.E.save.inventory.TOWN_MAP == 1 and g.E.save.inventory.REPEL == 3
+    assert g.E.save.inventory.TOWN_MAP == 1
     assert g.status()["bagRefused"] == 2
+
+
+def test_placeholders_and_candy_are_mirrored_and_taken():
+    """A Repel (a placeholder in Minecraft) and a Rare Candy (Cobblemon's) used up in Minecraft leave the bag too."""
+    g = bag_game()
+    g.connect()
+    g.send("bag.use", {"item": "REPEL", "qty": 1})
+    g.send("bag.use", {"item": "RARE_CANDY", "qty": 2})
+    g.run()
+    assert g.E.save.inventory.REPEL == 2 and g.E.save.inventory.RARE_CANDY is None
+    assert syncs(g)[-1] == {"POKE_BALL": 5, "POTION": 2, "X_ATTACK": 1, "REPEL": 2}
+    assert g.status()["bagRefused"] == 0
 
 
 @pytest.mark.parametrize("bad", [

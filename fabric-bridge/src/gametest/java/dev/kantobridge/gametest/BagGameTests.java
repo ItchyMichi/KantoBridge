@@ -5,6 +5,8 @@ import com.cobblemon.mod.common.battles.BattleRegistry;
 import dev.kantobridge.bag.BagItems;
 import dev.kantobridge.bag.BagService;
 import dev.kantobridge.battle.EncounterService;
+import dev.kantobridge.item.KbItems;
+import dev.kantobridge.item.PlaceholderItem;
 import dev.kantobridge.net.RelayService;
 import dev.kantobridge.proto.Envelope;
 import dev.kantobridge.proto.MsgTypes;
@@ -64,14 +66,53 @@ public class BagGameTests implements FabricGameTest {
 	}
 
 	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH)
-	public void everyMirroredItemIsACobblemonItem(GameTestHelper helper) {
+	public void everyMirroredItemIsRegistered(GameTestHelper helper) {
 		Map<String, Item> items = BagService.items();
 		for (Map.Entry<String, String> entry : BagItems.table().entrySet()) {
-			helper.assertTrue(items.containsKey(entry.getKey()), "Cobblemon 1.8.1 has no item cobblemon:" + entry.getValue());
-			helper.assertTrue(BuiltInRegistries.ITEM.getKey(items.get(entry.getKey())).getPath().equals(entry.getValue()), entry.getKey());
+			helper.assertTrue(items.containsKey(entry.getKey()), "no item " + entry.getValue() + " (Cobblemon 1.8.1's, or a placeholder)");
+			helper.assertTrue(BuiltInRegistries.ITEM.getKey(items.get(entry.getKey())).toString().equals(entry.getValue()), entry.getKey());
 		}
 		helper.assertTrue(BagService.warnings("item_missing") == 0, "a mirrored item is missing");
+		helper.assertTrue(items.get("RARE_CANDY") != null
+				&& BuiltInRegistries.ITEM.getKey(items.get("RARE_CANDY")).toString().equals("cobblemon:rare_candy"), "Rare Candy isn't Cobblemon's");
+		for (String placeholder : List.of("REPEL", "SUPER_REPEL", "MAX_REPEL", "ESCAPE_ROPE", "NUGGET")) {
+			helper.assertTrue(items.get(placeholder) instanceof PlaceholderItem, placeholder + " isn't a placeholder item");
+		}
+		helper.assertTrue(KbItems.placeholders().size() == 5, "placeholders registered: " + KbItems.placeholders().keySet());
 		helper.succeed();
+	}
+
+	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH, timeoutTicks = 100)
+	public void aPlaceholderIsMirroredAndItsUseReported(GameTestHelper helper) {
+		ServerPlayer player = MockPlayers.join(helper);
+		RelayTap.Recorder relay = RelayTap.open(player);
+		Item repel = BuiltInRegistries.ITEM.get(ResourceLocation.fromNamespaceAndPath("kantobridge", "repel"));
+		try {
+			sync(player, 1, "{\"REPEL\":3,\"NUGGET\":1}");
+			helper.assertTrue(player.getInventory().countItem(repel) == 3, "the Repels weren't mirrored");
+			// Dropped, given away or used up some other way: the hidden bag gives it up too, as for any mirrored item.
+			Inventory inventory = player.getInventory();
+			for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
+				if (inventory.getItem(slot).is(repel)) {
+					inventory.getItem(slot).shrink(1);
+					break;
+				}
+			}
+		} catch (RuntimeException e) {
+			relay.close();
+			MockPlayers.leave(helper, player);
+			throw e;
+		}
+		helper.startSequence()
+				.thenWaitUntil(() -> helper.assertTrue(!uses(relay).isEmpty(), "no bag.use yet"))
+				.thenExecute(() -> {
+					List<Envelope> uses = uses(relay);
+					helper.assertTrue(uses.size() == 1 && uses.get(0).data().get("item").getAsString().equals("REPEL")
+							&& uses.get(0).data().get("qty").getAsInt() == 1, "the use: " + uses);
+					relay.close();
+					MockPlayers.leave(helper, player);
+				})
+				.thenSucceed();
 	}
 
 	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH, timeoutTicks = 100)
@@ -168,6 +209,52 @@ public class BagGameTests implements FabricGameTest {
 					helper.assertTrue(uses.size() == 1 && uses.get(0).data().get("item").getAsString().equals("POTION"), "wrong use");
 				});
 		MockPlayers.leaveAfterBattle(helper, end, relay::close, player);
+	}
+
+	// ---- a rejoin: the hidden game reports only when its bag changes (2026-11-07) ----
+
+	/** {@code n} of the mirror's own (marked) balls, as a rejoining player's saved inventory holds them. */
+	static ItemStack markedBalls(int n) {
+		ItemStack stack = new ItemStack(item("poke_ball"), n);
+		CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> tag.putBoolean(MARK, true));
+		return stack;
+	}
+
+	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH, timeoutTicks = 100)
+	public void aBallThrownBeforeTheFirstSyncStaysThrown(GameTestHelper helper) {
+		ServerPlayer player = MockPlayers.join(helper);
+		RelayTap.Recorder relay = RelayTap.open(player);
+		try {
+			// Rejoined with five of the mirror's balls; Gen1Recomp kept running, so no bag.sync comes until its bag changes.
+			helper.assertTrue(player.getInventory().add(markedBalls(5)), "the balls didn't fit");
+			BagService.joined(player);
+			helper.assertTrue(BagService.reference(player, "POKE_BALL") == 5, "the join didn't take the inventory as the reference");
+			consume(helper, player, "poke_ball");
+		} catch (RuntimeException e) {
+			relay.close();
+			MockPlayers.leave(helper, player);
+			throw e;
+		}
+		helper.startSequence()
+				.thenWaitUntil(() -> helper.assertTrue(!uses(relay).isEmpty(), "the throw before any sync wasn't reported"))
+				.thenExecute(() -> {
+					List<Envelope> uses = uses(relay);
+					helper.assertTrue(uses.size() == 1 && uses.get(0).data().get("item").getAsString().equals("POKE_BALL")
+							&& uses.get(0).data().get("qty").getAsInt() == 1, "the use: " + uses);
+					// The hidden game's first report still crosses the use (five): the ball stays thrown.
+					sync(player, 1, "{\"POKE_BALL\":5}");
+					helper.assertTrue(marked(player, "poke_ball") == 4, "the first sync put the thrown ball back: " + marked(player, "poke_ball"));
+					// Its next shows the use applied: still four, nothing given back or taken.
+					sync(player, 2, "{\"POKE_BALL\":4}");
+					helper.assertTrue(marked(player, "poke_ball") == 4, "the applied use changed the inventory: " + marked(player, "poke_ball"));
+					helper.assertTrue(BagService.inFlight(player, "POKE_BALL") == 0, "the use wasn't acknowledged");
+				})
+				.thenExecuteAfter(12, () -> {
+					helper.assertTrue(uses(relay).size() == 1, "the syncs were reported as uses");
+					relay.close();
+					MockPlayers.leave(helper, player);
+				})
+				.thenSucceed();
 	}
 
 	// ---- marked stacks (MG6) ----

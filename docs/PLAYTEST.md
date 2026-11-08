@@ -1194,6 +1194,28 @@ Quit" saves them first. Start every game the world needs (or use `-Engines minec
 - [ ] **Reading at your own pace:** the same text without hurrying still turns page by page, and a yes/no at the end
       (the nurse's) still opens over the text.
 
+## The bag mirror (2026-11-07; the mod and gen1-bridge: rebuild the mod, restart Gen1Recomp, no world rebuild)
+- [ ] **Found items show up:** in Viridian's wild route, pick up item balls until you get a Repel, an Escape Rope, a
+      Nugget and a Rare Candy. Each appears in the Minecraft inventory. The Repel, Escape Rope and Nugget are
+      placeholders (a bottle, a lead, a gold nugget) whose tooltip says to use or sell them from the game's bag; the Rare
+      Candy is Cobblemon's.
+- [ ] **Placeholders follow the bag:** use a Repel from the hidden game's bag and sell the Nugget at a Mart: each leaves
+      the Minecraft inventory too. Right-clicking a placeholder in Minecraft does nothing.
+- [ ] **Rare Candy and vitamins from Minecraft:** give a party Pokémon a Rare Candy (and an HP Up, if you have one) from
+      the Minecraft inventory: it levels up in Cobblemon, the candy is gone from both the inventory and the hidden bag
+      (open the bag in the game), and it doesn't come back after a heal.
+- [ ] **Thrown balls stay thrown:** throw several balls outside battle (miss some, pick those up), walk around, then
+      heal at a Pokémon Center and save. The inventory holds what it held after the throws (the balls picked up count as
+      yours), and the hidden bag has the balls you threw taken out. Repeat while walking without stopping, right after
+      joining the world.
+- [ ] **Another region:** in Hoenn or Johto, throw a ball: that game's bag loses it, and Blue's doesn't.
+- [x] **After a rejoin:** in Kanto with some Poké Balls, Save and Quit, rejoin the world without restarting Gen1Recomp,
+      throw a ball or two (miss, pick them up), then pick up an item ball or buy something at the Mart. The thrown balls
+      don't come back, and the hidden bag has them taken out. (Confirmed by the user, 2026-11-07.)
+- [ ] **If an item comes back or goes missing:** note the time, then send `local/minecraft/logs/kb-bagtrace.log` (the
+      Minecraft side) and the `bagtrace.` lines from Gen1Recomp's `--console` window (the hidden game's side). Both hold
+      item names and counts only.
+
 ## Emerald's text box (2026-11-02; the mod only: rebuild it, no world rebuild)
 - [ ] **Every line fits:** talk to several people in Emerald (Mom, a sign, a Pokémon Center nurse). Each line stays
       inside the box, the top line too. A line drawn a little narrower than the others is the safety net working; note

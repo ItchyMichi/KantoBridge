@@ -173,6 +173,7 @@ return {
     },
     calcium = {
       class = "medicine",
+      cobblemon = "calcium",
       symbols = {
         gen1 = "CALCIUM",
         gen2 = "CALCIUM",
@@ -181,6 +182,7 @@ return {
     },
     carbos = {
       class = "medicine",
+      cobblemon = "carbos",
       symbols = {
         gen1 = "CARBOS",
         gen2 = "CARBOS",
@@ -348,6 +350,7 @@ return {
     },
     escape_rope = {
       class = "field",
+      placeholder = "escape_rope",
       symbols = {
         gen1 = "ESCAPE_ROPE",
         gen2 = "ESCAPE_ROPE",
@@ -607,6 +610,7 @@ return {
     },
     hp_up = {
       class = "medicine",
+      cobblemon = "hp_up",
       symbols = {
         gen1 = "HP_UP",
         gen2 = "HP_UP",
@@ -640,6 +644,7 @@ return {
     },
     iron = {
       class = "medicine",
+      cobblemon = "iron",
       symbols = {
         gen1 = "IRON",
         gen2 = "IRON",
@@ -866,6 +871,7 @@ return {
     },
     max_repel = {
       class = "field",
+      placeholder = "max_repel",
       symbols = {
         gen1 = "MAX_REPEL",
         gen2 = "MAX_REPEL",
@@ -992,6 +998,7 @@ return {
     },
     nugget = {
       class = "valuable",
+      placeholder = "nugget",
       symbols = {
         gen1 = "NUGGET",
         gen2 = "NUGGET",
@@ -1170,6 +1177,7 @@ return {
     },
     pp_up = {
       class = "medicine",
+      cobblemon = "pp_up",
       symbols = {
         gen1 = "PP_UP",
         gen2 = "PP_UP",
@@ -1178,6 +1186,7 @@ return {
     },
     protein = {
       class = "medicine",
+      cobblemon = "protein",
       symbols = {
         gen1 = "PROTEIN",
         gen2 = "PROTEIN",
@@ -1214,6 +1223,7 @@ return {
     },
     rare_candy = {
       class = "medicine",
+      cobblemon = "rare_candy",
       symbols = {
         gen1 = "RARE_CANDY",
         gen2 = "RARE_CANDY",
@@ -1243,6 +1253,7 @@ return {
     },
     repel = {
       class = "field",
+      placeholder = "repel",
       symbols = {
         gen1 = "REPEL",
         gen2 = "REPEL",
@@ -1474,6 +1485,7 @@ return {
     },
     super_repel = {
       class = "field",
+      placeholder = "super_repel",
       symbols = {
         gen1 = "SUPER_REPEL",
         gen2 = "SUPER_REPEL",

@@ -2,6 +2,7 @@ package dev.kantobridge.server;
 
 import com.google.gson.JsonObject;
 import dev.kantobridge.KantoBridge;
+import dev.kantobridge.bag.BagTrace;
 import dev.kantobridge.net.RelayService;
 import dev.kantobridge.proto.Envelope;
 import dev.kantobridge.proto.Ids;
@@ -42,17 +43,27 @@ import org.jetbrains.annotations.Nullable;
  * a projection; with another stamp (an older save restored) → a fresh projection, no diff.</li>
  * <li>Projections are sent after a crossing ({@link PassService} → {@link #onFollowed}), after an adoption, and again
  * when the game answered {@code busy} (a few ticks later) or {@code not_ingame} (on its next {@code save.loaded}).</li>
+ * <li><b>One projection on its way per region.</b> A {@code bag.set} waits in the hidden game for a free moment. Until
+ * its answer comes back (matched by its {@code seq}: the client forwards {@code act.result} with it as {@code re}) or a
+ * report carries its stamp, a report with an older stamp predates it and is left alone (it isn't an older save: projecting
+ * again would put two on their way, and each landing would answer with a stamp the other replaced, forever), and a new
+ * projection waits for that answer and goes then. A projection unanswered for {@value #AWAIT_TICKS} ticks counts as lost.</li>
  * <li>The forwarded {@code act.result{kind:"bag.set"}} says what the bag could not hold ({@code left}): it stays in the
  * ledger ("in your trunk") and the remembered projection shrinks by it, so the next read-back doesn't count the
  * shortfall as consumption.</li>
- * <li>A mirrored item Minecraft consumed debits the ledger ({@link #use}); the followed game still gets its
- * {@code bag.use}, and its baseline moves with it.</li>
+ * <li>A mirrored item Minecraft consumed debits the ledger ({@link #use}); the followed game (else the legacy region's)
+ * gets its {@code bag.use}, tagged with its region and by its own symbol, and its baseline moves with it.</li>
  * </ul>
  * Logs carry region ids, counts and codes only. Server thread only.
  */
 public final class LedgerService {
 	/** Ticks before a projection refused {@code busy} is sent again. */
 	static final int RETRY_TICKS = 40;
+	/**
+	 * Ticks a projection may stay unanswered before it counts as lost (a dropped link: the client forwards nothing). gen1-bridge
+	 * answers within its wait for a free moment (120 logic steps, two seconds), so this is generous.
+	 */
+	static final int AWAIT_TICKS = 300;
 	private static final Set<String> RESULT_FIELDS = Set.of("ok", "kind", "reason", "detail", "moved", "left", "region");
 	private static final Pattern REASON = Pattern.compile("^[a-z][a-z0-9_.]{0,63}$");
 	private static final Random RANDOM = new SecureRandom();
@@ -65,6 +76,23 @@ public final class LedgerService {
 		/** A projection the game refused {@code busy}: again at this tick (-1: none). */
 		long retryAt = -1;
 		@Nullable String game;
+		/** The {@code seq} of the projection on its way (not answered yet), or -1. */
+		long awaitingSeq = -1;
+		/** When it was sent (server ticks). */
+		long sentAt;
+		/** A report carried its stamp: it landed, even if its answer hasn't come yet. */
+		boolean landed;
+		/** A projection asked for while one was on its way: it goes when that one is answered. */
+		boolean owed;
+
+		/** True while a projection is on its way and not given up on. */
+		boolean awaiting(long now) {
+			return this.awaitingSeq >= 0 && !this.landed && now - this.sentAt < AWAIT_TICKS;
+		}
+	}
+
+	/** Where a use in Minecraft went ({@link #use}): the region whose game hears it, and that game's symbol (null: it lacks the item). */
+	public record UseTarget(String region, @Nullable String symbol) {
 	}
 
 	private static final Map<UUID, Map<String, Slot>> SLOTS = new HashMap<>();
@@ -74,6 +102,9 @@ public final class LedgerService {
 	private static final AtomicLong PROJECTIONS = new AtomicLong();
 	private static final AtomicLong REPROJECTED = new AtomicLong();
 	private static final AtomicLong RESULTS = new AtomicLong();
+	private static final AtomicLong DEFERRED = new AtomicLong();
+	private static final AtomicLong WAITED = new AtomicLong();
+	private static final AtomicLong STRAY = new AtomicLong();
 
 	private LedgerService() {
 	}
@@ -115,17 +146,31 @@ public final class LedgerService {
 		if (stamp != null) {
 			if (slot.projected != null && stamp.equals(slot.projected.stamp())) {
 				Ledger out = LedgerRules.readBack(ledger, catalogue, family, slot.projected, bag, money);
+				BagTrace.server("ledger.readback", "p", who(player), "region", region.id(), "stamp", BagTrace.stamp(stamp),
+						"wasProjected", BagTrace.nonZero(slot.projected.items()), "delta", delta(ledger, out), "money",
+						out.money() - ledger.money(), "seq", slot.awaitingSeq, "landed", slot.landed);
 				if (!out.equals(ledger)) {
 					Ledger.set(player, out);
 				}
 				slot.projected = new LedgerRules.Projection(bag, money < 0 ? slot.projected.money() : money, stamp);
+				slot.landed = true;
+			} else if (slot.projected != null && slot.awaiting(player.server.getTickCount())) {
+				// The game still holds the stamp from before the projection on its way: this report predates it. The landing's
+				// own report reads back from there; projecting again now would only put a second one on its way.
+				WAITED.incrementAndGet();
+				BagTrace.server("ledger.waited", "p", who(player), "region", region.id(), "theirs", BagTrace.stamp(stamp), "onItsWay",
+						BagTrace.stamp(slot.projected.stamp()), "seq", slot.awaitingSeq);
+				KantoBridge.LOGGER.debug("ledger: {} reported before its projection landed; waiting for it", region.id());
 			} else if (slot.projected == null && stamp.equals(ledger.stamp(region.id()))) {
 				// After a restart: the save carries the stamp this server projected last, and the ledger already holds
 				// everything that game reported while followed, so its bag is the baseline again.
 				slot.projected = new LedgerRules.Projection(bag, money < 0 ? ledger.money() : money, stamp);
+				BagTrace.server("ledger.baseline", "p", who(player), "region", region.id(), "stamp", BagTrace.stamp(stamp));
 			} else {
 				// An older save restored (save.mismatch kinds): the ledger's view stands.
 				REPROJECTED.incrementAndGet();
+				BagTrace.server("ledger.reproject", "p", who(player), "region", region.id(), "theirs", BagTrace.stamp(stamp), "ours",
+						BagTrace.stamp(slot.projected == null ? ledger.stamp(region.id()) : slot.projected.stamp()));
 				KantoBridge.LOGGER.info("ledger: {} reports a save with another stamp; projecting again", region.id());
 				project(player, region.id(), region.game());
 			}
@@ -133,11 +178,37 @@ public final class LedgerService {
 		}
 		String key = adoptionKey(player, region.id());
 		if (!ledger.isAdopted(key)) {
-			Ledger.set(player, LedgerRules.adopt(ledger, catalogue, family, bag, Math.max(0, money), key));
+			Ledger adopted = LedgerRules.adopt(ledger, catalogue, family, bag, Math.max(0, money), key);
+			BagTrace.server("ledger.adopt", "p", who(player), "region", region.id(), "delta", delta(ledger, adopted), "money",
+					adopted.money() - ledger.money());
+			Ledger.set(player, adopted);
 			ADOPTIONS.incrementAndGet();
 			KantoBridge.LOGGER.info("ledger: adopted a save of {} ({} item kinds, money {})", region.id(), bag.size(), Math.max(0, money));
+		} else {
+			BagTrace.server("ledger.unstamped", "p", who(player), "region", region.id(), "why", "adopted, no projection landed yet");
 		}
 		project(player, region.id(), region.game());
+	}
+
+	/** BagTrace: what changed in the ledger's items, by canonical id. */
+	private static Map<String, Integer> delta(Ledger before, Ledger after) {
+		Map<String, Integer> out = new TreeMap<>();
+		after.items().forEach((id, qty) -> {
+			int d = qty - before.count(id);
+			if (d != 0) {
+				out.put(id, d);
+			}
+		});
+		before.items().forEach((id, qty) -> {
+			if (!after.items().containsKey(id)) {
+				out.put(id, -qty);
+			}
+		});
+		return out;
+	}
+
+	private static String who(ServerPlayer player) {
+		return BagTrace.who(player.getUUID());
 	}
 
 	/** What marks a save as merged: its save pair, or, for a New Game never saved, the region's fresh-game key. */
@@ -148,12 +219,25 @@ public final class LedgerService {
 
 	// ---- bag.set ----
 
-	/** Writes the ledger into a region's game: {@code bag.set} to the player's client, which relays it to that link. */
+	/**
+	 * Writes the ledger into a region's game: {@code bag.set} to the player's client, which relays it to that link. While a
+	 * projection is on its way there, this one waits for its answer and goes then (true: it will be sent).
+	 */
 	public static boolean project(ServerPlayer player, String region, String game) {
 		String family = Games.family(game);
 		if (family == null) {
 			warn("unknown_game");
 			return false;
+		}
+		Slot waiting = slot(player.getUUID(), region);
+		if (waiting.awaiting(player.server.getTickCount())) {
+			waiting.owed = true;
+			waiting.game = game;
+			waiting.pending = false;
+			waiting.retryAt = -1;
+			DEFERRED.incrementAndGet();
+			BagTrace.server("ledger.project.deferred", "p", who(player), "region", region, "onItsWay", waiting.awaitingSeq);
+			return true;
 		}
 		Items catalogue = Items.bundled();
 		Ledger ledger = Ledger.of(player);
@@ -168,7 +252,8 @@ public final class LedgerService {
 		data.addProperty("money", ledger.money());
 		data.addProperty("stamp", stamp);
 		Regions.tag(data, player.server, region);
-		if (!RelayService.get().send(player, MsgTypes.BAG_SET, data, null)) {
+		long seq = RelayService.get().post(player, MsgTypes.BAG_SET, data, null);
+		if (seq <= 0) {
 			warn("send_failed");
 			return false;
 		}
@@ -176,9 +261,15 @@ public final class LedgerService {
 		slot.game = game;
 		slot.pending = false;
 		slot.retryAt = -1;
+		slot.awaitingSeq = seq;
+		slot.sentAt = player.server.getTickCount();
+		slot.landed = false;
+		slot.owed = false;
 		slot.projected = new LedgerRules.Projection(projected.items(), ledger.money(), stamp);
 		Ledger.set(player, ledger.withStamp(region, stamp));
 		PROJECTIONS.incrementAndGet();
+		BagTrace.server("ledger.project", "p", who(player), "tick", player.server.getTickCount(), "region", region, "seq", seq, "stamp",
+				BagTrace.stamp(stamp), "items", projected.items(), "money", ledger.money(), "trunk", projected.left());
 		KantoBridge.LOGGER.info("ledger: projected into {} ({} item kinds, {} left in the trunk)", region, projected.items().size(),
 				projected.left().size());
 		return true;
@@ -201,6 +292,7 @@ public final class LedgerService {
 		if (slot.projected == null && Ledger.of(player).stamp(region) == null) {
 			return;
 		}
+		BagTrace.server("ledger.followed", "p", who(player), "region", region, "why", "a crossing ended");
 		project(player, region, record.game());
 	}
 
@@ -211,6 +303,7 @@ public final class LedgerService {
 		}
 		Slot slot = SLOTS.getOrDefault(player.getUUID(), Map.of()).get(region);
 		if (slot != null && slot.pending && slot.game != null) {
+			BagTrace.server("ledger.loaded", "p", who(player), "region", region, "why", "owed since not_ingame");
 			project(player, region, slot.game);
 		}
 	}
@@ -218,28 +311,37 @@ public final class LedgerService {
 	// ---- consumption in Minecraft ----
 
 	/**
-	 * Minecraft consumed a mirrored item (a thrown ball, a potion): the ledger falls; the followed game's remembered
-	 * projection falls too, since the {@code bag.use} it also receives will show the same fall in its next report.
+	 * Minecraft consumed a mirrored item (a thrown ball, a potion; {@code symbol} is the mirror's Gen 1 symbol): the ledger
+	 * falls, and so does the remembered projection of the followed game (else the legacy region's), since the
+	 * {@code bag.use} that game receives will show the same fall in its next report. Returns where that {@code bag.use}
+	 * goes: the region and its game's symbol for the item (null when its games lack it: the ledger alone held it, and
+	 * nothing goes); null in a legacy world or when no region can take it (the use goes untagged, as before).
 	 */
-	public static void use(ServerPlayer player, String symbol, int qty) {
+	public static @Nullable UseTarget use(ServerPlayer player, String symbol, int qty) {
 		if (!enabled(player.server) || qty <= 0) {
-			return;
+			return null;
 		}
 		Items catalogue = Items.bundled();
 		Ledger.set(player, LedgerRules.use(Ledger.of(player), catalogue, symbol, qty));
-		RegionRecord followed = RegionPresenceService.followed(player);
-		if (followed == null) {
-			return;
+		RegionRecord target = RegionPresenceService.followed(player);
+		if (target == null) {
+			Regions regions = Regions.of(player.server);
+			target = regions == null ? null : regions.legacy();
 		}
-		Slot slot = SLOTS.getOrDefault(player.getUUID(), Map.of()).get(followed.id());
-		if (slot == null || slot.projected == null) {
-			return;
+		if (target == null) {
+			return null;
 		}
 		String id = catalogue.canonical("gen1", symbol);
-		String theirs = id == null ? null : LedgerRules.symbolFor(catalogue, Games.family(followed.game()), id);
-		if (theirs != null) {
+		String theirs = id == null ? null : LedgerRules.symbolFor(catalogue, Games.family(target.game()), id);
+		Slot slot = SLOTS.getOrDefault(player.getUUID(), Map.of()).get(target.id());
+		if (theirs != null && slot != null && slot.projected != null) {
 			slot.projected = slot.projected.less(Map.of(theirs, qty));
 		}
+		BagTrace.server("ledger.use", "p", who(player), "item", symbol, "qty", qty, "target", target.id(), "theirs", theirs, "ledgerNow",
+				id == null ? -1 : Ledger.of(player).count(id), "projectedNow",
+				theirs == null || slot == null || slot.projected == null ? "-" : slot.projected.items().getOrDefault(theirs, 0),
+				"onItsWay", slot == null ? -1 : slot.awaitingSeq);
+		return new UseTarget(target.id(), theirs);
 	}
 
 	/** The mirror's targets in a region world: the ledger's mirrored items by their Gen 1 symbols. */
@@ -279,31 +381,55 @@ public final class LedgerService {
 			return;
 		}
 		RESULTS.incrementAndGet();
-		RegionRecord record;
-		Regions regions = Regions.of(player.server);
-		if (regions == null) {
+		if (Regions.of(player.server) == null) {
 			return;
 		}
-		record = regionId != null ? regions.byId(regionId) : RegionPresenceService.followed(player);
-		if (record == null) {
-			warn("unknown_region");
+		// The answer names its projection by re (the bag.set's seq). An older projection's answer changes nothing: the one
+		// sent after it decides.
+		Map.Entry<String, Slot> answered = answered(player, message.re());
+		BagTrace.server("ledger.answer", "p", who(player), "re", message.re(), "ok", ok, "reason", reason, "left", left, "region",
+				answered == null ? "stray" : answered.getKey(), "owed", answered != null && answered.getValue().owed);
+		if (answered == null) {
+			STRAY.incrementAndGet();
+			KantoBridge.LOGGER.debug("ledger: an answer to a projection not on its way (region {})", regionId == null ? "-" : regionId);
 			return;
 		}
-		Slot slot = slot(player.getUUID(), record.id());
+		String region = answered.getKey();
+		Slot slot = answered.getValue();
+		slot.awaitingSeq = -1;
+		boolean owed = slot.owed;
+		slot.owed = false;
 		if (ok || "too_many".equals(reason)) {
 			// what did not fit stays in the ledger (the trunk); the game's bag holds the rest
 			if (slot.projected != null && !left.isEmpty()) {
 				slot.projected = slot.projected.less(left);
 			}
-			return;
-		}
-		if ("busy".equals(reason)) {
-			slot.retryAt = player.server.getTickCount() + RETRY_TICKS;
 		} else if ("not_ingame".equals(reason)) {
 			slot.pending = true;
+			return;
+		} else if ("busy".equals(reason)) {
+			if (!owed) {
+				slot.retryAt = player.server.getTickCount() + RETRY_TICKS;
+			}
 		} else {
 			warn("refused");
 		}
+		if (owed && slot.game != null) {
+			project(player, region, slot.game);
+		}
+	}
+
+	/** The player's region whose projection on its way was sent as {@code seq}, with its slot; null when none was. */
+	private static Map.@Nullable Entry<String, Slot> answered(ServerPlayer player, @Nullable Long re) {
+		if (re == null) {
+			return null;
+		}
+		for (Map.Entry<String, Slot> entry : SLOTS.getOrDefault(player.getUUID(), Map.of()).entrySet()) {
+			if (entry.getValue().awaitingSeq == re) {
+				return entry;
+			}
+		}
+		return null;
 	}
 
 	private static void tick(MinecraftServer server) {
@@ -318,6 +444,7 @@ public final class LedgerService {
 					slot.retryAt = -1;
 					ServerPlayer online = server.getPlayerList().getPlayer(player.getKey());
 					if (online != null) {
+						BagTrace.server("ledger.retry", "p", who(online), "region", entry.getKey(), "why", "answered busy");
 						project(online, entry.getKey(), slot.game);
 					}
 				}
@@ -365,6 +492,21 @@ public final class LedgerService {
 
 	public static long results() {
 		return RESULTS.get();
+	}
+
+	/** Projections that waited for the one on its way. */
+	public static long deferred() {
+		return DEFERRED.get();
+	}
+
+	/** Reports with an older stamp left alone while a projection was on its way. */
+	public static long waited() {
+		return WAITED.get();
+	}
+
+	/** Answers to a projection that wasn't the one on its way (an older one's). */
+	public static long stray() {
+		return STRAY.get();
 	}
 
 	public static long warnings(String code) {

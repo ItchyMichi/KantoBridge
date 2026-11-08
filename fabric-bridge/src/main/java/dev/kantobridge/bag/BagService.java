@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -38,8 +39,9 @@ import net.minecraft.world.item.component.CustomData;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * The hidden game's battle items in the Minecraft inventory (docs/PLAN.md P17, §4.4 {@code BagService}). The bag stays
- * authoritative in the hidden game; Cobblemon battles use the inventory.
+ * The hidden game's bag items in the Minecraft inventory (docs/PLAN.md P17, §4.4 {@code BagService}): the battle items,
+ * Rare Candy, the vitamins and PP Up as Cobblemon's items, and the items Cobblemon lacks (Repel, Escape Rope, Nugget) as
+ * this mod's placeholders ({@link BagItems}). The bag stays authoritative in the hidden game; Cobblemon uses the inventory.
  *
  * <ul>
  * <li><b>{@code bag.sync}</b> (C→S, the client relays gen1-bridge's whole mirrored bag, sent after every snapshot and
@@ -57,8 +59,10 @@ import org.jetbrains.annotations.Nullable;
  * stacks are counted and only they are ever taken, so a ball or potion the player found in Minecraft is theirs for good
  * (marked and unmarked stacks never merge: their components differ). <b>Several games</b> (MULTI_GAME_PLAN §4.9): in a
  * region world the hidden bag no longer drives the mirror; {@code bag.sync} (now with {@code money} and the ledger
- * {@code stamp}) feeds the player's {@link LedgerService ledger}, the mirror shows the ledger's battle items, and a use
- * debits the ledger as well as going to the followed game. A legacy world keeps the per-game path exactly as it was.
+ * {@code stamp}) feeds the player's {@link LedgerService ledger}, the mirror shows the ledger's mirrored items, and a use
+ * debits the ledger as well as going to the followed game: tagged with that game's region and named by that game's own
+ * symbol, so it reaches the game whose remembered projection the ledger lowered ({@link LedgerService#use}). A legacy world
+ * keeps the per-game path exactly as it was.
  */
 public final class BagService {
 	static final int OBSERVE_EVERY_TICKS = 5;
@@ -77,6 +81,8 @@ public final class BagService {
 		final BagLedger ledger = new BagLedger();
 		/** The newest sync that arrived during a battle. */
 		@Nullable Map<String, Integer> pending;
+		/** BagTrace: the inventory's marked and own counts as last traced. */
+		@Nullable String traced;
 	}
 
 	private static final Map<UUID, State> STATES = new HashMap<>();
@@ -95,6 +101,7 @@ public final class BagService {
 	public static void init() {
 		RelayService.get().register(MsgTypes.BAG_SYNC, BagService::onSync);
 		ServerTickEvents.END_SERVER_TICK.register(BagService::tick);
+		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> joined(handler.getPlayer()));
 		ServerPlayerEvents.LEAVE.register(player -> STATES.remove(player.getUUID()));
 		ServerLifecycleEvents.SERVER_STOPPED.register(server -> STATES.clear());
 	}
@@ -113,6 +120,8 @@ public final class BagService {
 		}
 		SYNCS.incrementAndGet();
 		Map<String, Integer> bag = sync.items();
+		BagTrace.server("sync.in", "p", who(player), "tick", player.server.getTickCount(), "region", Regions.tagOf(message.data()),
+				"stamp", BagTrace.stamp(sync.stamp()), "money", sync.money(), "items", BagTrace.nonZero(sync.items()));
 		if (LedgerService.enabled(player.server)) {
 			// Several games: the report feeds the ledger; the mirror shows the ledger's battle items.
 			Regions regions = Regions.of(player.server);
@@ -124,13 +133,36 @@ public final class BagService {
 			}
 			LedgerService.onSync(player, region, sync.items(), sync.money(), sync.stamp());
 			bag = LedgerService.mirrorTargets(player);
+			BagTrace.server("mirror.targets", "p", who(player), "targets", BagTrace.nonZero(bag));
 		}
 		State state = STATES.computeIfAbsent(player.getUUID(), id -> new State());
 		if (inBattle(player)) {
 			state.pending = bag;
+			BagTrace.server("sync.held", "p", who(player), "why", "battle");
 			return;
 		}
 		apply(player, state, bag, player.server.getTickCount());
+	}
+
+	/**
+	 * A player joined (2026-11-07): the mirror watches their inventory from now, not from the hidden game's first
+	 * {@code bag.sync}. The game sends one only when its bag changes, so after a rejoin with Gen1Recomp still running it may
+	 * be a while; a ball thrown meanwhile went unseen, and that first sync then put it back. The marked stacks the player
+	 * joins with are the reference ({@link BagLedger#seed}); until the first sync, a later call takes the inventory as it is
+	 * then.
+	 */
+	public static void joined(ServerPlayer player) {
+		State state = STATES.computeIfAbsent(player.getUUID(), id -> new State());
+		Map<String, Integer> marked = counts(player);
+		if (state.ledger.seed(marked)) {
+			BagTrace.server("bag.joined", "p", who(player), "tick", player.server.getTickCount(), "marked", BagTrace.nonZero(marked),
+					"own", BagTrace.nonZero(ownCounts(player)));
+		}
+	}
+
+	/** BagTrace: the first eight hex digits of a player's UUID (one line per player in multiplayer). */
+	static String who(ServerPlayer player) {
+		return BagTrace.who(player.getUUID());
 	}
 
 	/** {@code bag.sync}: item symbols to counts 0–9999, the optional {@code money} and {@code stamp} (MG6), nothing else. */
@@ -151,16 +183,19 @@ public final class BagService {
 
 	private static void apply(ServerPlayer player, State state, Map<String, Integer> bag, long now) {
 		// What the inventory shows consumed since the last sync goes first (in flight), so a sync never hides a use.
-		report(player, state.ledger.observe(counts(player), false, now));
-		change(player, state.ledger.sync(bag, counts(player)));
+		report(player, state.ledger.observe(counts(player), false, now), "sync");
+		change(player, state.ledger.sync(bag, counts(player)), "sync");
 		state.ledger.settled(counts(player));
+		BagTrace.server("mirror.settled", "p", who(player), "inflight", state.ledger.inFlight());
+		traceInventory(player, state);
 	}
 
-	/** Adds and takes items as {@code changes} says (Gen 1 item → count to add, negative to take). */
-	private static void change(ServerPlayer player, Map<String, Integer> changes) {
+	/** Adds and takes items as {@code changes} says (Gen 1 item → count to add, negative to take); {@code why} for the trace. */
+	private static void change(ServerPlayer player, Map<String, Integer> changes, String why) {
 		Map<String, Item> mirrored = items();
 		int added = 0;
 		int removed = 0;
+		Map<String, Integer> applied = new TreeMap<>();
 		for (Map.Entry<String, Integer> change : changes.entrySet()) {
 			Item item = mirrored.get(change.getKey());
 			if (item == null) {
@@ -169,12 +204,18 @@ public final class BagService {
 			if (change.getValue() > 0) {
 				int put = add(player.getInventory(), item, change.getValue());
 				added += put;
+				applied.merge(change.getKey(), put, Integer::sum);
 				if (put < change.getValue()) {
 					warn("inventory_full");
 				}
 			} else {
-				removed += remove(player.getInventory(), item, -change.getValue());
+				int taken = remove(player.getInventory(), item, -change.getValue());
+				removed += taken;
+				applied.merge(change.getKey(), -taken, Integer::sum);
 			}
+		}
+		if (!changes.isEmpty()) {
+			BagTrace.server("mirror.change", "p", who(player), "why", why, "asked", changes, "done", applied);
 		}
 		if (added > 0 || removed > 0) {
 			player.containerMenu.broadcastChanges();
@@ -182,6 +223,32 @@ public final class BagService {
 			CHANGED.incrementAndGet();
 			KantoBridge.LOGGER.debug("bag: mirrored the bag ({} items added, {} taken)", added, removed);
 		}
+	}
+
+	/**
+	 * BagTrace: the inventory's mirrored items whenever they change: {@code marked} (the mirror's stacks), {@code own} (the
+	 * same items without the mark: found, crafted, a missed ball picked up) and the ledger's {@code ref}erence.
+	 */
+	private static void traceInventory(ServerPlayer player, State state) {
+		if (!BagTrace.on()) {
+			return;
+		}
+		Map<String, Integer> marked = BagTrace.nonZero(counts(player));
+		Map<String, Integer> own = BagTrace.nonZero(ownCounts(player));
+		String now = marked + "|" + own;
+		if (now.equals(state.traced)) {
+			return;
+		}
+		state.traced = now;
+		Map<String, Integer> reference = new TreeMap<>();
+		for (String item : BagItems.gen1Items()) {
+			int ref = state.ledger.reference(item);
+			if (ref > 0 || marked.containsKey(item)) {
+				reference.put(item, ref);
+			}
+		}
+		BagTrace.server("inv", "p", who(player), "tick", player.server.getTickCount(), "marked", marked, "own", own, "ref", reference,
+				"inflight", state.ledger.inFlight(), "battle", inBattle(player));
 	}
 
 	// ---- consumption ----
@@ -201,41 +268,79 @@ public final class BagService {
 			if (!battle && state.pending != null) {
 				Map<String, Integer> pending = state.pending;
 				state.pending = null;
+				BagTrace.server("sync.released", "p", who(player), "why", "battle over");
 				apply(player, state, pending, now);
 				continue;
 			}
-			report(player, state.ledger.observe(counts(player), battle, now));
+			traceInventory(player, state);
+			report(player, state.ledger.observe(counts(player), battle, now), "tick");
 			if (!battle) {
 				Map<String, Integer> expired = state.ledger.expire(counts(player), now);
 				if (!expired.isEmpty()) {
 					// Uses no sync ever showed (lost with a link): the hidden game still has those items.
 					warn("use_unacknowledged");
-					change(player, expired);
+					BagTrace.server("use.expired", "p", who(player), "tick", now, "giveBack", expired);
+					change(player, expired, "expired");
 					state.ledger.settled(counts(player));
+					traceInventory(player, state);
 				}
 			}
 		}
 	}
 
-	private static void report(ServerPlayer player, Map<String, Integer> used) {
+	private static void report(ServerPlayer player, Map<String, Integer> used, String when) {
 		boolean ledger = LedgerService.enabled(player.server);
+		if (!used.isEmpty()) {
+			BagTrace.server("use.observed", "p", who(player), "tick", player.server.getTickCount(), "when", when, "used", used,
+					"marked", BagTrace.nonZero(counts(player)));
+		}
 		for (Map.Entry<String, Integer> entry : used.entrySet()) {
+			String item = entry.getKey();
+			String region = null;
 			if (ledger) {
-				// Several games: the player's own item was consumed; the followed game hears it through bag.use too
-				LedgerService.use(player, entry.getKey(), entry.getValue());
+				// Several games: the player's own item was consumed; the game whose projection the ledger lowered hears it
+				// through bag.use too, by its own symbol (none when its games lack the item: the ledger alone held it)
+				LedgerService.UseTarget target = LedgerService.use(player, item, entry.getValue());
+				if (target != null) {
+					if (target.symbol() == null) {
+						BagTrace.server("use.kept", "p", who(player), "item", entry.getKey(), "region", target.region(), "why",
+								"that game lacks it");
+						continue;
+					}
+					item = target.symbol();
+					region = target.region();
+				}
 			}
 			int left = entry.getValue();
 			while (left > 0) {
 				int qty = Math.min(MAX_USE, left);
 				JsonObject data = new JsonObject();
-				data.addProperty("item", entry.getKey());
+				data.addProperty("item", item);
 				data.addProperty("qty", qty);
-				if (RelayService.get().send(player, MsgTypes.BAG_USE, data, null)) {
+				Regions.tag(data, player.server, region);
+				long seq = RelayService.get().post(player, MsgTypes.BAG_USE, data, null);
+				if (seq > 0) {
 					USES.incrementAndGet();
 				}
+				BagTrace.server("use.sent", "p", who(player), "seq", seq, "item", item, "qty", qty, "region", region);
 				left -= qty;
 			}
 		}
+	}
+
+	/** BagTrace: the mirrored items the inventory holds without the mark (the player's own). */
+	static Map<String, Integer> ownCounts(ServerPlayer player) {
+		Map<Item, String> lookup = byItem();
+		Map<String, Integer> out = new LinkedHashMap<>();
+		Inventory inventory = player.getInventory();
+		for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
+			ItemStack stack = inventory.getItem(slot);
+			String gen1 = stack.isEmpty() || marked(stack) ? null : lookup.get(stack.getItem());
+			if (gen1 != null) {
+				out.merge(gen1, stack.getCount(), Integer::sum);
+			}
+		}
+		return out;
 	}
 
 	// ---- the inventory ----
@@ -319,13 +424,14 @@ public final class BagService {
 		return BattleRegistry.getBattleByParticipatingPlayer(player) != null;
 	}
 
-	/** The Cobblemon item of each mirrored Gen 1 item that the registry has; missing ones are warned about once. */
+	/** The item (Cobblemon's, or a placeholder) of each mirrored Gen 1 item that the registry has; missing ones are warned about once. */
 	public static synchronized Map<String, Item> items() {
 		if (items == null) {
 			Map<String, Item> resolved = new LinkedHashMap<>();
 			Map<Item, String> reverse = new IdentityHashMap<>();
 			for (Map.Entry<String, String> entry : BagItems.table().entrySet()) {
-				Item item = BuiltInRegistries.ITEM.get(ResourceLocation.fromNamespaceAndPath(BagItems.NAMESPACE, entry.getValue()));
+				ResourceLocation key = ResourceLocation.tryParse(entry.getValue());
+				Item item = key == null ? Items.AIR : BuiltInRegistries.ITEM.get(key);
 				if (item == Items.AIR) {
 					warn("item_missing");
 					continue;

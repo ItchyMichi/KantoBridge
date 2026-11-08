@@ -3483,6 +3483,84 @@ taken from what already arrived. `test_battle` and `test_route1` fail on cpu3g p
 **Deviation.** A real gym leader was not walked to (the drivers start trainer battles by script, as before); the Name
 Rater is its write to the record, not the walk to his house.
 
+## The bag mirror: more items, and uses that stay used (2026-11-07)
+
+The user's reports of 2026-11-07: (1) some items picked up in the wild route never appear in the Minecraft inventory,
+Rare Candy among them, although Cobblemon has one; (2) Poké Balls thrown outside battle (missed, picked up again) leave
+the inventory as expected but come back later, noticed at a Pokémon Center heal. The user's decision: mirror what
+Cobblemon has, and give the items it lacks placeholders (the Nugget needs no function, it is for selling; the others,
+a Cobblemon Repel for one, can be features later).
+
+- *(1) Cause.* Only PLAN Appendix B's 29 battle items were mirrored (`ball`/`medicine`/`battle` with a Cobblemon item).
+  The wild route's item tiers (`wild_routes/items.json`) hold five others: Escape Rope, Repel, Super Repel, Nugget and
+  Rare Candy, which stayed in the hidden bag only. Rare Candy had no `cobblemon` entry, though Cobblemon 1.8.1 ships
+  `cobblemon:rare_candy`, and HP Up, Protein, Iron, Calcium, Carbos and PP Up (checked in its jar). It has nothing for
+  the repels, Escape Rope or Nugget.
+- *(1) Fix (a deviation from Appendix B, the user's call).* `protocol/items.json`: those seven carry their Cobblemon
+  item (all class `medicine`, so all three games mirror them), and Repel, Super Repel, Max Repel, Escape Rope and Nugget
+  carry a new `placeholder` field: the mirror creates `kantobridge:<id>` for them (`item/KbItems`, `PlaceholderItem`:
+  no function, a tooltip "Use it from the game's bag." or, for the Nugget, "Sell it at a Poké Mart."; models point at
+  vanilla textures). `Items.Item.mirrorItem()` gives each mirrored item's full id; `BagItems.table()` maps a Gen 1
+  symbol to it. gen1-bridge's mirrored set (`Bag.sets`) and `kb_protocol.items` take placeholders too. 41 mirrored items.
+- *(2) What was ruled out.* Cobblemon takes the ball at the throw, and a miss drops a fresh ball with no mirror mark
+  (`EmptyPokeBallEntity.drop()` spawns `getDefaultItem()`), so a ball picked up is the player's own and never counted.
+  Nothing at a heal touches the bag (the nurse, the center save: `Game:writeSave`, `UnionSafety`; `party.heal`; the
+  Minecraft save). The plain round trip balances. The logs on this PC end on 2026-11-02, so the session wasn't seen.
+- *(2) Defects found and fixed* (each can bring a used item back or lose a found one):
+  1. **`bag.use` went to the slot-0 game.** `BagService.report` sent it untagged, and the client routes untagged
+     messages to the legacy region's link (`Links.route`): Blue's, whatever was followed. In Hoenn or Johto a thrown
+     ball came out of Blue's bag, and the followed game's next report credited it back. Now `LedgerService.use` returns
+     the region it debited (the followed one, else the legacy one) with that game's symbol, and the `bag.use` goes
+     tagged with it (none when that game lacks the item).
+  2. **Two projections on their way answered each other forever.** A `bag.sync` whose stamp wasn't the newest
+     projection's was taken for an older save and projected again. While one `bag.set` waited in the hidden game for a
+     free world, any report (a stamp-less one too) sent another; each landing then reported a stamp the next had
+     replaced. Meanwhile nothing the game reported was read back and every landing overwrote its bag. Now
+     `LedgerService` keeps one projection on its way per region: answers match their `bag.set` by `re`
+     (`RelayService.post` returns the seq; an older one's answer is set aside, `stray`), a projection asked for
+     meanwhile goes when the answer comes (`deferred`), a report with an older stamp is left alone until it lands or
+     its answer comes (`waited`), and one unanswered for 300 ticks counts as lost.
+  3. **A landing projection wiped what happened while it waited.** gen1-bridge applied a `bag.use` at once but a
+     `bag.set` only when the world was free, so a ball thrown after the server had sent a projection was put back when
+     it landed, and an item ball picked up or prize money won meanwhile was erased. A `bag.use` sent before a
+     `bag.set` but still queued applied after it: twice. Now `bag.use` and `bag.set` share one arrival count
+     (main.lua); a request notes the bag once every earlier use has applied (`bag.applyUses`), the landing writes the
+     projection plus what changed since (`ledgerKept`), and a landing moves the notes of the requests still waiting.
+- Which of these the user hit is not known; the heal is likely only when it was noticed. If it happens again, the
+  Minecraft log's `(kantobridge) ledger:` and `bag:` lines tell (`use_unacknowledged`: the use never reached the game).
+- *The likely cause, found with the trace (2026-11-07).* The user's run (in Hoenn, an empty bag, so nothing to throw)
+  showed the second world of the session getting **no `bag.sync` at all**: a world that opens on a link that stayed up
+  ("same save as before") asks gen1-bridge for nothing, and gen1-bridge sends a `bag.sync` only when its bag, money or
+  stamp changes. `BagService` began watching a player only at their first `bag.sync`, so after a rejoin with Gen1Recomp
+  still running a ball thrown before the hidden bag next changed was never seen: no `bag.use`, the hidden bag kept it,
+  and that first `bag.sync` (an item ball, a purchase, prize money, a reconnect) brought the inventory back up to the bag:
+  the ball came back. Fixed both ways: **the server** seeds each player's mirror at join (`ServerPlayConnectionEvents.JOIN`
+  → `BagService.joined` → `BagLedger.seed`: the marked stacks the player joins with are the reference and the last bag,
+  so a throw is a use and the first sync acknowledges it by its fall); **the client** sends the link's last `bag.sync`
+  again when a world opens on a link that stayed up (`GameRelay.resendBag`, from `SessionRuntime`'s non-stale opening;
+  a stale one asks for a fresh snapshot, which sends the bag). Tests: `BagLedgerTest` (a throw before the first sync,
+  crossing or acknowledged; a quiet minute gives nothing back), `GameRelayTest.aWorldOpeningSendsTheLastBagAgain`,
+  GameTest `BagGameTests.aBallThrownBeforeTheFirstSyncStaysThrown`. The user retested it in game on 2026-11-07: the
+  thrown balls stayed gone (PLAYTEST.md "The bag mirror", the rejoin item).
+- *The bag trace (2026-11-07, for the user's reproduction).* `bag/BagTrace` writes one line per bag event to
+  `logs/kb-bagtrace.log` in the game directory (`local/minecraft/logs/` for the dev client), from the server (`S`) and the
+  client (`C`): every report in (`sync.in`) and the mirror's targets, the inventory's mirrored items whenever they change
+  (`inv`: `marked` stacks, `own` unmarked ones such as a missed ball picked up, the `ref`erence, uses `inflight`), each
+  use seen, sent and routed (`use.observed`, `use.sent`, client `use.down`/`use.flushed`), each ledger branch
+  (`ledger.readback` with its `delta`, `waited`, `baseline`, `reproject`, `adopt`, `unstamped`), each projection and its
+  answer (`ledger.project`, `.deferred`, `ledger.answer`; client `set.down`, `set.answer`), the given-back uses
+  (`use.expired`), followed-region changes, heals and saves as markers. gen1-bridge adds `bagtrace.*` lines to
+  Gen1Recomp's mod log (`use_in`, `use_applied`, `sync_out`, `set_in`, `set_before`, `set_land`, `set_answer`), with the
+  wall clock as `t`. Ids, symbols, counts, seqs and short stamps only. On by default; `-Dkantobridge.bagtrace=false`
+  turns the Minecraft side off; the file rolls over at 16 MB. Test: `BagTraceTest`; `test_lua_ledger.py` checks the
+  Lua lines.
+- Tests: `test_lua_ledger.py` (four new: a throw while the projection waits, an item and prize money kept, a use before
+  the projection not applied twice, two waiting projections; all four fail on the old `kb_ledger.lua`),
+  `test_lua_bag.py` (the 41, a placeholder and candy taken), `test_items.py`, `ItemsTest`, `BagLedgerTest`,
+  `LedgerTest`; GameTests `BagGameTests.everyMirroredItemIsRegistered`, `aPlaceholderIsMirroredAndItsUseReported`,
+  `LedgerGameTests.aProjectionOnItsWayIsWaitedFor`, `aUseGoesToTheFollowedGamesRegion`. Not yet confirmed in game:
+  PLAYTEST.md "The bag mirror".
+
 ## Emerald's text fits its box (2026-11-02)
 
 The user's report of 2026-11-02: Emerald's text doesn't always fit the text box; the top line often runs over its right

@@ -321,13 +321,21 @@ return function(mod)
     engine = engine, json = kb.json, log = log, items = kb.items,
     store = { get = function(key) return mod.save:get(key) end },
   })
-  -- MG6: bag.set, the ledger's projection into this save (act/kb_ledger.lua)
+  -- MG6: bag.set, the ledger's projection into this save (act/kb_ledger.lua).
+  -- bag.use and bag.set share one arrival count, so a projection lands after
+  -- every use that came before it and keeps the ones after it.
+  local bagArrivals = 0
+  local function bagArrival()
+    bagArrivals = bagArrivals + 1
+    return bagArrivals
+  end
   local ledger = kb.Ledger.new({
     engine = engine, json = kb.json, clock = clock, log = log,
     store = {
       get = function(key) return mod.save:get(key) end,
       set = function(key, value) mod.save:set(key, value) end,
     },
+    applyUses = function(through) return bagObs.applyUses(through) end,
   })
   -- M7: saving (save.begin/done, the Pokemon Center's heal and save),
   -- session pairing, and Bill's PC as Cobblemon's PC. The bound world is
@@ -746,7 +754,7 @@ return function(mod)
     session.on("region." .. op, queued(function(data, seq, gen) return regionActs.request(op, data, seq, gen) end))
   end
   -- MG6: the ledger's projection, answered by act.result (act/kb_ledger.lua)
-  session.on("bag.set", queued(ledger.request))
+  session.on("bag.set", queued(function(data, seq, gen) return ledger.request(data, seq, gen, bagArrival()) end))
   for _, t in ipairs({ "ui.advance", "ui.pick", "ui.back", "ui.qty", "ui.name" }) do
     session.on(t, queued(function(data, seq, gen) return uiAct.request(t, data, seq, gen) end))
   end
@@ -783,7 +791,7 @@ return function(mod)
   -- (M9: not while a save-slot switch waits: the bag isn't the new world's yet)
   session.on("bag.use", answered(function(data)
     if pairing.blocked() then return false, "session.pending" end
-    return bagObs.use(data)
+    return bagObs.use(data, bagArrival())
   end))
   -- M7: Minecraft saved (log only), Cobblemon's PC closed
   session.on("save.done", answered(saves.done))

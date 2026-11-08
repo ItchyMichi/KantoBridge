@@ -21,7 +21,8 @@ import org.jetbrains.annotations.Nullable;
  * The canonical item catalogue, {@code protocol/items.json} (docs/specs/MULTI_GAME_PLAN.md §4.9, MG6), bundled in the jar
  * beside the protocol catalog: every item the one trainer economy can hold. For each canonical id it holds the item's
  * class ({@code ball}, {@code medicine}, {@code battle}, {@code field}, {@code stone}, {@code held}, {@code valuable},
- * {@code tm}, {@code key}), the Cobblemon item the Minecraft mirror creates for it (the battle items only), the move a
+ * {@code tm}, {@code key}), the Cobblemon item the Minecraft mirror creates for it (the battle items, Rare Candy, the
+ * vitamins and PP Up), or the placeholder item it creates for one Cobblemon lacks (Repel, Escape Rope, Nugget), the move a
  * machine teaches (TMs cross between games <b>by move</b>: Gen 1's TM01 and Gen 3's TM01 are different moves), and each
  * family's symbol for it (the hidden game's own item id, e.g. {@code POTION}, {@code TM_MEGA_PUNCH}). Items a game lacks
  * have no symbol for it; class {@code key} (key items, HMs, badges, story items) never crosses. Nothing else names an item
@@ -40,17 +41,23 @@ public final class Items {
 	public static final Pattern SYMBOL = Pattern.compile("^[A-Z0-9_]{1,64}$");
 	/** A Cobblemon item path (namespace {@code cobblemon}). */
 	public static final Pattern COBBLEMON_PATH = Pattern.compile("^[a-z0-9_./-]{1,64}$");
+	/** A placeholder item path (namespace {@value #PLACEHOLDER_NAMESPACE}). */
+	public static final Pattern PLACEHOLDER_PATH = Pattern.compile("^[a-z0-9_]{1,64}$");
+	/** The namespace of Cobblemon's items. */
+	public static final String COBBLEMON_NAMESPACE = "cobblemon";
+	/** The namespace of the placeholder items: this mod's ({@code dev.kantobridge.item.KbItems}). */
+	public static final String PLACEHOLDER_NAMESPACE = "kantobridge";
 	/** The classes, in the order a projection fills a bag: what a trainer reaches for first. */
 	public static final List<String> CLASSES = List.of("ball", "medicine", "battle", "field", "stone", "held", "valuable", "tm", "key");
 	/** The class that never crosses: key items, HMs, badges, story items. */
 	public static final String KEY = "key";
 	/** The class that crosses by move. */
 	public static final String TM = "tm";
-	/** The classes whose Cobblemon items the Minecraft mirror creates (the battle-usable items). */
+	/** The classes whose Cobblemon items the Minecraft mirror creates (the battle-usable items); a placeholder is mirrored whatever its class. */
 	public static final Set<String> MIRRORED_CLASSES = Set.of("ball", "medicine", "battle");
 	public static final int MAX_MOVE = 2000;
 	private static final Set<String> ROOT_FIELDS = Set.of("version", "items");
-	private static final Set<String> ITEM_FIELDS = Set.of("class", "cobblemon", "move", "symbols", "hiddenOnly");
+	private static final Set<String> ITEM_FIELDS = Set.of("class", "cobblemon", "placeholder", "move", "symbols", "hiddenOnly");
 
 	private static volatile @Nullable Items bundled;
 
@@ -62,15 +69,22 @@ public final class Items {
 	 * @param move      tm/hm: the move taught, as its national (Showdown) move number; else null
 	 * @param symbols   family → the game's item symbol (sorted)
 	 * @param hiddenOnly FP4: no Cobblemon item exists for it; a member holding it keeps it in the hidden game
+	 * @param placeholder an item Cobblemon lacks: the path of the placeholder item (namespace {@value #PLACEHOLDER_NAMESPACE})
+	 *                    the mirror creates for it, or null
 	 */
 	public record Item(String id, String clazz, @Nullable String cobblemon, @Nullable Integer move, Map<String, String> symbols,
-			boolean hiddenOnly) {
+			boolean hiddenOnly, @Nullable String placeholder) {
 		public Item {
 			symbols = Collections.unmodifiableMap(new TreeMap<>(symbols));
 		}
 
+		public Item(String id, String clazz, @Nullable String cobblemon, @Nullable Integer move, Map<String, String> symbols,
+				boolean hiddenOnly) {
+			this(id, clazz, cobblemon, move, symbols, hiddenOnly, null);
+		}
+
 		public Item(String id, String clazz, @Nullable String cobblemon, @Nullable Integer move, Map<String, String> symbols) {
-			this(id, clazz, cobblemon, move, symbols, false);
+			this(id, clazz, cobblemon, move, symbols, false, null);
 		}
 
 		/** The item's symbol in a family's games, or null when they lack it. */
@@ -83,9 +97,17 @@ public final class Items {
 			return !KEY.equals(this.clazz);
 		}
 
-		/** True when the Minecraft mirror creates Cobblemon items for it. */
+		/** True when the Minecraft mirror creates stacks for it: a battle-usable Cobblemon item, or a placeholder. */
 		public boolean mirrored() {
-			return this.cobblemon != null && MIRRORED_CLASSES.contains(this.clazz);
+			return this.placeholder != null || this.cobblemon != null && MIRRORED_CLASSES.contains(this.clazz);
+		}
+
+		/** The id ({@code namespace:path}) of the item the mirror creates for it, or null when it is never mirrored. */
+		public @Nullable String mirrorItem() {
+			if (this.placeholder != null) {
+				return PLACEHOLDER_NAMESPACE + ":" + this.placeholder;
+			}
+			return this.mirrored() ? COBBLEMON_NAMESPACE + ":" + this.cobblemon : null;
 		}
 
 		/** The class's place in {@link #CLASSES}. */
@@ -134,6 +156,11 @@ public final class Items {
 				throw new DataException(e.path("class"), "unknown class");
 			}
 			String cobblemon = e.optionalString("cobblemon", COBBLEMON_PATH);
+			String placeholder = e.optionalString("placeholder", PLACEHOLDER_PATH);
+			if (placeholder != null && (cobblemon != null || KEY.equals(clazz))) {
+				throw new DataException(e.path("placeholder"), cobblemon != null ? "a placeholder stands in for a missing Cobblemon item"
+						: "a key item is never mirrored");
+			}
 			Integer move = e.has("move") ? e.integer("move", 1, MAX_MOVE) : null;
 			boolean hiddenOnly = false;
 			if (e.has("hiddenOnly")) {
@@ -141,8 +168,8 @@ public final class Items {
 						|| !e.json().get("hiddenOnly").getAsBoolean()) {
 					throw new DataException(e.path("hiddenOnly"), "only true");
 				}
-				if (cobblemon != null) {
-					throw new DataException(e.path("hiddenOnly"), "a hidden-only item has no Cobblemon item");
+				if (cobblemon != null || placeholder != null) {
+					throw new DataException(e.path("hiddenOnly"), "a hidden-only item has no Cobblemon or placeholder item");
 				}
 				hiddenOnly = true;
 			}
@@ -158,7 +185,7 @@ public final class Items {
 				}
 				symbols.put(family, symbol);
 			}
-			out.put(id, new Item(id, clazz, cobblemon, move, symbols, hiddenOnly));
+			out.put(id, new Item(id, clazz, cobblemon, move, symbols, hiddenOnly, placeholder));
 		}
 		if (out.isEmpty()) {
 			throw new DataException(r.path("items"), "no items");
@@ -237,7 +264,7 @@ public final class Items {
 		return item == null ? null : item.symbol(family);
 	}
 
-	/** The ids the Minecraft mirror creates Cobblemon items for, sorted. */
+	/** The ids the Minecraft mirror creates stacks for (Cobblemon items and placeholders), sorted. */
 	public List<String> mirroredIds() {
 		List<String> out = new ArrayList<>();
 		for (Item item : this.items.values()) {
@@ -299,7 +326,10 @@ public final class Items {
 		return bundled().canonical(family, symbol);
 	}
 
-	/** The Cobblemon item path (namespace {@code cobblemon}) the mirror creates for an id, or null when it is never mirrored. */
+	/**
+	 * The Cobblemon item path (namespace {@code cobblemon}) of an id, or null when Cobblemon has none for it: the mirror's
+	 * item for the battle-usable classes, the held item, the stone or the vitamin for the others.
+	 */
 	public static @Nullable String cobblemonPath(@Nullable String id) {
 		Item item = get(id);
 		return item == null ? null : item.cobblemon();
@@ -317,9 +347,21 @@ public final class Items {
 		return item == null ? null : item.move();
 	}
 
-	/** The ids the Minecraft mirror creates Cobblemon items for (the battle-usable items with a Cobblemon item), sorted. */
+	/** The ids the Minecraft mirror creates stacks for (battle-usable Cobblemon items and placeholders), sorted. */
 	public static List<String> mirrored() {
 		return bundled().mirroredIds();
+	}
+
+	/** The placeholder item paths (namespace {@value #PLACEHOLDER_NAMESPACE}) the catalogue names, sorted. */
+	public static List<String> placeholders() {
+		List<String> out = new ArrayList<>();
+		for (Item item : bundled().items.values()) {
+			if (item.placeholder() != null && !out.contains(item.placeholder())) {
+				out.add(item.placeholder());
+			}
+		}
+		Collections.sort(out);
+		return out;
 	}
 
 	/** The ids the ledger may hold (every class but {@link #KEY}), sorted. */

@@ -71,8 +71,33 @@ public final class GameRelayRuntime {
 				public void warn(String code, long count) {
 					LOGGER.warn("relay: {} ({} so far)", code, count);
 				}
+
+				@Override
+				public void trace(String event, Object... kv) {
+					traceFor(link, event, kv);
+				}
 			}, dexUp));
 		}
+	}
+
+	/**
+	 * A client-side bag trace line ({@link dev.kantobridge.bag.BagTrace}) about one link: which game it runs, its port, and
+	 * whether the save pairing's gate lets data through (a held gate keeps {@code bag.use}s waiting).
+	 */
+	static void traceFor(BridgeLink link, String event, Object... kv) {
+		if (!dev.kantobridge.bag.BagTrace.on()) {
+			return;
+		}
+		SessionGate gate = gate(link);
+		Object[] all = new Object[kv.length + 6];
+		all[0] = "game";
+		all[1] = link.game();
+		all[2] = "port";
+		all[3] = link.port();
+		all[4] = "gate";
+		all[5] = gate == null ? "-" : gate.state();
+		System.arraycopy(kv, 0, all, 6, kv.length);
+		dev.kantobridge.bag.BagTrace.client(event, all);
 	}
 
 	/** Call once from the client entrypoint, after {@link BridgeRuntime#init} and the UI runtime. */

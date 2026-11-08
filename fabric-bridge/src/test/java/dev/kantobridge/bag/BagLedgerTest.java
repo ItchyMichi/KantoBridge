@@ -33,24 +33,32 @@ class BagLedgerTest {
 	@Test
 	void theItemTable() {
 		Map<String, String> table = BagItems.table();
-		assertEquals(29, table.size(), "5 balls, 17 medicines, 7 battle boosters");
-		assertEquals(table.size(), new HashSet<>(table.values()).size(), "each Gen 1 item has its own Cobblemon item");
+		assertEquals(29 + 7 + 5, table.size(), "5 balls, 17 medicines, 7 battle boosters; Rare Candy, the vitamins, PP Up; 5 placeholders");
+		assertEquals(table.size(), new HashSet<>(table.values()).size(), "each Gen 1 item has its own item");
 		for (Map.Entry<String, String> entry : table.entrySet()) {
 			assertTrue(entry.getKey().matches("^[A-Z0-9_]+$"), entry.getKey());
-			assertTrue(entry.getValue().matches("^[a-z0-9_]+$"), entry.getValue());
+			assertTrue(entry.getValue().matches("^(cobblemon|kantobridge):[a-z0-9_]+$"), entry.getValue());
 			assertEquals(entry.getKey(), BagItems.gen1Of(entry.getValue()));
 		}
+		assertEquals("POKE_BALL", BagItems.gen1Of("poke_ball"), "a bare path is Cobblemon's");
+		assertEquals("RARE_CANDY", BagItems.gen1Of("rare_candy"));
+		assertEquals("REPEL", BagItems.gen1Of("kantobridge:repel"));
 		// Names that differ between Gen 1 and Cobblemon 1.8.1.
 		assertEquals("paralyze_heal", BagItems.cobblemonPath("PARLYZ_HEAL"));
 		assertEquals("elixir", BagItems.cobblemonPath("ELIXER"));
 		assertEquals("max_elixir", BagItems.cobblemonPath("MAX_ELIXER"));
 		assertEquals("x_defence", BagItems.cobblemonPath("X_DEFEND"));
 		assertEquals("x_special_attack", BagItems.cobblemonPath("X_SPECIAL"));
-		// Key items, TMs, stones and the like stay Gen 1-only.
-		for (String gen1Only : Set.of("BICYCLE", "TM_MEGA_PUNCH", "MOON_STONE", "RARE_CANDY", "REPEL", "ESCAPE_ROPE", "OLD_ROD")) {
-			assertNull(BagItems.cobblemonPath(gen1Only), gen1Only);
+		assertEquals("rare_candy", BagItems.cobblemonPath("RARE_CANDY"));
+		// Key items, TMs, stones and the like stay in the hidden bag; Repel and Escape Rope are placeholders, no Cobblemon item.
+		for (String gen1Only : Set.of("BICYCLE", "TM_MEGA_PUNCH", "MOON_STONE", "POKE_DOLL", "OLD_ROD")) {
+			assertNull(BagItems.itemId(gen1Only), gen1Only);
 		}
-		assertNull(BagItems.gen1Of("rare_candy"));
+		for (String placeholder : Set.of("REPEL", "ESCAPE_ROPE", "NUGGET")) {
+			assertNull(BagItems.cobblemonPath(placeholder), placeholder);
+			assertTrue(BagItems.placeholder(placeholder), placeholder);
+		}
+		assertNull(BagItems.gen1Of("moon_stone"));
 	}
 
 	@Test
@@ -145,5 +153,39 @@ class BagLedgerTest {
 		// Lost with a link: the hidden game still has it, so the potion comes back.
 		assertEquals(Map.of("POTION", 1), ledger.expire(inventory.counts, 101 + BagLedger.IN_FLIGHT_TICKS));
 		assertEquals(0, ledger.inFlight("POTION"));
+	}
+
+	@Test
+	void aBallThrownBeforeTheFirstSyncIsAUseNotAGiveBack() {
+		// The player rejoined with five of the mirror's balls; the hidden game hasn't reported yet (2026-11-07).
+		BagLedger ledger = new BagLedger();
+		ledger.seed(Map.of("POKE_BALL", 5));
+		assertTrue(ledger.known());
+		assertEquals(5, ledger.reference("POKE_BALL"));
+		assertEquals(Map.of("POKE_BALL", 1), ledger.observe(Map.of("POKE_BALL", 4), false, 0), "the throw is a use");
+		assertEquals(1, ledger.inFlight("POKE_BALL"));
+		// The first sync crosses the use (the game still holds five): the inventory keeps four, nothing comes back.
+		assertEquals(Map.of(), ledger.sync(Map.of("POKE_BALL", 5), Map.of("POKE_BALL", 4)));
+		// The next shows it applied: acknowledged, still nothing to change.
+		assertEquals(Map.of(), ledger.sync(Map.of("POKE_BALL", 4), Map.of("POKE_BALL", 4)));
+		assertEquals(0, ledger.inFlight("POKE_BALL"));
+		// Once a sync has set the reference, a seed changes nothing.
+		ledger.settled(Map.of("POKE_BALL", 4));
+		ledger.seed(Map.of("POKE_BALL", 99));
+		assertEquals(4, ledger.reference("POKE_BALL"));
+	}
+
+	@Test
+	void aFirstSyncThatShowsTheUseTakesNoSecondBall() {
+		BagLedger ledger = new BagLedger();
+		ledger.seed(Map.of("POKE_BALL", 5, "POTION", 2));
+		ledger.observe(Map.of("POKE_BALL", 4, "POTION", 2), false, 0);
+		// The game applied the use before its first sync: the fall from the seeded bag acknowledges it.
+		assertEquals(Map.of(), ledger.sync(Map.of("POKE_BALL", 4, "POTION", 2), Map.of("POKE_BALL", 4, "POTION", 2)));
+		assertEquals(0, ledger.inFlight("POKE_BALL"));
+		// And with no sync at all for a minute the seeded bag doesn't hand the ball back early: only an unacknowledged use does.
+		BagLedger quiet = new BagLedger();
+		quiet.seed(Map.of("POKE_BALL", 5));
+		assertEquals(Map.of(), quiet.expire(Map.of("POKE_BALL", 5), 10_000), "nothing in flight, nothing to give back");
 	}
 }

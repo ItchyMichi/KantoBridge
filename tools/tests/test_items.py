@@ -1,5 +1,6 @@
 """The canonical item catalogue (protocol/items.json, MULTI_GAME_PLAN §4.9): it matches its schema, names
-only symbols, mirrors exactly today's battle items into Cobblemon, and its Lua copy is current."""
+only symbols, mirrors the battle items, Rare Candy, the vitamins and PP Up into Cobblemon's items and the
+items Cobblemon lacks into placeholders, and its Lua copy is current."""
 import json
 
 from kb_protocol import load_items, load_protocol
@@ -28,11 +29,26 @@ def test_every_item_has_a_symbol_and_gen1_ids_derive_from_theirs():
             assert ITEMS.canonical(family, symbol) == item_id, (family, symbol)
 
 
-def test_the_mirror_set_is_todays_29_battle_items():
+CANDY_AND_VITAMINS = {"rare_candy", "hp_up", "protein", "iron", "calcium", "carbos", "pp_up"}
+PLACEHOLDERS = {"repel", "super_repel", "max_repel", "escape_rope", "nugget"}
+
+
+def test_the_mirror_set_is_the_battle_items_candy_vitamins_and_placeholders():
     mirrored = ITEMS.mirrored()
-    assert len(mirrored) == 29
+    assert len(mirrored) == 29 + 7 + 5, "PLAN Appendix B's 29, Rare Candy, five vitamins and PP Up, five placeholders"
     assert {ITEMS.get(i).cobblemon for i in mirrored} >= {"poke_ball", "potion", "elixir", "paralyze_heal", "x_defence", "x_special_attack"}
-    assert "rare_candy" not in mirrored and "moon_stone" not in mirrored
+    assert CANDY_AND_VITAMINS <= set(mirrored) and all(ITEMS.get(i).cobblemon == i for i in CANDY_AND_VITAMINS)
+    assert {i for i in ITEMS.ids if ITEMS.get(i).placeholder} == PLACEHOLDERS <= set(mirrored)
+    assert "moon_stone" not in mirrored and "poke_doll" not in mirrored and "tm_mega_punch" not in mirrored
+    assert all("gen1" in ITEMS.get(i).symbols for i in mirrored), "the mirror is keyed by Gen 1 symbols"
+
+
+def test_a_placeholder_stands_in_only_for_a_missing_cobblemon_item():
+    for item_id in ITEMS.ids:
+        item = ITEMS.get(item_id)
+        if item.placeholder:
+            assert item.placeholder == item_id, item_id
+            assert item.cobblemon is None and not item.hidden_only and item.clazz != "key", item_id
 
 
 def test_machines_cross_by_move_and_keys_never_cross():

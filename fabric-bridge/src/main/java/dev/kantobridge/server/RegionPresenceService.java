@@ -78,6 +78,11 @@ public final class RegionPresenceService {
 	/** Stores a presence; a change of the followed region clears the story state the client is about to resend. */
 	public static void apply(ServerPlayer player, RegionPresence presence) {
 		RegionPresence before = of(player);
+		if (!java.util.Objects.equals(before.followed(), presence.followed())) {
+			// where Minecraft's item uses go (LedgerService.use)
+			dev.kantobridge.bag.BagTrace.server("presence.followed", "p", dev.kantobridge.bag.BagTrace.who(player.getUUID()), "was",
+					before.followed(), "now", presence.followed());
+		}
 		if (before.followed() != null && !before.followed().equals(presence.followed())) {
 			StoryStates.of(player).clear();
 			SWAPS.incrementAndGet();
